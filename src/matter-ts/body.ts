@@ -405,8 +405,8 @@ export class Body {
   }
 
   public setPosition2(x: number, y: number) {
-    const deltaX = this.position.x - x;
-    const deltaY = this.position.y - y;
+    const deltaX = x - this.position.x;
+    const deltaY = y - this.position.y;
     this.positionPrev.x += deltaX;
     this.positionPrev.y += deltaY;
 

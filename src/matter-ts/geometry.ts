@@ -242,7 +242,7 @@ export class Vector {
   ];
 
   public dump(msg = '') {
-    console.log(`${msg} (${this.x}, ${this.y})`)
+    console.log(`${msg} (${this.x | 0}, ${this.y | 0})`)
   }
 
 
@@ -294,7 +294,6 @@ export class Vertices {
 
   public static create(points: Vector[], body: any) {
     var vertices = [];
-
     for (var i = 0; i < points.length; i++) {
       const point = points[i];
       const vertex = new Vertex(point.x, point.y, i, body);
@@ -738,17 +737,23 @@ export class Bounds {
    */
 
   public static update(bounds: Bounds, vertices: Vector[], velocity?: Vector) {
-    bounds.min.x = Infinity;
-    bounds.max.x = -Infinity;
-    bounds.min.y = Infinity;
-    bounds.max.y = -Infinity;
+    const max = bounds.max;
+    const min = bounds.min;
+    min.x = Infinity;
+    max.x = -Infinity;
+    min.y = Infinity;
+    max.y = -Infinity;
 
     for (var i = 0; i < vertices.length; i++) {
-      var vertex = vertices[i];
-      if (vertex.x > bounds.max.x) bounds.max.x = vertex.x;
-      if (vertex.x < bounds.min.x) bounds.min.x = vertex.x;
-      if (vertex.y > bounds.max.y) bounds.max.y = vertex.y;
-      if (vertex.y < bounds.min.y) bounds.min.y = vertex.y;
+      const vertex = vertices[i];
+      max.x = Math.max(vertex.x, max.x);
+      min.x = Math.min(vertex.x, min.x);
+      max.y = Math.max(vertex.y, max.y);
+      min.y = Math.min(vertex.y, min.y);
+      // if (vertex.x > bounds.max.x) bounds.max.x = vertex.x;
+      // if (vertex.x < bounds.min.x) bounds.min.x = vertex.x;
+      // if (vertex.y > bounds.max.y) bounds.max.y = vertex.y;
+      // if (vertex.y < bounds.min.y) bounds.min.y = vertex.y;
     }
 
     if (velocity) {

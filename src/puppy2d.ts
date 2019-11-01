@@ -226,11 +226,41 @@ export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => a
   'circle': (world: PuppyWorld, options: any) => {
     const radius = options.circleRadius = getradius(options, 50);
     const maxSides = 25;
-    // approximate circles with polygons until true circles implemented in SAT
     var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
-    // optimisation: always use even number of sides (half the number of unique axes)
     if (sides % 2 === 1)
       sides += 1;
+    return polygon(world, options, sides, radius);
+  },
+  'ticker': (world: PuppyWorld, options: any) => {
+    const width = (options.width = (!options.width) ? 0 : options.width);
+    const height = (options.height = (!options.height) ? 0 : options.height);
+    if (width === 0) {
+      vertices(options, [0, 0]);
+    }
+    else {
+      vertices(options, [0, 0, width, 0, width, height, 0, height]);
+    }
+    return options;
+  },
+  'paint': (world: PuppyWorld, options: any) => {
+    const radius = options.circleRadius = getradius(options, 10);
+    const maxSides = 25;
+    var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
+    if (sides % 2 === 1)
+      sides += 1;
+    options.timeToLive = options.timeToLive || 1000;
+    options.opacity = 0.5;
+    if (!options.move) {
+      options.move = (body: Body, timestamp: number) => {
+        const timeToLive = (body as any).timeToLive--;
+        if (timeToLive < 1000) {
+          body.opacity = (timeToLive / 1000) * 0.5;
+        }
+        if (timeToLive < 0) {
+          world.removeBody(body);
+        }
+      }
+    }
     return polygon(world, options, sides, radius);
   },
 }
@@ -278,6 +308,7 @@ const DefaultPuppyOption: any = {
 
 
 export class PuppyWorld extends World {
+  base: Puppy;
   public width: number;
   public height: number;
   public timestamp = 0;
@@ -287,8 +318,9 @@ export class PuppyWorld extends World {
   paints: Body[] = [];
   tickers: Body[] = [];
 
-  public constructor(options: any = {}) {
+  public constructor(base: Puppy, options: any = {}) {
     super(Object.assign(options, { id: 0 }));
+    this.base = base;
     this.width = options.width || 1000;
     this.height = options.height || this.width;
     this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
@@ -313,9 +345,11 @@ export class PuppyWorld extends World {
   public addBody(body: Body) {
     if (body.shape === 'paint') {
       this.paints.push(body);
+      return this;
     }
     if (body.shape === 'ticker') {
       this.tickers.push(body);
+      return this;
     }
     return super.addBody(body);
   }
@@ -327,13 +361,15 @@ export class PuppyWorld extends World {
         this.paints.splice(position, 1);
         this.setModified(true, true, false);
       }
+      return this;
     }
     if (body.shape === 'ticker') {
       const position = Common.indexOf(this.tickers, body);
       if (position !== -1) {
-        this.paints.splice(position, 1);
+        this.tickers.splice(position, 1);
         this.setModified(true, true, false);
       }
+      return this;
     }
     return super.removeBody(body);
   }
@@ -423,33 +459,57 @@ export class PuppyWorld extends World {
   //   return x;
   // }
 
+  public paint(x: number, y: number, radius = 5, color?: string) {
+    const options = {
+      position: new Vector(x, y),
+      shape: 'paint',
+      radius: radius,
+      fillStyle: color || Common.choose(this.colors, 1),
+    }
+    this.newObject(options);
+  }
+
   public print(text: string, options: any = {}) {
     const world = this;
     const x = this.bounds.max.x;
-    const y = this.height * (Math.random() * 0.9 + 0.05);
+    const y = - this.height / 2 * (Math.random() * 0.9 + 0.05);
     options = Object.assign({
       textRef: (body: Body) => `${text}`,
       position: new Vector(x, y),
       shape: 'ticker',
+      fontColor: Common.choose(this.colors, 1),
       move: (body: Body, time: number) => {
-        body.translate2(-5, 0);
-        if (body.bounds.max.x < world.bounds.min.x) {
+        body.translate2(-2, 0);
+        //body.position.dump(`print`);
+        if (body.position.x + 100 < world.bounds.min.x) {
+          console.log(`width=${body.bounds.min.x}`)
+          body.position.dump('removed');
           this.removeBody(body);
         }
       },
     }, options);
-    this.newObject(options);
+    const t = this.newObject(options);
+    console.log(t);
+    console.log(t.vertices);
   }
 
-  public trace(log: {}) {
+  public trace(log: any) {
     console.log(log);
     // this.settings.trace(log);
   }
 
 }
 
-const DefaultPuppyCode = {
-  main: (world: PuppyWorld) => {
+export type PuppyCode = {
+  world: any;
+  main: (puppy: any) => IterableIterator<number>;
+  errors: any[];
+  code: string;
+};
+
+const DefaultPuppyCode: PuppyCode = {
+  world: {},
+  main: function* (world: PuppyWorld) {
     world.newBody({
       shape: 'rectangle', position: world.newVec(0, 500),
       width: 1000, height: 100, isStatic: true,
@@ -497,7 +557,16 @@ const DefaultPuppyCode = {
       width: 60, height: 60,
       frictionAir: 0.1,
     });
-  }
+
+    world.print('Hello World');
+    for (var i = 0; i < 10; i++) {
+      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 50);
+      yield 200;
+    }
+    return 0;
+  },
+  errors: [],
+  code: '',
 }
 
 
@@ -512,12 +581,35 @@ export class Puppy {
     this.element = element;
   }
 
-  public compile(source: string) {
+  private eventMap: { [key: string]: ((event: any) => void)[] } = {};
 
+  public addEventListener(key: string, callback: (event: any) => void) {
+    if (this.eventMap[key] === undefined) {
+      this.eventMap[key] = [];
+    }
+    this.eventMap[key].push(callback);
+  }
+
+  public trigger(key: string, event: any) {
+    const callbacks = this.eventMap[key];
+    if (callbacks !== undefined) {
+      event.trigger = key;
+      for (const callback of callbacks) {
+        callback(event);
+      }
+    }
+    console.log(event); // for debugging
+  }
+
+  public compile(source: string) {
+    // send error event
+    for (const error of this.code.errors) {
+      this.trigger('compile', error);
+    }
   }
 
   public load() {
-    const world = new PuppyWorld(this.code || {});
+    const world = new PuppyWorld(this, this.code || {});
     if (this.engine !== null) {
       this.unload();
     }
@@ -541,16 +633,19 @@ export class Puppy {
     }
   }
 
-  public start() {
+  public async start() {
     if (this.render !== null && this.runner !== null && this.engine !== null) {
       //console.log(this.code);
-      this.code.main(this.engine.world as PuppyWorld);
       this.render.run();
       Runner.run(this.runner, this.engine!);
+      const puppy: any = this.engine.world;
+      for await (const time of this.code.main(puppy)) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
   }
 
-  public stop() {
+  public async stop() {
     if (this.render !== null && this.runner !== null) {
       this.render.stop();
       Runner.stop(this.runner);
@@ -569,8 +664,5 @@ export class Puppy {
   // }
 
   // public async execute_main() {
-  //   for await (const time of this.code.main(this.world)) {
-  //     await this.wait(time);
-  //   }
   // }
 }
