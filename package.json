@@ -1,0 +1,43 @@
+{
+  "name": "matter-ts",
+  "version": "0.1.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "Kimio Kuramitsu",
+  "license": "MIT License",
+  "devDependencies": {
+    "@types/jest": "^24.0.20",
+    "@types/node": "^12.7.12",
+    "jest": "^24.9.0",
+    "parcel": "^1.12.4",
+    "ts-jest": "^24.1.0",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.4"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "**/test/*.+(ts|tsx|js)"
+    ]
+  },
+  "dependencies": {
+    "matter-js": "^0.14.2"
+  }
+}
