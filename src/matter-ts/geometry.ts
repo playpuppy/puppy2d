@@ -434,7 +434,16 @@ export class Vertices {
       }
     }
     return vertices;
-  };
+  }
+
+  public static translate2(vertices: Vertex[], x: number, y: number, scalar = 1) {
+    for (var i = 0; i < vertices.length; i++) {
+      vertices[i].x += x * scalar;
+      vertices[i].y += y * scalar;
+    }
+    return vertices;
+  }
+
 
   /**
    * Rotates the set of vertices in-place.
@@ -716,6 +725,10 @@ export class Bounds {
     return bounds;
   }
 
+  public static create2(x: number, y: number, width: number, height: number) {
+    return new Bounds(x - width / 2, y - height / 2, x + width / 2, y + height / 2);
+  }
+
   /**
    * Updates bounds using the given vertices and extends the bounds given a velocity.
    * @method update
@@ -753,6 +766,13 @@ export class Bounds {
     }
   }
 
+  public update2(x: number, y: number, width: number, height: number) {
+    this.min.x = x - width / 2;
+    this.min.y = y - height / 2;
+    this.max.x = x + width / 2;
+    this.max.y = y + height / 2;
+  }
+
   /**
    * Returns true if the bounds contains the given point.
    * @method contains
@@ -760,6 +780,7 @@ export class Bounds {
    * @param {vector} point
    * @return {boolean} True if the bounds contain the point, otherwise false
    */
+
   public static contains(bounds: Bounds, point: Vector): boolean {
     return point.x >= bounds.min.x && point.x <= bounds.max.x
       && point.y >= bounds.min.y && point.y <= bounds.max.y;

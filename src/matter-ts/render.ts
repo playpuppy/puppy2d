@@ -367,11 +367,15 @@ export class Render {
     const allBodies = world.allBodies();
     const allConstraints = world.allConstraints();
     const background = options.wireframes ? options.wireframeBackground : world.background;
+    const timestamp = engine.timing.timestamp;
+
     var bodies: Body[] = [];
     var constraints: Constraint[] = [];
+    const paints: Body[] = world.allPaints();
+    const tickers: Body[] = world.allTickers();
 
     var event = {
-      timestamp: engine.timing.timestamp
+      timestamp: timestamp
     }
 
     Events.trigger(this, 'beforeRender', event);
@@ -437,7 +441,9 @@ export class Render {
 
     if (!options.wireframes || (engine.enableSleeping && options.showSleeping)) {
       // fully featured rendering of bodies
+      this.bodies(paints, context);
       this.bodies(bodies, context);
+      this.bodies(tickers, context);
     } else {
       if (options.showConvexHulls)
         this.bodyConvexHulls(bodies, context);
@@ -714,25 +720,22 @@ export class Render {
    */
 
   private bodies(bodies: Body[], context: CanvasRenderingContext2D) {
-    var c = context,
-      engine = this.engine,
-      options = this.options,
-      showInternalEdges = options.showInternalEdges || !options.wireframes,
-      body,
-      part,
-      i,
-      k;
+    const c = context;
+    const options = this.world as any;
+    const showInternalEdges = options.showInternalEdges || !options.wireframes;
     const globalAlpha = this.globalAlpha;
+    const defaultFont = options.defaultFont || "bold 24px 'Arial'";
+    const defaultFontColor = options.defaultFontColor || 'gray';
 
-    for (i = 0; i < bodies.length; i++) {
-      body = bodies[i];
+    for (var i = 0; i < bodies.length; i++) {
+      const body = bodies[i];
 
       if (!body.visible)
         continue;
 
       // handle compound parts
-      for (k = body.parts.length > 1 ? 1 : 0; k < body.parts.length; k++) {
-        part = body.parts[k];
+      for (var k = body.parts.length > 1 ? 1 : 0; k < body.parts.length; k++) {
+        var part = body.parts[k];
 
         if (!part.visible)
           continue;
@@ -803,6 +806,39 @@ export class Render {
           }
         }
         c.globalAlpha = globalAlpha;
+      }
+
+      // text, 
+      const ticker: any = body;
+      if (ticker.textRef !== undefined) {
+        const text: string = ticker.textRef(body);
+        const cx = body.position.x;
+        const cy = body.position.y - 10;
+        c.save();
+        c.font = ticker.font || defaultFont;
+        c.fillStyle = ticker.fontColor || defaultFontColor;
+        if (ticker.caption) {
+          c.textAlign = 'left';
+          const width = ticker.width || 100;
+          c.fillText(ticker.caption, cx - width / 2, cy);
+          c.textAlign = 'right';
+          c.fillText(text, cx + width / 2, cy);
+        }
+        else {
+          c.textAlign = 'center';
+          if (!ticker.width) {
+            const m = c.measureText(text);
+            ticker.width = m.width;
+            body.translate2(m.width / 2, 0);
+            body.bounds.update2(body.position.x, body.position.y, m.width, 30);
+          }
+          c.fillText(text, cx, cy);
+        }
+        c.restore();
+      }
+      // quick anime
+      if (ticker.move) {
+        ticker.move(body, options.timestamp/*FIXME*/);
       }
     }
   }

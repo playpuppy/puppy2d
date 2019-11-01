@@ -5,7 +5,7 @@ import { Render } from './matter-ts/render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { Lib } from './libpuppy2d';
-import { Type } from './puppy';
+//import { Type } from './puppy';
 
 // puppy extension
 
@@ -280,8 +280,12 @@ const DefaultPuppyOption: any = {
 export class PuppyWorld extends World {
   public width: number;
   public height: number;
+  public timestamp = 0;
   public colors: string[];
   public background = '';
+  public vars: any = {};
+  paints: Body[] = [];
+  tickers: Body[] = [];
 
   public constructor(options: any = {}) {
     super(Object.assign(options, { id: 0 }));
@@ -292,10 +296,46 @@ export class PuppyWorld extends World {
     this.colors = chooseColorScheme(options.colorScheme);
   }
 
+  public allPaints() {
+    return this.paints;
+  }
+
+  public allTickers() {
+    return this.tickers;
+  }
+
   private uniqueId = 1;
 
   public newId() {
     return this.uniqueId++;
+  }
+
+  public addBody(body: Body) {
+    if (body.shape === 'paint') {
+      this.paints.push(body);
+    }
+    if (body.shape === 'ticker') {
+      this.tickers.push(body);
+    }
+    return super.addBody(body);
+  }
+
+  public removeBody(body: Body) {
+    if (body.shape === 'paint') {
+      const position = Common.indexOf(this.paints, body);
+      if (position !== -1) {
+        this.paints.splice(position, 1);
+        this.setModified(true, true, false);
+      }
+    }
+    if (body.shape === 'ticker') {
+      const position = Common.indexOf(this.tickers, body);
+      if (position !== -1) {
+        this.paints.splice(position, 1);
+        this.setModified(true, true, false);
+      }
+    }
+    return super.removeBody(body);
   }
 
   public newVec(ux?: number, uy?: number) {
@@ -340,6 +380,71 @@ export class PuppyWorld extends World {
 
   // from puppy vm
 
+  // public async input(msg?: string) {
+  //   const cahce = window.sessionStorage.getItem('/input/cahche');
+  //   if (this.inTimeLeap && cahce) {
+  //     return cahce;
+  //   }
+  //   this.runner!.enabled = false;
+  //   const x = await getInputValue(msg ? msg : '');
+  //   this.runner!.enabled = true;
+  //   this.waitForRun(500);
+  //   window.sessionStorage.setItem(`/input/cahche`, x);
+  //   console.log(`input ${x}`);
+  //   return x;
+  // }
+
+  // public async input0(console?: string) {
+  //   this.runner!.enabled = false;
+  //   const awaitForClick = target => {
+  //     return new Promise(resolve => {
+  //       // 処理A
+  //       const listener = resolve; // 処理B
+  //       target.addEventListener('click', listener, { once: true }); // 処理C
+  //     });
+  //   };
+  //   const text = document.getElementById('inputtext') as HTMLInputElement;
+  //   const f = async () => {
+  //     const target = document.querySelector('#submitInput');
+  //     let Text = '';
+  //     document.getElementById('submitInput')!.onclick = () => {
+  //       document.getElementById('myOverlay')!.style.display = 'none';
+  //       Text = text.value;
+  //       text.value = '';
+  //     };
+  //     await awaitForClick(target);
+  //     return Text;
+  //   };
+  //   text.placeholder = console ? console : 'Input here';
+  //   document.getElementById('myOverlay')!.style.display = 'block';
+  //   const x = await f();
+  //   this.runner!.enabled = true;
+  //   this.waitForRun(500);
+  //   return x;
+  // }
+
+  public print(text: string, options: any = {}) {
+    const world = this;
+    const x = this.bounds.max.x;
+    const y = this.height * (Math.random() * 0.9 + 0.05);
+    options = Object.assign({
+      textRef: (body: Body) => `${text}`,
+      position: new Vector(x, y),
+      shape: 'ticker',
+      move: (body: Body, time: number) => {
+        body.translate2(-5, 0);
+        if (body.bounds.max.x < world.bounds.min.x) {
+          this.removeBody(body);
+        }
+      },
+    }, options);
+    this.newObject(options);
+  }
+
+  public trace(log: {}) {
+    console.log(log);
+    // this.settings.trace(log);
+  }
 
 }
 

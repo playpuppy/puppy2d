@@ -163,8 +163,8 @@ export class Common {
     return -1;
   }
 
-  public static choose<T>(choices: T[]): T {
-    return choices[Math.floor(Math.random() * choices.length)];
+  public static choose<T>(choices: T[], start = 0): T {
+    return choices[Math.floor(Math.random() * choices.length - start) + start];
   }
 
 }

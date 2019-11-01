@@ -55,6 +55,7 @@ export class Body {
   public id: number = -1;
   public type = 'body';
   public label = 'Body';
+  public shape = '';
   public parts: Body[] = []; //
   //plugin: { },
   public position: Vector = new Vector(); //{ x: 0, y: 0 },
@@ -403,6 +404,21 @@ export class Body {
     }
   }
 
+  public setPosition2(x: number, y: number) {
+    const deltaX = this.position.x - x;
+    const deltaY = this.position.y - y;
+    this.positionPrev.x += deltaX;
+    this.positionPrev.y += deltaY;
+
+    for (var i = 0; i < this.parts.length; i++) {
+      var part = this.parts[i];
+      part.position.x += deltaX;
+      part.position.y += deltaY;
+      Vertices.translate2(part.vertices, deltaX, deltaY);
+      Bounds.update(part.bounds, part.vertices, this.velocity);
+    }
+  }
+
   /**
    * Sets the angle of the body instantly. Angular velocity, position, force etc. are unchanged.
    * @method setAngle
@@ -462,6 +478,10 @@ export class Body {
 
   public translate(translation: Vector) {
     this.setPosition(Vector.add(this.position, translation));
+  }
+
+  public translate2(x: number, y: number) {
+    this.setPosition2(this.position.x + x, this.position.y + y);
   }
 
   /**
