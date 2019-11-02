@@ -5,6 +5,7 @@ import { Render } from './matter-ts/render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { Lib } from './libpuppy2d';
+import { Bodies } from './matter-ts/factory';
 //import { Type } from './puppy';
 
 // puppy extension
@@ -211,6 +212,19 @@ const polygon = (world: PuppyWorld, options: any, sides: number, radius: number)
   return options;
 }
 
+const label = (world: PuppyWorld, options: any) => {
+  const width = (!options.width) ? 100 : options.width;
+  const height = (!options.height) ? 30 : options.height;
+  vertices(options, [0, 0, width, 0, width, height, 0, height]);
+  if (!options.fillStyle) {
+    options.fillStyle = '#000000';
+    options.opacity = 0;
+  }
+  options.shape = 'ticker';
+  return options;
+}
+
+
 export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => any } = {
   'rectangle': (world: PuppyWorld, options: any) => {
     const width = (options.width = (!options.width) ? 100 : options.width);
@@ -232,15 +246,22 @@ export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => a
     return polygon(world, options, sides, radius);
   },
   'ticker': (world: PuppyWorld, options: any) => {
-    const width = (options.width = (!options.width) ? 0 : options.width);
-    const height = (options.height = (!options.height) ? 0 : options.height);
-    if (width === 0) {
-      vertices(options, [0, 0]);
+    return label(world, options);
+  },
+  'var': (world: PuppyWorld, options: any) => {
+    const name = options.name;
+    options.caption = options.caption || name;
+    if (name === 'TIME') {
+      options.textRef = (body: Body) => {
+        return `${(world.timestamp / 1000) | 0}`;
+      }
     }
     else {
-      vertices(options, [0, 0, width, 0, width, height, 0, height]);
+      options.textRef = (body: Body) => {
+        return `${world.vars[name]}`;
+      }
     }
-    return options;
+    return label(world, options);
   },
   'paint': (world: PuppyWorld, options: any) => {
     const radius = options.circleRadius = getradius(options, 10);
@@ -414,6 +435,27 @@ export class PuppyWorld extends World {
     return constraint;
   }
 
+  public Rectangle(x: number, y: number, width: number, height: number, options: any = {}) {
+    options = Object.assign(options, {
+      shape: 'rectangle', position: this.newVec(x, y),
+      width: width, height: height
+    });
+    return this.newBody(options);
+
+  }
+
+  public Circle(x: number, y: number, radius = 25, options: any = {}) {
+
+  }
+
+  public Variable(name: string, x: number, y: number, width: number, options: any = {}) {
+    options = Object.assign(options, {
+      shape: 'var', position: this.newVec(x, y), width: width,
+      name: name, caption: name,
+    });
+    return this.newBody(options);
+  }
+
   // from puppy vm
 
   // public async input(msg?: string) {
@@ -471,8 +513,9 @@ export class PuppyWorld extends World {
 
   public print(text: string, options: any = {}) {
     const world = this;
-    const x = this.bounds.max.x;
-    const y = - this.height / 2 * (Math.random() * 0.9 + 0.05);
+    const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
+    const x = bounds.max.x;
+    const y = bounds.randomY(50);
     options = Object.assign({
       textRef: (body: Body) => `${text}`,
       position: new Vector(x, y),
@@ -482,15 +525,51 @@ export class PuppyWorld extends World {
         body.translate2(-2, 0);
         //body.position.dump(`print`);
         if (body.position.x + 100 < world.bounds.min.x) {
-          console.log(`width=${body.bounds.min.x}`)
-          body.position.dump('removed');
+          console.log(`FIXME width=${body.bounds.min.x}`)
+          //body.position.dump('removed');
           this.removeBody(body);
         }
       },
     }, options);
-    const t = this.newObject(options);
-    console.log(t);
-    console.log(t.vertices);
+    this.newObject(options);
+  }
+
+  public line(linenum: number) {
+    this.base.trigger('line', {
+      status: 'executed',
+      linenum: linenum
+    });
+  }
+
+  private token(tkid: number, event: any) {
+    return event;
+  }
+
+  public v(value: any, tkid: number) {
+    this.base.trigger('variable', this.token(tkid, {
+      value: value,
+    }));
+    return this.v;
+  }
+
+  public ckint(value: any, tkid: number) {
+    if (typeof value !== 'number') {
+      this.base.trigger('error', {
+        status: 'runtime',
+        value: value,
+      });
+    }
+    return this.v;
+  }
+
+  public ckstr(value: any, tkid: number) {
+    if (typeof value !== 'string') {
+      this.base.trigger('error', {
+        status: 'runtime',
+        value: value,
+      });
+    }
+    return this.v;
   }
 
   public trace(log: any) {
@@ -506,6 +585,13 @@ export type PuppyCode = {
   errors: any[];
   code: string;
 };
+
+const trail = (body: Body, timestamp: number, world: PuppyWorld) => {
+  if (Math.abs(body.position.x - body.positionPrev.x) > 2) {
+    body.position.dump('moved');
+    world.paint(body.position.x, body.position.y, 10, body.fillStyle);
+  }
+}
 
 const DefaultPuppyCode: PuppyCode = {
   world: {},
@@ -535,6 +621,7 @@ const DefaultPuppyCode: PuppyCode = {
       position: world.newVec(100, 100),
       width: 60, height: 60,
       frictionAir: 0.001,
+      move: trail,
     });
 
     world.newBody({
@@ -557,10 +644,11 @@ const DefaultPuppyCode: PuppyCode = {
       width: 60, height: 60,
       frictionAir: 0.1,
     });
-
-    world.print('Hello World');
-    for (var i = 0; i < 10; i++) {
-      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 50);
+    world.Variable('TIME', 320, -400, 260);
+    world.Variable('MOUSE', 320, -440, 260);
+    for (var i = 0; i < 100; i++) {
+      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      world.print('Hello World');
       yield 200;
     }
     return 0;
@@ -633,13 +721,19 @@ export class Puppy {
     }
   }
 
+  private stopping = false;
+
   public async start() {
     if (this.render !== null && this.runner !== null && this.engine !== null) {
       //console.log(this.code);
       this.render.run();
       Runner.run(this.runner, this.engine!);
       const puppy: any = this.engine.world;
+      this.stopping = false;
       for await (const time of this.code.main(puppy)) {
+        if (this.stopping) {
+          break;
+        }
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
@@ -647,6 +741,7 @@ export class Puppy {
 
   public async stop() {
     if (this.render !== null && this.runner !== null) {
+      this.stopping = true;
       this.render.stop();
       Runner.stop(this.runner);
     }

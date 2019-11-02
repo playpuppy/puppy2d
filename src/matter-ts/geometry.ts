@@ -241,6 +241,10 @@ export class Vector {
     new Vector(), new Vector()
   ];
 
+  public toString() {
+    return `(${this.x | 0}, ${this.y | 0})`;
+  }
+
   public dump(msg = '') {
     console.log(`${msg} (${this.x | 0}, ${this.y | 0})`)
   }
@@ -706,6 +710,30 @@ export class Bounds {
     this.min = new Vector(minX, minY);
     this.max = new Vector(maxX, maxY);
   }
+
+  public getWidth() {
+    return this.max.x - this.min.x;
+  }
+
+  public getHeight() {
+    const maxY = this.max.y;
+    const minY = this.min.y;
+    return maxY > minY ? maxY - minY : minY - maxY;
+  }
+
+  public randomX(mergin = 0) {
+    const w = (this.getWidth() - mergin * 2) * Math.random();
+    return this.min.x + (w + mergin);
+  }
+
+  public randomY(mergin = 0) {
+    const h = (this.getHeight() - mergin * 2) * Math.random();
+    const maxY = this.max.y;
+    const minY = this.min.y;
+    return maxY < minY ? maxY + (h + mergin) : minY + (h + mergin);
+  }
+
+
 
   public static Null = new Bounds(0, 0, 0, 0);
 

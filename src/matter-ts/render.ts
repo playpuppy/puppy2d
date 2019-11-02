@@ -402,6 +402,9 @@ export class Render {
     var event = {
       timestamp: timestamp
     }
+    world.timestamp = timestamp;
+    world.vars['MOUSE'] = engine.mouse.position;
+    world.vars['VIEWPORT'] = this.bounds;
 
     Events.trigger(this, 'beforeRender', event);
 
@@ -872,7 +875,7 @@ export class Render {
       }
       // quick anime
       if (ticker.move) {
-        ticker.move(body, options.timestamp/*FIXME*/);
+        ticker.move(body, options.timestamp, this.world/*FIXME*/);
       }
     }
   }
