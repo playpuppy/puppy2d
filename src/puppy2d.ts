@@ -5,7 +5,7 @@ import { Render } from './matter-ts/render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { Lib } from './libpuppy2d';
-import { Bodies } from './matter-ts/factory';
+//import { Bodies } from './matter-ts/factory';
 //import { Type } from './puppy';
 
 // puppy extension
@@ -336,6 +336,7 @@ export class PuppyWorld extends World {
   public colors: string[];
   public background = '';
   public vars: any = {};
+  public lib: Lib;
   paints: Body[] = [];
   tickers: Body[] = [];
 
@@ -347,6 +348,7 @@ export class PuppyWorld extends World {
     this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
     this.background = options.background || '#F7F6EB';
     this.colors = chooseColorScheme(options.colorScheme);
+    this.lib = new Lib(base);
   }
 
   public allPaints() {
@@ -596,54 +598,16 @@ const trail = (body: Body, timestamp: number, world: PuppyWorld) => {
 const DefaultPuppyCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
-    world.newBody({
-      shape: 'rectangle', position: world.newVec(0, 500),
-      width: 1000, height: 100, isStatic: true,
-    });
+    world.Rectangle(0, 500, 1000, 100, { isStatic: true });
+    world.Rectangle(0, -500, 1000, 100, { isStatic: true });
+    world.Rectangle(500, 0, 100, 1000, { isStatic: true });
+    world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
 
-    world.newBody({
-      shape: 'rectangle', position: world.newVec(0, -500),
-      width: 1000, height: 100, isStatic: true,
-    });
+    world.Rectangle(200, 200, 60, 60, { frictionAir: 0.001, move: trail });
+    world.Rectangle(200, -200, 60, 60, { frictionAir: 0.01, move: trail });
+    world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
+    world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
 
-    world.newBody({
-      shape: 'rectangle', position: world.newVec(500, 0),
-      width: 100, height: 1000, isStatic: true,
-    });
-
-    world.newBody({
-      shape: 'rectangle', position: world.newVec(-500, 0),
-      width: 100, height: 1000, isStatic: true,
-    });
-
-    world.newBody({
-      shape: 'rectangle',
-      position: world.newVec(100, 100),
-      width: 60, height: 60,
-      frictionAir: 0.001,
-      move: trail,
-    });
-
-    world.newBody({
-      shape: 'rectangle',
-      position: world.newVec(-100, 100),
-      width: 60, height: 60,
-      frictionAir: 0.001,
-    });
-
-    world.newBody({
-      shape: 'rectangle',
-      position: world.newVec(100, -100),
-      width: 60, height: 60,
-      frictionAir: 0.1,
-    });
-
-    world.newBody({
-      shape: 'rectangle',
-      position: world.newVec(-100, -100),
-      width: 60, height: 60,
-      frictionAir: 0.1,
-    });
     world.Variable('TIME', 320, -400, 260);
     world.Variable('MOUSE', 320, -440, 260);
     for (var i = 0; i < 100; i++) {
@@ -656,7 +620,6 @@ const DefaultPuppyCode: PuppyCode = {
   errors: [],
   code: '',
 }
-
 
 export class Puppy {
   element: HTMLElement;

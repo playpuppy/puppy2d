@@ -1,4 +1,10 @@
 export class Lib {
+  world: any;
+
+  public constructor(world: any) {
+    this.world = world;
+  }
+
 
   /* python */
 
@@ -68,7 +74,6 @@ export class Lib {
   public anyIn(x: any, a: any) {
     return a.indexOf(x) >= 0;
   }
-
 
   public range(x: number, y?: number, z?: number) {
     let start = 0;
