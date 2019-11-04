@@ -194,25 +194,36 @@ export class Render {
     }
   }
 
+  showingMessage: string | null = null;
+
+  public show(message: string, time = 1000) {
+    this.showingMessage = message;
+    if (this.showingMessage !== null) {
+      setTimeout(() => { this.showingMessage = null }, time);
+    }
+  }
+
   /**
    * Continuously updates the render canvas on the `requestAnimationFrame` event.
    * @method run
    * @param {render} this
    */
 
-  public run() {
-    document.addEventListener('keydown', (event) => {
-      var keyName = event.key;
+  public run(message?: string) {
+    // document.addEventListener('keydown', (event) => {
+    //   var keyName = event.key;
 
-      if (event.ctrlKey) {
-        console.log(`keydown:Ctrl + ${keyName}`);
-      } else if (event.shiftKey) {
-        console.log(`keydown:Shift + ${keyName}`);
-      } else {
-        console.log(`keydown:${keyName}`);
-      }
-    });
-
+    //   if (event.ctrlKey) {
+    //     console.log(`keydown:Ctrl + ${keyName}`);
+    //   } else if (event.shiftKey) {
+    //     console.log(`keydown:Shift + ${keyName}`);
+    //   } else {
+    //     console.log(`keydown:${keyName}`);
+    //   }
+    // });
+    if (message !== undefined) {
+      this.show(message);
+    }
     if (_requestAnimationFrame !== undefined) {
       const loop = (time: number) => {
         this.frameRequestId = _requestAnimationFrame(loop);
@@ -227,9 +238,19 @@ export class Render {
    * @method stop
    * @param {render} render
    */
-  public stop() {
-    if (_cancelAnimationFrame !== undefined) {
-      _cancelAnimationFrame(this.frameRequestId);
+  public stop(message?: string) {
+    if (message !== undefined) {
+      this.show(message);
+      setTimeout(() => {
+        _cancelAnimationFrame(this.frameRequestId);
+        //this.canvas.style.filter = 'sepia(50%)';
+        this.canvas.style.filter = 'grayscale(100%)';
+      }, 100);
+    }
+    else {
+      if (_cancelAnimationFrame !== undefined) {
+        _cancelAnimationFrame(this.frameRequestId);
+      }
     }
   }
 
@@ -519,6 +540,18 @@ export class Render {
       // revert view transforms
       this.endViewTransform();
     }
+    if (this.showingMessage !== null) {
+      context.font = '96px Arial 🎨';
+      const w = context.measureText(this.showingMessage).width;
+      const cx = this.canvas.width / 2;
+      const cy = this.canvas.height / 2;
+      context.fillStyle = 'rgba(0,0,0,0.75)';
+      context.fillRect(cx - w, cy - w, w + w, w + w);
+      context.fillStyle = 'white';
+      context.textAlign = 'center';
+      context.fillText(this.showingMessage, cx, cy + 40);
+    }
+
     Events.trigger(this, 'afterRender', event);
     //console.log(world.isModified);
   }

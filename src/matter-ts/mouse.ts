@@ -135,7 +135,7 @@ export class Mouse {
     element.addEventListener('touchmove', this.mousemove);
     element.addEventListener('touchstart', this.mousedown);
     element.addEventListener('touchend', this.mouseup);
-  };
+  }
 
   /**
    * Clears all captured source events.
@@ -159,7 +159,7 @@ export class Mouse {
    */
 
   public setOffset(offset: Vector) {
-    console.log(`offset ${offset.x} ${offset.y}`)
+    //console.log(`offset ${offset.x} ${offset.y}`)
     this.offset.x = offset.x;
     this.offset.y = offset.y;
     this.position.x = this.absolute.x * this.scale.x + this.offset.x;
@@ -174,7 +174,7 @@ export class Mouse {
    */
 
   public setScale(scale: Vector) {
-    console.log(`scale ${scale.x} ${scale.y}`)
+    //console.log(`scale ${scale.x} ${scale.y}`)
     this.scale.x = scale.x;
     this.scale.y = scale.y;
     this.position.x = this.absolute.x * this.scale.x + this.offset.x;
@@ -243,16 +243,6 @@ export class MouseConstraint {
 
   public constructor(engine: Engine, options?: any) {
     var mouse = engine.mouse!;
-    // if (!mouse) {
-    //   if (engine && engine.render && engine.render.canvas) {
-    //     mouse = Mouse.create(engine.render.canvas);
-    //   } else if (options && options.element) {
-    //     mouse = Mouse.create(options.element);
-    //   } else {
-    //     mouse = Mouse.create();
-    //     Common.warn('MouseConstraint.create: options.mouse was undefined, options.element was undefined, may not function as expected');
-    //   }
-    // }
     this.constraint = new Constraint({
       label: 'Mouse Constraint',
       pointA: mouse.position,
@@ -299,7 +289,7 @@ export class MouseConstraint {
           if (Bounds.contains(body.bounds, mouse.position)
             && Detector.canCollide(body.collisionFilter, mouseConstraint.collisionFilter)) {
             for (var j = body.parts.length > 1 ? 1 : 0; j < body.parts.length; j++) {
-              var part = body.parts[j];
+              const part = body.parts[j];
               if (Vertices.contains(part.vertices, mouse.position)) {
                 constraint.pointA = mouse.position;
                 constraint.bodyB = mouseConstraint.body = body;
@@ -307,7 +297,7 @@ export class MouseConstraint {
                 constraint.angleB = body.angle;
                 Sleeping.set(body, false);
                 Events.trigger(mouseConstraint, 'startdrag', { mouse: mouse, body: body });
-                console.log(`found ${body.id} at ${mouse.position.x} ${mouse.position.y}`)
+                console.log(`clicked ${body.id} at ${mouse.position.x} ${mouse.position.y}`)
                 break;
               }
             }
@@ -320,7 +310,6 @@ export class MouseConstraint {
     } else {
       constraint.bodyB = mouseConstraint.body = null;
       constraint.pointB = null;
-
       if (body)
         Events.trigger(mouseConstraint, 'enddrag', { mouse: mouse, body: body });
     }
@@ -348,5 +337,4 @@ export class MouseConstraint {
     // reset the mouse state ready for the next step
     mouse.clearSourceEvents();
   }
-
 }

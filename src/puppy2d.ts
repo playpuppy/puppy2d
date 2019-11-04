@@ -4,9 +4,10 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { Render } from './matter-ts/render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { Lib } from './libpuppy2d';
+import { Lib } from './lang/libpuppy2d';
+import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
+import { ifError } from 'assert';
 //import { Bodies } from './matter-ts/factory';
-//import { Type } from './puppy';
 
 // puppy extension
 
@@ -154,6 +155,41 @@ export const chooseColorScheme = (key: string) => {
     targets[i].style.borderColor = cs[i % cs.length];
   }
   return cs;
+}
+
+const colorToNumber = (colorString: string) => {
+  colorString = colorString.replace('#', '');
+  if (colorString.length == 3) {
+    colorString = colorString.charAt(0) + colorString.charAt(0)
+      + colorString.charAt(1) + colorString.charAt(1)
+      + colorString.charAt(2) + colorString.charAt(2);
+  }
+  return {
+    r: parseInt(colorString.charAt(0) + colorString.charAt(1), 16),
+    g: parseInt(colorString.charAt(2) + colorString.charAt(3), 16),
+    b: parseInt(colorString.charAt(4) + colorString.charAt(5), 16),
+  }
+}
+
+const RGBtoHSV = (r: number, g: number, b: number) => {
+  var max = Math.max(r, g, b), min = Math.min(r, g, b),
+    d = max - min,
+    h,
+    s = (max === 0 ? 0 : d / max),
+    v = max / 255;
+
+  switch (max) {
+    case min: h = 0; break;
+    case r: h = (g - b) + d * (g < b ? 6 : 0); h /= 6 * d; break;
+    case g: h = (b - r) + d * 2; h /= 6 * d; break;
+    case b: h = (r - g) + d * 4; h /= 6 * d; break;
+  }
+
+  return {
+    h: h,
+    s: s,
+    v: v
+  };
 }
 
 const common = (world: PuppyWorld, options: any) => {
@@ -581,12 +617,12 @@ export class PuppyWorld extends World {
 
 }
 
-export type PuppyCode = {
-  world: any;
-  main: (puppy: any) => IterableIterator<number>;
-  errors: any[];
-  code: string;
-};
+// export type PuppyCode = {
+//   world: any;
+//   main: (puppy: any) => IterableIterator<number>;
+//   errors: any[];
+//   code: string;
+// };
 
 const trail = (body: Body, timestamp: number, world: PuppyWorld) => {
   if (Math.abs(body.position.x - body.positionPrev.x) > 2) {
@@ -610,9 +646,8 @@ const DefaultPuppyCode: PuppyCode = {
 
     world.Variable('TIME', 320, -400, 260);
     world.Variable('MOUSE', 320, -440, 260);
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 10; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-      world.print('Hello World');
       yield 200;
     }
     return 0;
@@ -627,9 +662,12 @@ export class Puppy {
   public engine: Engine | null = null;
   public render: Render | null = null;
   public runner: Runner | null = null;
+  runtime: IterableIterator<number> | null = null;
 
   public constructor(element: HTMLElement, options: any = {}) {
     this.element = element;
+    this.load();
+    this.start();
   }
 
   private eventMap: { [key: string]: ((event: any) => void)[] } = {};
@@ -652,15 +690,31 @@ export class Puppy {
     console.log(event); // for debugging
   }
 
-  public compile(source: string) {
-    // send error event
-    for (const error of this.code.errors) {
-      this.trigger('compile', error);
+  public load(source?: string, autorun = true) {
+    if (source !== undefined) {
+      var hasError = false;
+      const compiled = PuppyCompile({ source });
+      for (const error of compiled.errors) {
+        if (error.type === 'error') {
+          hasError = true;
+          this.trigger('error', error);
+        }
+        else if (error.type === 'warning') {
+          this.trigger('warning', error);
+        }
+        else {
+          this.trigger('info', error);
+        }
+      }
+      if (hasError) {
+        return false;
+      }
+      if (!autorun) {
+        return true;
+      }
+      this.code = compiled;
     }
-  }
-
-  public load() {
-    const world = new PuppyWorld(this, this.code || {});
+    const world = new PuppyWorld(this, this.code);
     if (this.engine !== null) {
       this.unload();
     }
@@ -670,42 +724,57 @@ export class Puppy {
     const hw = world.width / 2;
     const hh = world.height / 2;
     this.render.lookAt(new Bounds(-hw, hh, hw, -hh));
+    this.runtime = this.code.main(world);
+    return true;
   }
 
   private unload() {
-    this.stop();
-    if (this.engine !== null) {
-      this.engine.clear();
-      this.engine = null;
-    }
+    this.pause();
     if (this.render !== null) {
       this.render.clear();
       this.render = null;
     }
-  }
-
-  private stopping = false;
-
-  public async start() {
-    if (this.render !== null && this.runner !== null && this.engine !== null) {
-      //console.log(this.code);
-      this.render.run();
-      Runner.run(this.runner, this.engine!);
-      const puppy: any = this.engine.world;
-      this.stopping = false;
-      for await (const time of this.code.main(puppy)) {
-        if (this.stopping) {
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+    if (this.engine !== null) {
+      this.engine.clear();
+      this.engine = null;
     }
   }
 
-  public async stop() {
+  //private running = false;
+  private pausing = false;
+
+  public start() {
+    if (this.runner !== null && this.runtime != null) {
+      //console.log(this.code);
+      //this.running = true;
+      this.pausing = false;
+      this.render!.run('▶︎');  // FIXME
+      Runner.run(this.runner, this.engine!);
+      this.execAll(this.runtime);
+    }
+  }
+
+  execAll(runtime: IterableIterator<number>) {
+    if (this.pausing) {
+      setTimeout(() => { this.execAll(runtime) }, 300);
+    }
+    else {
+      const res = runtime.next();
+      if (res.done) {
+        setTimeout(() => {
+          this.pause();
+        }, 5000);
+        return;
+      }
+      setTimeout(() => { this.execAll(runtime) }, res.value);
+    }
+  }
+
+  public pause() {
     if (this.render !== null && this.runner !== null) {
-      this.stopping = true;
-      this.render.stop();
+      //this.running = true; // still runing
+      this.pausing = true;
+      this.render.stop('‖'); // FIXME
       Runner.stop(this.runner);
     }
   }
