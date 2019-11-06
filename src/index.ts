@@ -1,6 +1,10 @@
 
 //import { Common } from './core';
-import { Puppy } from './puppy2d';
+export { Puppy } from './puppy2d';
+export { ErrorLog } from './lang/puppy';
+
+// simple usage
+import  { Puppy } from './puppy2d';
 
 const settings: any = {
 }
