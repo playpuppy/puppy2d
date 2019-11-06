@@ -1,15 +1,23 @@
 {
-  "name": "matter-ts",
-  "version": "0.1.1",
-  "description": "",
+  "name": "puppy2d",
+  "version": "1.0.0",
+  "description": "Puppy for 2D",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
     "test": "jest"
   },
-  "keywords": [],
+  "keywords": ["physics engine", "programming language"],
   "author": "Kimio Kuramitsu",
   "license": "MIT License",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/playpuppy/puppy2d.git"
+  },
+  "bugs": {
+    "url": "https://github.com/playpuppy/puppy2d/issues"
+  },
+  "homepage": "https://github.com/playpuppy/puppy2d",
   "devDependencies": {
     "@types/jest": "^24.0.20",
     "@types/node": "^12.7.12",
