@@ -843,6 +843,23 @@ export class Puppy {
     }
   }
 
+  public resize(width: number, height: number) {
+    // console.log(`'resize width ${width} ${this.canvas.clientWidth} height ${height} ${this.canvas.clientHeight}`);
+    const render = this.render!;
+    const canvas = render.canvas;
+    let w = width;
+    let h = (width * canvas.height) / canvas.width;
+    if (h > height) {
+      h = height;
+      w = (height * canvas.width) / canvas.height;
+    }
+    canvas.setAttribute('width', w.toString());
+    canvas.setAttribute('height', h.toString());
+    // console.log('resize width {this.render.options.width} => {w} height {this.render.options.height} => {h}');
+    render.options.width = w;
+    render.options.height = h;
+  }
+
   // public async wait(msec: number) {
   //   await new Promise(resolve => setTimeout(resolve, msec));
   // }
