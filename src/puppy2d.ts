@@ -521,7 +521,11 @@ export class PuppyWorld extends World {
   }
 
   public Circle(x: number, y: number, radius = 25, options: any = {}) {
-
+    options = Object.assign(options, {
+      shape: 'circle', position: this.newVec(x, y),
+      circleRadius: radius
+    });
+    return this.newBody(options);
   }
 
   public Variable(name: string, x: number, y: number, width: number, options: any = {}) {
