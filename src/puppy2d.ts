@@ -140,7 +140,7 @@ const PuppyColorScheme: { [key: string]: string[] } = {
     '#946761', '#b80040', '#4eacb8', '#7f1f69', '#c8b568', '#147472',
     '#1d518b', '#b1623b', '#95a578', '#b9b327', '#af508a', '#dab100',
   ],
-};
+}
 
 export const chooseColorScheme = (key: string) => {
   const cs =
@@ -190,6 +190,44 @@ const RGBtoHSV = (r: number, g: number, b: number) => {
     s: s,
     v: v
   };
+}
+
+const HSVtoRGB = (h: number, s: number, v: number) => {
+  var r, g, b, i, f, p, q, t;
+  i = Math.floor(h * 6);
+  f = h * 6 - i;
+  p = v * (1 - s);
+  q = v * (1 - f * s);
+  t = v * (1 - (1 - f) * s);
+  switch (i % 6) {
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    default: r = v, g = p, b = q; break;
+  }
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255)
+  };
+}
+
+const brightness = (color: string | string[]) => {
+  if (Array.isArray(color)) {
+    var d = 1;
+    for (const c of color) {
+      const rgb = colorToNumber(c);
+      const hsv = RGBtoHSV(rgb.r, rgb.g, rgb.b);
+      //console.log(`${c} ${hsv.v}`);
+      d = Math.min(hsv.v, d);
+    }
+    return d;
+  }
+  const rgb = colorToNumber(color);
+  const hsv = RGBtoHSV(rgb.r, rgb.g, rgb.b);
+  return hsv.v;
 }
 
 const common = (world: PuppyWorld, options: any) => {
@@ -363,13 +401,13 @@ const DefaultPuppyOption: any = {
   background: '#F7F6EB',
 }
 
-
 export class PuppyWorld extends World {
   base: Puppy;
   public width: number;
   public height: number;
   public timestamp = 0;
   public colors: string[];
+  public darkmode: boolean;
   public background = '';
   public vars: any = {};
   public lib: Lib;
@@ -382,8 +420,10 @@ export class PuppyWorld extends World {
     this.width = options.width || 1000;
     this.height = options.height || this.width;
     this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
-    this.background = options.background || '#F7F6EB';
     this.colors = chooseColorScheme(options.colorScheme);
+    console.log(`brightness ${brightness(this.colors)}`);
+    this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
+    this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
     this.lib = new Lib(base);
   }
 
@@ -444,12 +484,10 @@ export class PuppyWorld extends World {
   }
 
   public newBody(options: any = {}) {
-    options.position.dump(`option`);
     const shape: string = options.shape in PuppyShape ? options.shape : 'rectangle';
     options = PuppyShape[shape](this, options);
     const body = new Body(common(this, options));
     this.addBody(body);
-    body.position.dump(`body ${body.id}`);
     return body;
   }
 
@@ -614,6 +652,32 @@ export class PuppyWorld extends World {
     console.log(log);
     // this.settings.trace(log);
   }
+
+  // lazy updates
+
+  private lazyUpdates: (() => void)[] = [];
+
+  public setLazy(key: string, target: any, value: any) {
+    this.lazyUpdates.push(() => {
+      target[key] = value;
+    })
+  }
+
+  public updateLazies() {
+    for (const f of this.lazyUpdates) {
+      f();
+    }
+    this.lazyUpdates = [];
+  }
+
+  public setpos(target: Body, position: Vector) {
+    this.lazyUpdates.push(() => {
+      target.setPosition(position);
+    })
+  }
+
+
+
 
 }
 
