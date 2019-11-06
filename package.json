@@ -1,13 +1,16 @@
 {
   "name": "puppy2d",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Puppy for 2D",
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest"
   },
-  "keywords": ["physics engine", "programming language"],
+  "keywords": [
+    "physics engine",
+    "programming language"
+  ],
   "author": "Kimio Kuramitsu",
   "license": "MIT License",
   "repository": {
