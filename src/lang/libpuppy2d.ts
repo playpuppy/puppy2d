@@ -8,41 +8,67 @@ export class Lib {
 
   /* python */
 
-  public static int(x: any): number {
+  public int(x: any): number {
     if (typeof x === 'number') {
       return x | 0;
-    }
-    if (typeof x === 'string') {
-      return Number.parseInt(x);
     }
     if (typeof x === 'boolean') {
       return x ? 1 : 0;
     }
+    if (typeof x === 'string') {
+      const v = Number.parseInt(x);
+      return Number.isNaN(v) ? 0 : v;
+    }
     return x | 0;
   }
 
-  public static float(x: any): number {
+  public float(x: any): number {
     if (typeof x === 'number') {
       return x;
-    }
-    if (typeof x === 'string') {
-      return Number.parseFloat(x);
     }
     if (typeof x === 'boolean') {
       return x ? 1.0 : 0.0;
     }
+    if (typeof x === 'string') {
+      const v = Number.parseFloat(x);
+      return Number.isNaN(v) ? 0 : v;
+
+    }
     return x;
   }
 
-  public static str(x: any): string {
-    if (typeof x === 'boolean') {
-      return x ? 'True' : 'False';
+  public str(obj: any): string {
+    if (typeof obj === 'number' || typeof obj === 'string') {
+      return `${obj}`;
     }
-    if (Array.isArray(x)) {
-      return '[' + x.map(x => this.str(x)).join(', ') + ']';
+    if (typeof obj === 'boolean') {
+      return obj ? 'True' : 'False';
     }
-    return `${x}`;
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(x => this.repr(x)).join(', ') + ']';
+    }
+    if (obj === undefined) {
+      return '';
+    }
+    if (obj.x && obj.y) {
+      return `(${obj.x}, ${obj.y})`;
+    }
+    if (obj.text) {
+      return obj.text;
+    }
+    return '{' + Object.keys(obj).map(key => `${key}: ${this.repr(obj[key])}`).join(', ') + '}'
   }
+
+  public repr(obj: any): string {
+    if (typeof obj === 'string') {
+      if (obj.indexOf('"') == -1) {
+        return `"${obj}"`
+      }
+      return `'${obj}'`
+    }
+    return this.str(obj);
+  }
+
 
   /* operator */
 
@@ -75,20 +101,15 @@ export class Lib {
     return a.indexOf(x) >= 0;
   }
 
-  public range(x: number, y?: number, z?: number) {
-    let start = 0;
-    let end = 0;
-    let step = 1;
-    if (y === undefined) {
-      end = x;
-    } else if (z !== undefined) {
-      start = x;
-      end = y;
-      step = z === 0 ? 1 : z;
-    } else {
-      start = x;
-      end = y;
-    }
+  public range1(x: number) {
+    return this.range(0, x, 0 < x ? 1 : -1);
+  }
+
+  public range2(x: number, y: number) {
+    return this.range(x, y, x < y ? 1 : -1);
+  }
+
+  public range(start: number, end: number, step: number) {
     const xs: number[] = [];
     if (start <= end) {
       if (step < 0) {
@@ -96,9 +117,8 @@ export class Lib {
       }
       for (let i = start; i < end; i += step) {
         xs.push(i);
-        if (xs.length > 100000) {
-          // safety break
-          break;
+        if (xs.length > 10000000) {
+          break; // for safety
         }
       }
     } else {
@@ -107,9 +127,8 @@ export class Lib {
       }
       for (let i = start; i > end; i += step) {
         xs.push(i);
-        if (xs.length > 100000) {
-          // safety break
-          break;
+        if (xs.length > 10000000) {
+          break; // for safety
         }
       }
     }
