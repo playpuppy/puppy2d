@@ -511,19 +511,22 @@ export class PuppyWorld extends World {
     return constraint;
   }
 
-  public Rectangle(x: number, y: number, width: number, height: number, options: any = {}) {
+  public Rectangle(x: number, y: number, width: number, height = width, options: any = {}) {
     options = Object.assign(options, {
       shape: 'rectangle', position: this.newVec(x, y),
       width: width, height: height
     });
     return this.newBody(options);
+  }
 
+  public Rectangle2(x: number, y: number, options: any = {}) {
+    return this.Rectangle(x, y, options.width || 50, options.height || 50, options);
   }
 
   public Circle(x: number, y: number, radius = 25, options: any = {}) {
     options = Object.assign(options, {
       shape: 'circle', position: this.newVec(x, y),
-      radius: radius
+      radius: radius,
     });
     return this.newBody(options);
   }
@@ -580,6 +583,10 @@ export class PuppyWorld extends World {
   //   this.waitForRun(500);
   //   return x;
   // }
+
+  public setGravity(x: number, y: number) {
+    this.gravity = new Vector(x, y);
+  }
 
   public paint(x: number, y: number, radius = 5, color?: string) {
     const options = {
