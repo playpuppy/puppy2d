@@ -1,11 +1,11 @@
 {
   "name": "puppy2d",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "Puppy for 2D",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
-    "generate_type": "dts",
+    "prepare": "npm run build",
     "test": "jest"
   },
   "keywords": [
