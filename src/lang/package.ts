@@ -83,6 +83,7 @@ const import_puppy2d: { [key: string]: Symbol } = {
   'Circle': sym('puppy.Circle', tFuncShape3, Visual),
   'Polygon': sym('puppy.Polygon', tFuncShape3, Visual),
   'Variable': sym('puppy.Variable', tFuncShape5),
+  'setGravity': sym('puppy.setGravity', ts.func(ts.Void, ts.Int, ts.Int)),
 
   // # 物体メソッド
   '.setPosition': sym('lib.setPosition', ts.func(ts.Void, ts.Matter, ts.Int, ts.Int)),
