@@ -523,10 +523,10 @@ export class PuppyWorld extends World {
     return this.Rectangle(x, y, options.width || 50, options.height || 50, options);
   }
 
-  public Circle(x: number, y: number, radius = 25, options: any = {}) {
+  public Circle(x: number, y: number, width = 50, options: any = {}) {
     options = Object.assign(options, {
       shape: 'circle', position: this.newVec(x, y),
-      radius: radius,
+      width: options.width || width,
     });
     return this.newBody(options);
   }
@@ -741,8 +741,10 @@ export class Puppy {
 
   public constructor(element: HTMLElement, options: any = {}) {
     this.element = element;
-    this.load();
-    this.start();
+    if (!options.jest) {
+      this.load();
+      this.start();
+    }
   }
 
   private eventMap: { [key: string]: ((event: any) => void)[] } = {};
@@ -801,6 +803,20 @@ export class Puppy {
     this.render.lookAt(new Bounds(-hw, hh, hw, -hh));
     this.runtime = this.code.main(world);
     return true;
+  }
+
+  public eval(source: string, variable?: string) {
+    const compiled = PuppyCompile({ source });
+    const world = (this.engine === null) ?
+      new PuppyWorld(this, compiled) : this.engine.world as PuppyWorld;
+    const runtime = compiled.main(world);
+    for (var i = 0; i < 2; i += 1) {
+      const res = runtime.next();
+      if (res.done) {
+        break;
+      }
+    }
+    return variable === undefined ? world.vars : world.vars[variable];
   }
 
   private unload() {

@@ -43,7 +43,8 @@
     "globals": {
       "ts-jest": {
         "tsConfig": "tsconfig.json"
-      }
+      },
+      "window": {}
     },
     "testMatch": [
       "**/test/*.+(ts|tsx|js)"
