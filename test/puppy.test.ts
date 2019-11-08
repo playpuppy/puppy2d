@@ -64,7 +64,7 @@ test('Circle(10,10)', () => {
 	expect(utest(`
 from puppy2d import *
 Circle(10, 10)
-`)).toBe("puppy.Circle(10,10)");
+`)).toBe("puppy.Circle2(10,10)");
 });
 
 test('Circle(10,10,50)', () => {

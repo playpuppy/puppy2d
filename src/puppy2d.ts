@@ -1,13 +1,11 @@
 import { Common } from './matter-ts/commons'
 import { Vector, Vertices, Bounds } from './matter-ts/geometry'
 import { Body, World, Composite, Constraint } from './matter-ts/body'
-import { Render } from './matter-ts/render';
+import { Render } from './matter-ts/puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { Lib } from './lang/libpuppy2d';
 import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
-import { ifError } from 'assert';
-//import { Bodies } from './matter-ts/factory';
 
 // puppy extension
 
@@ -147,12 +145,18 @@ export const chooseColorScheme = (key: string) => {
     key in PuppyColorScheme
       ? PuppyColorScheme[key]
       : PuppyColorScheme[Common.choose(Object.keys(PuppyColorScheme))];
-  const targets = <HTMLCollectionOf<HTMLElement>>(
+  var targets = <HTMLCollectionOf<HTMLElement>>(
+    document.getElementsByClassName('puppy-background')
+  );
+  for (let i = 0; i < targets.length; i += 1) {
+    targets[i].style.borderColor = cs[i % cs.length];
+    targets[i].style.backgroundColor = cs[i % cs.length];
+  }
+  targets = <HTMLCollectionOf<HTMLElement>>(
     document.getElementsByClassName('puppy-color')
   );
   for (let i = 0; i < targets.length; i += 1) {
-    targets[i].style.backgroundColor = cs[i % cs.length];
-    targets[i].style.borderColor = cs[i % cs.length];
+    targets[i].style.color = cs[i % cs.length];
   }
   return cs;
 }
@@ -230,37 +234,21 @@ const brightness = (color: string | string[]) => {
   return hsv.v;
 }
 
-const common = (world: PuppyWorld, options: any) => {
-  options.id = world.newId();
-  options.position = (!options.position) ? world.newVec() : options.position;
-  if (!options.fillStyle) {
-    if (options.isStatic) {
-      options.fillStyle = world.colors[0];
-    }
-    else {
-      options.fillStyle = Common.choose(world.colors);
-    }
+// shape setting
+
+const initSize = (world: PuppyWorld, options: any, width = 100, height = width) => {
+  options.width = options.width || width;
+  options.height = options.height || height;
+  if (options.width < 2.0) {
+    options.width = world.width * options.width;
+  }
+  if (options.height < 2.0) {
+    options.height = world.height * options.height;
   }
   return options;
 }
 
-const getradius = (options: any, radius: number): number => {
-  if (options.radius) {
-    return options.radius as number;
-  }
-  if (options.width) {
-    if (options.height) {
-      return options.width + options.height / 4
-    }
-    return options.width / 2;
-  }
-  if (options.height) {
-    return options.height / 2;
-  }
-  return radius;
-}
-
-const vertices = (options: any, path: number[]) => {
+const initVertices = (options: any, path: number[]) => {
   options.vertices = Vertices.fromPath(path);
   if (options.chamfer) {
     var chamfer = options.chamfer;
@@ -270,11 +258,30 @@ const vertices = (options: any, path: number[]) => {
   }
 }
 
-const polygon = (world: PuppyWorld, options: any, sides: number, radius: number) => {
-  const theta = 2 * Math.PI / sides;
+const getradius = (options: any, radius = 50): number => {
+  if (options.width) {
+    if (options.height) {
+      return Math.min(options.width, options.height) / 2;
+    }
+    return options.width / 2;
+  }
+  if (options.height) {
+    return options.height / 2;
+  }
+  return radius;
+}
+
+const _polygon = (world: PuppyWorld, options: any, sides?: number, radius?: number) => {
+  if (sides === undefined) {
+    sides = options.sides !== undefined ? options.sides : 3;
+  }
+  if (radius === undefined) {
+    radius = getradius(options, 50);
+  }
+  const theta = 2 * Math.PI / sides!;
   const path: number[] = [];
   const offset = theta * 0.5;
-  for (var i = 0; i < sides; i += 1) {
+  for (var i = 0; i < sides!; i += 1) {
     var angle = offset + (i * theta),
       xx = Math.cos(angle) * radius,
       yy = Math.sin(angle) * radius;
@@ -282,14 +289,23 @@ const polygon = (world: PuppyWorld, options: any, sides: number, radius: number)
     path.push(xx);
     path.push(yy);
   }
-  vertices(options, path);
+  initVertices(options, path);
   return options;
 }
 
-const label = (world: PuppyWorld, options: any) => {
+const _circle = (world: PuppyWorld, options: any, radius?: number) => {
+  radius = options.circleRadius = getradius(options, radius || 50);
+  const maxSides = 25;
+  var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
+  if (sides % 2 === 1)
+    sides += 1;
+  return _polygon(world, options, sides, radius);
+}
+
+const _label = (world: PuppyWorld, options: any) => {
   const width = (!options.width) ? 100 : options.width;
   const height = (!options.height) ? 30 : options.height;
-  vertices(options, [0, 0, width, 0, width, height, 0, height]);
+  initVertices(options, [0, 0, width, 0, width, height, 0, height]);
   if (!options.fillStyle) {
     options.fillStyle = '#000000';
     options.opacity = 0;
@@ -298,29 +314,17 @@ const label = (world: PuppyWorld, options: any) => {
   return options;
 }
 
-
 export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => any } = {
   'rectangle': (world: PuppyWorld, options: any) => {
-    const width = (options.width = (!options.width) ? 100 : options.width);
-    const height = (options.height = (!options.height) ? 100 : options.height);
-    vertices(options, [0, 0, width, 0, width, height, 0, height]);
+    const width = options.width || 100;
+    const height = options.height || 100;
+    initVertices(options, [0, 0, width, 0, width, height, 0, height]);
     return options;
   },
-  'polygon': (world: PuppyWorld, options: any) => {
-    const sides = options.sides ? options.sides : 3;
-    const radius = getradius(options, 50);
-    return polygon(world, options, sides, radius);
-  },
-  'circle': (world: PuppyWorld, options: any) => {
-    const radius = options.circleRadius = getradius(options, 50);
-    const maxSides = 25;
-    var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
-    if (sides % 2 === 1)
-      sides += 1;
-    return polygon(world, options, sides, radius);
-  },
+  'polygon': _polygon,
+  'circle': _circle,
   'ticker': (world: PuppyWorld, options: any) => {
-    return label(world, options);
+    return _label(world, options);
   },
   'var': (world: PuppyWorld, options: any) => {
     const name = options.name;
@@ -335,7 +339,7 @@ export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => a
         return `${world.vars[name]}`;
       }
     }
-    return label(world, options);
+    return _label(world, options);
   },
   'paint': (world: PuppyWorld, options: any) => {
     const radius = options.circleRadius = getradius(options, 10);
@@ -356,8 +360,22 @@ export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => a
         }
       }
     }
-    return polygon(world, options, sides, radius);
+    return _polygon(world, options, sides, radius);
   },
+}
+
+const common = (world: PuppyWorld, options: any) => {
+  options.id = world.newId();
+  options.position = (!options.position) ? world.newVec() : options.position;
+  if (!options.fillStyle) {
+    if (options.isStatic) {
+      options.fillStyle = world.colors[0];
+    }
+    else {
+      options.fillStyle = Common.choose(world.colors);
+    }
+  }
+  return options;
 }
 
 const newtonsCradle = (world: PuppyWorld, options: any): Composite => {
@@ -421,7 +439,7 @@ export class PuppyWorld extends World {
     this.height = options.height || this.width;
     this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
     this.colors = chooseColorScheme(options.colorScheme);
-    console.log(`brightness ${brightness(this.colors)}`);
+    //console.log(`brightness ${brightness(this.colors)}`);
     this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
     this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
     this.lib = new Lib(base);
@@ -511,29 +529,72 @@ export class PuppyWorld extends World {
     return constraint;
   }
 
+  public World(options: any = {}) {
+    if (options.width && options.height) {
+      this.width = options.width;
+      this.height = options.height;
+    }
+    if (typeof options.background === 'string') {
+      this.background = options.background;
+    }
+    if (options.gravity instanceof Vector) {
+      this.gravity = options.gravity;
+    }
+  }
+
+  public setViewport(x1: number, y1: number, x2: number, y2: number) {
+    const bounds = new Bounds(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2));
+    this.base.render!.lookAt(bounds);
+  }
+
   public Rectangle(x: number, y: number, width: number, height = width, options: any = {}) {
     options = Object.assign(options, {
-      shape: 'rectangle', position: this.newVec(x, y),
-      width: width, height: height
+      shape: 'rectangle',
+      position: this.newVec(x, y),
     });
+    initSize(this, options, width, height);
     return this.newBody(options);
   }
 
-  public Rectangle2(x: number, y: number, options: any = {}) {
-    return this.Rectangle(x, y, options.width || 50, options.height || 50, options);
+  Rectangle3(x: number, y: number, width: number, options: any = {}) {
+    return this.Rectangle(x, y, width, width, options);
   }
 
-  public Circle(x: number, y: number, width = 50, options: any = {}) {
+  Rectangle2(x: number, y: number, options: any = {}) {
+    return this.Rectangle(x, y, 100, 100, options);
+  }
+
+  Rectangle0(options: any = {}) {
+    if (options.position) {
+      return this.Rectangle(options.position.x, options.position.y, 100, 100, options);
+    }
+    return this.Rectangle(options.x, options.y, 100, 100, options);
+  }
+
+  public Circle(x: number, y: number, width = 100, options: any = {}) {
     options = Object.assign(options, {
       shape: 'circle', position: this.newVec(x, y),
-      width: options.width || width,
     });
+    initSize(this, options, width);
     return this.newBody(options);
   }
+
+  Circle2(x: number, y: number, options: any = {}) {
+    return this.Circle(x, y, 100, options);
+  }
+
+  Circle0(options: any = {}) {
+    if (options.position) {
+      return this.Circle(options.position.x, options.position.y, 100, options);
+    }
+    return this.Circle(options.x, options.y, 100, options);
+  }
+
 
   public Variable(name: string, x: number, y: number, width: number, options: any = {}) {
     options = Object.assign(options, {
-      shape: 'var', position: this.newVec(x, y), width: width,
+      shape: 'var', position: this.newVec(x, y),
+      width: width,
       name: name, caption: name,
     });
     return this.newBody(options);
@@ -598,7 +659,7 @@ export class PuppyWorld extends World {
     this.newObject(options);
   }
 
-  public print(text: string, options: any = {}) {
+  public print(text: string = '', options: any = {}) {
     const world = this;
     const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
     const x = bounds.max.x;
@@ -611,9 +672,7 @@ export class PuppyWorld extends World {
       move: (body: Body, time: number) => {
         body.translate2(-2, 0);
         //body.position.dump(`print`);
-        if (body.position.x + 100 < world.bounds.min.x) {
-          console.log(`FIXME width=${body.bounds.min.x}`)
-          //body.position.dump('removed');
+        if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
           this.removeBody(body);
         }
       },
@@ -731,6 +790,7 @@ const DefaultPuppyCode: PuppyCode = {
   code: '',
 }
 
+
 export class Puppy {
   element: HTMLElement;
   public code = DefaultPuppyCode;
@@ -798,9 +858,6 @@ export class Puppy {
     this.engine = new Engine(world);
     this.render = new Render(this.engine, this.element);
     this.runner = new Runner();
-    const hw = world.width / 2;
-    const hh = world.height / 2;
-    this.render.lookAt(new Bounds(-hw, hh, hw, -hh));
     this.runtime = this.code.main(world);
     return true;
   }

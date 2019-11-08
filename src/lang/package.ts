@@ -77,10 +77,15 @@ const tFuncShape5 = ts.func(ts.Matter, ts.String, ts.Int, ts.Int, ts.Int, ts.Int
 
 const import_puppy2d: { [key: string]: Symbol } = {
   // # クラス
-  'World': sym('puppy.world', tFuncShape),
+  'World': sym('puppy.World', tFuncShape),
   'Object': sym('puppy.Object', tFuncShape, Visual),
   'Rectangle': sym('puppy.Rectangle', tFuncShape4, Visual),
+  'Rectangle@3': sym('puppy.Rectangle3', tFuncShape3, Visual),
+  'Rectangle@2': sym('puppy.Rectangle2', tFuncShape2, Visual),
+  'Rectangle@0': sym('puppy.Rectangle0', tFuncShape, Visual),
   'Circle': sym('puppy.Circle', tFuncShape3, Visual),
+  'Circle@2': sym('puppy.Circle2', tFuncShape2, Visual),
+  'Circle@0': sym('puppy.Circle0', tFuncShape, Visual),
   'Polygon': sym('puppy.Polygon', tFuncShape3, Visual),
   'Variable': sym('puppy.Variable', tFuncShape5),
   'setGravity': sym('puppy.setGravity', ts.func(ts.Void, ts.Int, ts.Int)),
