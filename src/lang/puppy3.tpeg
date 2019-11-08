@@ -325,7 +325,7 @@ Argument = {
     '=' _ 
     value: Expression
     #KeyValue
-}
+} / NLKeyValue
 
 example Expression Circle(500, 500)
 example Expression Circle(500, 500, clicked=cat_clicked)
@@ -366,7 +366,7 @@ KeyValue = {
 
 /* Name, Identifier */
 
-Name = Identifier / NLPSymbol
+Name = Identifier // NLPSymbol
 
 Identifier = {
     [A-Za-z] W*
@@ -377,6 +377,12 @@ NLPSymbol = {
     (HIRA / KATA / KANJI)+
     #NLPSymbol
 } _
+
+NLKeyValue = {
+    (HIRA / KATA / KANJI)+
+    #NLKeyValue
+} _
+
 
 W = [A-Za-z0-9_]
 

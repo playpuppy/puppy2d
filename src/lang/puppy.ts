@@ -937,6 +937,11 @@ class Transpiler {
     return Types.Void;
   }
 
+  public NLKeyValue(env: Env, t: ParseTree | any, out: string[]) {
+    env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    return Types.Void;
+  }
+
   public KeyValue(env: Env, t: ParseTree | any, out: string[]) {
     const name = t.tokenize('name');
     out.push(`'${name}': `)

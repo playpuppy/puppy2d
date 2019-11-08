@@ -5,7 +5,6 @@ export class Lib {
     this.world = world;
   }
 
-
   /* python */
 
   public int(x: any): number {
