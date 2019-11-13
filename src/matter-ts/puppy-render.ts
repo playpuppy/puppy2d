@@ -20,12 +20,13 @@ import { Pair, Grid } from './collision';
  * @return canvas
  */
 
-const createCanvas = (width: number, height: number) => {
+const createCanvas = (element: HTMLElement, width: number, height: number) => {
   var canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   canvas.oncontextmenu = () => false;
   canvas.onselectstart = () => false;
+  element.appendChild(canvas);
   return canvas;
 }
 
@@ -125,10 +126,11 @@ export class Render {
   public canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;//?
   // background: string;
-  public scale: Vector = new Vector(1, 1);
-  public offset: Vector = new Vector();
+  scale: Vector = new Vector(1, 1);
+  offset: Vector = new Vector();
   bounds: Bounds;
-  public frameRequestId = -1;
+  viewports: [number, number, number, number] | null = null;
+  frameRequestId = -1;
   pixelRatio = 1;
 
   /**
@@ -144,14 +146,19 @@ export class Render {
     this.engine = engine;
     this.world = engine.world;
     this.options = this.world;
-    this.canvas = createCanvas(element.clientWidth, element.clientHeight);
-    element.appendChild(this.canvas);
+    this.canvas = createCanvas(element, element.clientWidth, element.clientHeight);
     this.mouse = engine.setRender(this);
     this.context = this.canvas.getContext('2d')!;
+    // init viewport
     this.bounds = new Bounds(0, 0, this.canvas.width, this.canvas.height);
-    // if (this.options.pixelRatio !== 1) {
-    //   this.setPixelRatio(this.options.pixelRatio);
-    // }
+    if (this.options.computerScreen) {
+      this.lookAt(0, 0, this.options.width, this.options.height);
+    }
+    else {
+      const hw = this.options.width / 2;
+      const hh = this.options.height / 2;
+      this.lookAt(-hw, hh, hw, -hh);
+    }
   }
 
   public clear() {
@@ -159,6 +166,110 @@ export class Render {
       this.canvas.parentElement.removeChild(this.canvas);
     }
   }
+
+  /**
+   * Positions and sizes the viewport around the given object bounds.
+   * Objects must have at least one of the following properties:
+   * - `object.bounds`
+   * - `object.position`
+   * - `object.min` and `object.max`
+   * - `object.x` and `object.y`
+   * @method lookAt
+   * @param {render} this
+   * @param {object[]} objects
+   * @param {vector} [padding]
+   * @param {bool} [center=true]
+   */
+
+  private lookAt(minX: number, minY: number, maxX: number, maxY: number, center = true) {
+    // find ratios
+    const viewWidth = (maxX - minX);
+    const viewHeight = (maxY - minY);
+    const canvasHeight = this.canvas.height;
+    const canvasWidth = this.canvas.width;
+    const canvasRatio = canvasWidth / canvasHeight;
+    const viewRatio = Math.abs(viewWidth / viewHeight);
+    var scaleX = 1;
+    var scaleY = 1;
+    // find scale factor
+    if (viewRatio > canvasRatio) {
+      scaleY *= viewRatio / canvasRatio;
+    } else {
+      scaleX *= canvasRatio / viewRatio;
+    }
+
+    // position and size
+    this.bounds.min.x = minX;
+    this.bounds.max.x = minX + viewWidth * scaleX;
+    this.bounds.min.y = minY;
+    this.bounds.max.y = minY + viewHeight * scaleY;
+    //console.log(`${this.bounds.min.x} ${this.bounds.min.y} ${this.bounds.max.x} ${this.bounds.max.y}`)
+
+    // center
+    if (center) {
+      this.bounds.min.x += viewWidth * 0.5 - (viewWidth * scaleX) * 0.5;
+      this.bounds.max.x += viewWidth * 0.5 - (viewWidth * scaleX) * 0.5;
+      this.bounds.min.y += viewHeight * 0.5 - (viewHeight * scaleY) * 0.5;
+      this.bounds.max.y += viewHeight * 0.5 - (viewHeight * scaleY) * 0.5;
+    }
+
+    const mx = (this.bounds.max.x - this.bounds.min.x) / this.canvas.width;
+    const my = (this.bounds.max.y - this.bounds.min.y) / this.canvas.height;
+    this.scale.x = mx;
+    this.scale.y = my;
+    this.offset = new Vector(this.bounds.min.x, this.bounds.min.y);
+    if (my < 0) {
+      this.bounds = new Bounds(this.bounds.min.x, this.bounds.max.y, this.bounds.max.x, this.bounds.min.y);
+    }
+    // update mouse
+    if (this.mouse) {
+      //console.log(`BOUND ${this.bounds.min.x} ${this.bounds.min.y} ${this.bounds.max.x} ${this.bounds.max.y}`)
+      this.mouse.setScale(this.scale);
+      this.mouse.setOffset(this.offset);
+    }
+    this.viewports = [minX, minY, maxX, maxY];
+  }
+
+  public isComputerScreen() {
+    return this.scale.y > 0;
+  }
+
+  public setViewport(x1: number, y1: number, x2: number, y2: number, center = true) {
+    const minX = Math.min(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxX = Math.max(x1, x2);
+    const maxY = Math.max(y1, y2);
+    if (this.isComputerScreen()) {
+      this.lookAt(minX, minY, maxX, maxY, center);
+    }
+    else {
+      this.lookAt(minX, maxY, maxX, minY, center);
+    }
+  }
+
+  public resize(width: number, height: number) {
+    const canvas = this.canvas;
+    canvas.width = width;
+    canvas.height = height;
+    if (this.viewports) {
+      this.lookAt(this.viewports[0], this.viewports[1], this.viewports[2], this.viewports[3], true);
+    }
+    // canvas.style.width = width.toString();
+    // canvas.style.height = height.toString();
+
+    // let w = width;
+    // let h = (width * canvas.height) / canvas.width;
+    // if (h > height) {
+    //   h = height;
+    //   w = (height * canvas.width) / canvas.height;
+    // }
+    // canvas.setAttribute('width', w.toString());
+    // canvas.setAttribute('height', h.toString());
+    // console.log('resize width {this.render.options.width} => {w} height {this.render.options.height} => {h}');
+    // render.options.width = w;
+    // render.options.height = h;
+  }
+
 
   showingMessage: string | null = null;
 
@@ -175,7 +286,7 @@ export class Render {
    * @param {render} this
    */
 
-  public run(message?: string) {
+  public start(message?: string) {
     // document.addEventListener('keydown', (event) => {
     //   var keyName = event.key;
 
@@ -190,6 +301,7 @@ export class Render {
     if (message !== undefined) {
       this.show(message);
     }
+    this.canvas.style.filter = '';
     if (_requestAnimationFrame !== undefined) {
       const loop = (time: number) => {
         this.frameRequestId = _requestAnimationFrame(loop);
@@ -210,7 +322,6 @@ export class Render {
       this.show(message);
       setTimeout(() => {
         _cancelAnimationFrame(this.frameRequestId);
-        //this.canvas.style.filter = 'sepia(50%)';
         this.canvas.style.filter = 'grayscale(100%)';
       }, 100);
     }
@@ -244,87 +355,6 @@ export class Render {
     //   canvas.style.width = options.width + 'px';
     //   canvas.style.height = options.height + 'px';
     // 
-  }
-
-  public initViewport(world: any) {
-    if (world.screen) {
-
-    }
-    else {
-      const hw = world.width / 2;
-      const hh = world.height / 2;
-      this.lookAt(new Bounds(-hw, hh, hw, -hh));
-    }
-  }
-
-  /**
-   * Positions and sizes the viewport around the given object bounds.
-   * Objects must have at least one of the following properties:
-   * - `object.bounds`
-   * - `object.position`
-   * - `object.min` and `object.max`
-   * - `object.x` and `object.y`
-   * @method lookAt
-   * @param {render} this
-   * @param {object[]} objects
-   * @param {vector} [padding]
-   * @param {bool} [center=true]
-   */
-
-  public lookAt(bounds: Bounds, padding: Vector = Vector.Null, center = true) {
-    // find ratios
-    const viewWidth = (bounds.max.x - bounds.min.x) + 2 * padding.x;
-    const viewHeight = (bounds.max.y - bounds.min.y) + 2 * padding.y;
-    const canvasHeight = this.canvas.height;
-    const canvasWidth = this.canvas.width;
-    const canvasRatio = canvasWidth / canvasHeight;
-    const viewRatio = Math.abs(viewWidth / viewHeight);
-    var scaleX = 1;
-    var scaleY = 1;
-    // find scale factor
-    if (viewRatio > canvasRatio) {
-      scaleY *= viewRatio / canvasRatio;
-    } else {
-      scaleX *= canvasRatio / viewRatio;
-    }
-
-    // enable bounds
-    this.options.hasBounds = true;
-
-    // position and size
-    this.bounds.min.x = bounds.min.x;
-    this.bounds.max.x = bounds.min.x + viewWidth * scaleX;
-    this.bounds.min.y = bounds.min.y;
-    this.bounds.max.y = bounds.min.y + viewHeight * scaleY;
-    //console.log(`${this.bounds.min.x} ${this.bounds.min.y} ${this.bounds.max.x} ${this.bounds.max.y}`)
-
-    // center
-    if (center) {
-      this.bounds.min.x += viewWidth * 0.5 - (viewWidth * scaleX) * 0.5;
-      this.bounds.max.x += viewWidth * 0.5 - (viewWidth * scaleX) * 0.5;
-      this.bounds.min.y += viewHeight * 0.5 - (viewHeight * scaleY) * 0.5;
-      this.bounds.max.y += viewHeight * 0.5 - (viewHeight * scaleY) * 0.5;
-    }
-
-    // padding
-    this.bounds.min.x -= padding.x;
-    this.bounds.max.x -= padding.x;
-    this.bounds.min.y -= padding.y;
-    this.bounds.max.y -= padding.y;
-
-    const mx = (this.bounds.max.x - this.bounds.min.x) / this.canvas.width;
-    const my = (this.bounds.max.y - this.bounds.min.y) / this.canvas.height;
-    this.scale = new Vector(mx, my);
-    this.offset = this.bounds.min;
-    if (my < 0) {
-      this.bounds = new Bounds(this.bounds.min.x, this.bounds.max.y, this.bounds.max.x, this.bounds.min.y);
-    }
-    // update mouse
-    if (this.mouse) {
-      //console.log(`BOUND ${this.bounds.min.x} ${this.bounds.min.y} ${this.bounds.max.x} ${this.bounds.max.y}`)
-      this.mouse.setScale(this.scale);
-      this.mouse.setOffset(this.offset);
-    }
   }
 
 
@@ -396,52 +426,33 @@ export class Render {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.globalCompositeOperation = 'source-over';
 
-    // handle bounds
-    if (options.hasBounds) {
-      // filter out bodies that are not in view
-      for (var i = 0; i < allBodies.length; i++) {
-        var body = allBodies[i];
-        if (Bounds.overlaps(body.bounds, this.bounds))
-          bodies.push(body);
-      }
-
-      // filter out constraints that are not in view
-      for (var i = 0; i < allConstraints.length; i++) {
-        var constraint = allConstraints[i],
-          bodyA = constraint.bodyA,
-          bodyB = constraint.bodyB,
-          pointAWorld = constraint.pointA,
-          pointBWorld = constraint.pointB;
-
-        if (bodyA) pointAWorld = Vector.add(bodyA.position, constraint.pointA!);
-        if (bodyB) pointBWorld = Vector.add(bodyB.position, constraint.pointB!);
-
-        if (!pointAWorld || !pointBWorld)
-          continue;
-
-        if (Bounds.contains(this.bounds, pointAWorld) || Bounds.contains(this.bounds, pointBWorld))
-          constraints.push(constraint);
-      }
-
-      // transform the view
-      this.startViewTransform();
-
-      // // update mouse
-      // if (this.mouse) {
-      //   this.mouse.setScale(new Vector(
-      //     (this.bounds.max.x - this.bounds.min.x) / this.canvas.width,
-      //     (this.bounds.max.y - this.bounds.min.y) / this.canvas.height
-      //   ));
-      //   this.mouse.setOffset(this.bounds.min);
-      // }
-    } else {
-      constraints = allConstraints;
-      bodies = allBodies;
-
-      if (this.options.pixelRatio !== 1) {
-        this.context.setTransform(this.options.pixelRatio, 0, 0, this.options.pixelRatio, 0, 0);
-      }
+    // filter out bodies that are not in view
+    for (var i = 0; i < allBodies.length; i++) {
+      var body = allBodies[i];
+      if (Bounds.overlaps(body.bounds, this.bounds))
+        bodies.push(body);
     }
+
+    // filter out constraints that are not in view
+    for (var i = 0; i < allConstraints.length; i++) {
+      var constraint = allConstraints[i],
+        bodyA = constraint.bodyA,
+        bodyB = constraint.bodyB,
+        pointAWorld = constraint.pointA,
+        pointBWorld = constraint.pointB;
+
+      if (bodyA) pointAWorld = Vector.add(bodyA.position, constraint.pointA!);
+      if (bodyB) pointBWorld = Vector.add(bodyB.position, constraint.pointB!);
+
+      if (!pointAWorld || !pointBWorld)
+        continue;
+
+      if (Bounds.contains(this.bounds, pointAWorld) || Bounds.contains(this.bounds, pointBWorld))
+        constraints.push(constraint);
+    }
+
+    // transform the view
+    this.startViewTransform();
 
     if (!options.wireframes || (engine.enableSleeping && options.showSleeping)) {
       // fully featured rendering of bodies
@@ -488,15 +499,10 @@ export class Render {
     if (options.showBroadphase && engine.broadphase instanceof Grid)
       this.grid(engine.broadphase, context);
 
-    if (options.showDebug)
-      this.debug(context);
+    this.endViewTransform();
 
-    if (options.hasBounds) {
-      // revert view transforms
-      this.endViewTransform();
-    }
     if (this.showingMessage !== null) {
-      context.font = '96px Arial 🎨';
+      context.font = '96px Arial';
       const w = context.measureText(this.showingMessage).width;
       const cx = this.canvas.width / 2;
       const cy = this.canvas.height / 2;
@@ -526,75 +532,6 @@ export class Render {
     this.canvas.style.background = cssBackground;
     this.canvas.style.backgroundSize = "contain";
     this.currentBackground = background;
-  }
-
-  private debugString = '';
-  private debugTimestamp = 0;
-
-  /**
-   * Description
-   * @private
-   * @method debug
-   * @param {render} this
-   * @param {RenderingContext} context
-   */
-  private debug(context: CanvasRenderingContext2D) {
-    var c = context,
-      engine = this.engine,
-      world = engine.world,
-      // metrics = engine.metrics,
-      options = this.options,
-      bodies = world.allBodies(),
-      space = "    ";
-
-    if (engine.timing.timestamp - (this.debugTimestamp) >= 500) {
-      var text = "";
-
-      // if (metrics.timing) {
-      //   text += "fps: " + Math.round(metrics.timing.fps) + space;
-      // }
-
-      // // @if DEBUG
-      // if (metrics.extended) {
-      //   if (metrics.timing) {
-      //     text += "delta: " + metrics.timing.delta.toFixed(3) + space;
-      //     text += "correction: " + metrics.timing.correction.toFixed(3) + space;
-      //   }
-
-      //   text += "bodies: " + bodies.length + space;
-
-      //   if (engine.broadphase.controller === Grid)
-      //     text += "buckets: " + metrics.buckets + space;
-
-      //   text += "\n";
-
-      //   text += "collisions: " + metrics.collisions + space;
-      //   text += "pairs: " + engine.pairs.list.length + space;
-      //   text += "broad: " + metrics.broadEff + space;
-      //   text += "mid: " + metrics.midEff + space;
-      //   text += "narrow: " + metrics.narrowEff + space;
-      // }
-      // @endif
-
-      this.debugString = text;
-      this.debugTimestamp = engine.timing.timestamp;
-    }
-
-    if (this.debugString) {
-      c.font = "12px Arial";
-
-      if (options.wireframes) {
-        c.fillStyle = 'rgba(255,255,255,0.5)';
-      } else {
-        c.fillStyle = 'rgba(0,0,0,0.5)';
-      }
-
-      var split = this.debugString.split('\n');
-
-      for (var i = 0; i < split.length; i++) {
-        c.fillText(split[i], 50, 50 + i * 18);
-      }
-    }
   }
 
   /**

@@ -4,7 +4,7 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { Render } from './matter-ts/puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { Lib } from './lang/libpuppy2d';
+import { LibPython } from './lang/libpython';
 import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
 
 // puppy extension
@@ -378,19 +378,45 @@ const common = (world: PuppyWorld, options: any) => {
   return options;
 }
 
+const stackArray = (world: PuppyWorld, options: any) => {
+  const width = (options.width = (!options.width) ? world.width * 0.5 : options.width);
+  const height = (options.height = (!options.height) ? width : options.height);
+  const columns = options.columns || 4;
+  const rows = options.rows || columns;
+  const margin = options.margin || 0;
+  const partOptions = options.part || { shape: 'rectangle' }
+  const pwidth = partOptions.width = (width - (columns - 1) * margin) / columns;
+  const pheight = partOptions.height = (height - (rows - 1) * margin) / rows;
+  const position = options.position;
+  var yy = position.y - world.yscale(height / 2);
+  const composite = world.newComposite();
+  for (var row = 0; row < rows; row++) {
+    var xx = position.x - (width / 2);
+    for (var column = 0; column < columns; column++) {
+      const opt = Object.assign({}, partOptions);
+      opt.position = new Vector(xx + pwidth / 2, yy + world.yscale(pheight / 2));
+      var body = world.newObject(opt);
+      xx += pwidth + margin;
+      composite.add(body);
+    }
+    yy += world.yscale(pheight + margin);
+  }
+  return composite;
+}
+
 const newtonsCradle = (world: PuppyWorld, options: any): Composite => {
-  const width = (options.width = (!options.width) ? 300 : options.width);
-  const height = (options.height = (!options.height) ? 200 : options.height);
-  const num = options.N || 5;
+  const width = (options.width = (!options.width) ? world.width * 0.5 : options.width);
+  const height = (options.height = (!options.height) ? width : options.height);
+  const num = options.columns || options.N || 5;
   const position = options.position;
   const sx = position.x - (width / 2);
-  const sy = position.y + (height / 2);
+  const sy = position.y - world.yscale(height / 2);
   const separation = 1.9;
   const size = width / num / separation;
   const newtonsCradle = world.newComposite();
   for (var i = 0; i < num; i++) {
     const cx = sx + i * (size * separation);
-    const cy = sy - (height - size);
+    const cy = sy + world.yscale(height - size);
     const circle = world.newBody({
       shape: 'circle',
       width: size * 2,
@@ -408,6 +434,8 @@ const newtonsCradle = (world: PuppyWorld, options: any): Composite => {
 }
 
 const PuppyObjects: { [key: string]: (world: PuppyWorld, options: any) => any } = {
+  'array': stackArray,
+  'stack': stackArray,
   'newtonsCradle': newtonsCradle,
 }
 
@@ -423,12 +451,13 @@ export class PuppyWorld extends World {
   base: Puppy;
   public width: number;
   public height: number;
+  public screen = false;
   public timestamp = 0;
   public colors: string[];
   public darkmode: boolean;
   public background = '';
   public vars: any = {};
-  public lib: Lib;
+  public lib: LibPython;
   paints: Body[] = [];
   tickers: Body[] = [];
 
@@ -437,12 +466,17 @@ export class PuppyWorld extends World {
     this.base = base;
     this.width = options.width || 1000;
     this.height = options.height || this.width;
-    this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
+    if (this.screen) {
+      this.bounds = new Bounds(0, 0, this.width, this.height);
+    }
+    else {
+      this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
+    }
     this.colors = chooseColorScheme(options.colorScheme);
     //console.log(`brightness ${brightness(this.colors)}`);
     this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
     this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
-    this.lib = new Lib(base);
+    this.lib = new LibPython(base);
   }
 
   public allPaints() {
@@ -451,6 +485,10 @@ export class PuppyWorld extends World {
 
   public allTickers() {
     return this.tickers;
+  }
+
+  public yscale(y = 1) {
+    return this.screen ? y : -y;
   }
 
   private uniqueId = 1;
@@ -543,8 +581,9 @@ export class PuppyWorld extends World {
   }
 
   public setViewport(x1: number, y1: number, x2: number, y2: number) {
-    const bounds = new Bounds(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2));
-    this.base.render!.lookAt(bounds);
+    if (this.base.render !== null) {
+      this.base.render.setViewport(x1, y1, x2, y2);
+    }
   }
 
   public Rectangle(x: number, y: number, width: number, height = width, options: any = {}) {
@@ -590,7 +629,6 @@ export class PuppyWorld extends World {
     return this.Circle(options.x, options.y, 100, options);
   }
 
-
   public Variable(name: string, x: number, y: number, width: number, options: any = {}) {
     options = Object.assign(options, {
       shape: 'var', position: this.newVec(x, y),
@@ -616,34 +654,6 @@ export class PuppyWorld extends World {
   //   return x;
   // }
 
-  // public async input0(console?: string) {
-  //   this.runner!.enabled = false;
-  //   const awaitForClick = target => {
-  //     return new Promise(resolve => {
-  //       // 処理A
-  //       const listener = resolve; // 処理B
-  //       target.addEventListener('click', listener, { once: true }); // 処理C
-  //     });
-  //   };
-  //   const text = document.getElementById('inputtext') as HTMLInputElement;
-  //   const f = async () => {
-  //     const target = document.querySelector('#submitInput');
-  //     let Text = '';
-  //     document.getElementById('submitInput')!.onclick = () => {
-  //       document.getElementById('myOverlay')!.style.display = 'none';
-  //       Text = text.value;
-  //       text.value = '';
-  //     };
-  //     await awaitForClick(target);
-  //     return Text;
-  //   };
-  //   text.placeholder = console ? console : 'Input here';
-  //   document.getElementById('myOverlay')!.style.display = 'block';
-  //   const x = await f();
-  //   this.runner!.enabled = true;
-  //   this.waitForRun(500);
-  //   return x;
-  // }
 
   public setGravity(x: number, y: number) {
     this.gravity = new Vector(x, y);
@@ -678,6 +688,10 @@ export class PuppyWorld extends World {
       },
     }, options);
     this.newObject(options);
+  }
+
+  public input(text: string = '') {
+    return this.base.syscall('input', { text });
   }
 
   public line(linenum: number) {
@@ -745,10 +759,6 @@ export class PuppyWorld extends World {
       target.setPosition(position);
     })
   }
-
-
-
-
 }
 
 // export type PuppyCode = {
@@ -773,14 +783,20 @@ const DefaultPuppyCode: PuppyCode = {
     world.Rectangle(500, 0, 100, 1000, { isStatic: true });
     world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
 
-    world.Rectangle(200, 200, 60, 60, { frictionAir: 0.001, move: trail });
-    world.Rectangle(200, -200, 60, 60, { frictionAir: 0.01, move: trail });
-    world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
-    world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
-
+    // world.Rectangle(200, 200, 60, 60, { frictionAir: 0.001, move: trail });
+    // world.Rectangle(200, -200, 60, 60, { frictionAir: 0.01, move: trail });
+    // world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
+    // world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
+    // world.setGravity(0, -1);
+    world.newObject({
+      shape: 'array',
+      position: new Vector(0, 0),
+      margin: 10,
+      part: { shape: 'circle' },
+    });
     world.Variable('TIME', 320, -400, 260);
     world.Variable('MOUSE', 320, -440, 260);
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < 100; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
       yield 200;
     }
@@ -790,6 +806,41 @@ const DefaultPuppyCode: PuppyCode = {
   code: '',
 }
 
+const syscallKeywords = [
+  'nop', 'input',
+];
+
+
+const initSyscalls = (element: HTMLElement, options: any) => {
+  const syscalls: { [key: string]: any } = {}
+
+  const defaultInput = (msg: string = '', callback: (res: any) => void) => {
+    //vars['_'] = (); yield -1; x = vars['']
+    const form = document.createElement('form');
+    form.onsubmit = () => {
+      const value = input.value;
+      form.style.display = 'none';
+      element.removeChild(form);
+      callback(value);
+      return false;
+    }
+    const caption = form.appendChild(document.createElement('div'));
+    caption.innerText = msg;
+    const input = form.appendChild(document.createElement('input'));
+    input.placeholder = '';
+    const submit = form.appendChild(document.createElement('button'));
+    submit.type = 'submit';
+    submit.onclick = () => {
+      const value = input.value;
+      form.style.display = 'none';
+      element.removeChild(form);
+      callback(value);
+    }
+    element.appendChild(form);
+  }
+  syscalls['input'] = options.input || defaultInput;
+  return syscalls;
+}
 
 export class Puppy {
   element: HTMLElement;
@@ -798,9 +849,11 @@ export class Puppy {
   public render: Render | null = null;
   public runner: Runner | null = null;
   runtime: IterableIterator<number> | null = null;
+  private syscalls: any;
 
   public constructor(element: HTMLElement, options: any = {}) {
     this.element = element;
+    this.syscalls = initSyscalls(element, options);
     if (!options.jest) {
       this.load();
       this.start();
@@ -896,7 +949,7 @@ export class Puppy {
       //console.log(this.code);
       //this.running = true;
       this.pausing = false;
-      this.render!.run('▶︎');  // FIXME
+      this.render!.start('▶︎');  // FIXME
       Runner.run(this.runner, this.engine!);
       this.execAll(this.runtime);
     }
@@ -904,7 +957,7 @@ export class Puppy {
 
   execAll(runtime: IterableIterator<number>) {
     if (this.pausing) {
-      setTimeout(() => { this.execAll(runtime) }, 300);
+      setTimeout(() => { this.execAll(runtime) }, 100);
     }
     else {
       const res = runtime.next();
@@ -918,43 +971,45 @@ export class Puppy {
     }
   }
 
-  public pause() {
+  public restart() {
+    if (this.render !== null && this.runner !== null) {
+      //this.running = true; // still runing
+      this.pausing = false;
+      this.render.start();
+      Runner.start(this.runner, this.engine!);
+    }
+  }
+
+  public pause(message: string = '||') {
     if (this.render !== null && this.runner !== null) {
       //this.running = true; // still runing
       this.pausing = true;
-      this.render.stop('‖'); // FIXME
+      this.render.stop(message); // FIXME
       Runner.stop(this.runner);
     }
   }
 
-  public resize(width: number, height: number) {
-    // console.log(`'resize width ${width} ${this.canvas.clientWidth} height ${height} ${this.canvas.clientHeight}`);
-    const render = this.render!;
-    const canvas = render.canvas;
-    let w = width;
-    let h = (width * canvas.height) / canvas.width;
-    if (h > height) {
-      h = height;
-      w = (height * canvas.width) / canvas.height;
+  async syscall(name: string, data: any) {
+    const world = this.engine!.world as PuppyWorld;
+    this.pause('');
+    world.vars['_'] = null;
+    this.syscalls[name](data, (res: any) => {
+      world.vars['_'] = res;
+      this.restart();
+    })
+    while (world.vars['_'] === null) {
+      await this.wait();
     }
-    canvas.setAttribute('width', w.toString());
-    canvas.setAttribute('height', h.toString());
-    // console.log('resize width {this.render.options.width} => {w} height {this.render.options.height} => {h}');
-    render.options.width = w;
-    render.options.height = h;
+    return world.vars['_'];
   }
 
-  // public async wait(msec: number) {
-  //   await new Promise(resolve => setTimeout(resolve, msec));
-  // }
+  private async wait(msec = 100) {
+    await new Promise(resolve => setTimeout(resolve, msec));
+  }
 
-  // public async waitForRun(interval: number) {
-  //   while (this.waitRestart) {
-  //     await this.wait(interval);
-  //   }
-  //   this.runner!.enabled = true;
-  // }
-
-  // public async execute_main() {
-  // }
+  public resize(width: number, height: number) {
+    if (this.render !== null) {
+      this.render.resize(width, height);
+    }
+  }
 }

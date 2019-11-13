@@ -461,18 +461,20 @@ class OptionType extends Type {
 export class Types {
   public static Any = new AnyType();
   public static Void = new VoidType();
-  public static Bool = new BaseType('Bool');
-  public static Int = new BaseType('Number');
+  public static Bool = new BaseType('bool');
+  public static Int = new BaseType('number');
   //  public static Int_ = new BaseType('Number', true);
   public static Float = Types.Int;
   //  public static Float_ = Types.Int_;
-  public static String = new BaseType('String');
+  public static String = new BaseType('string');
   //  public static String_ = new BaseType('String', true);
   public static A = new BaseType('a');
+  public static B = new BaseType('b');
   public static ListA = new ListType(Types.A);
+  public static ListB = new ListType(Types.B);
   public static ListInt = new ListType(Types.Int);
   public static ListAny = new ListType(Types.Any);
-  public static Matter = new BaseType('Object');
+  public static Matter = new BaseType('object');
   public static Object = Types.Matter;
   public static Vec = new BaseType('Vec');
   public static Module = new BaseType('Module');

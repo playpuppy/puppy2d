@@ -1,6 +1,6 @@
-import { Lib } from '../src/lang/libpuppy2d';
+import { LibPython } from '../src/lang/libpython';
 
-const lib = new Lib(undefined);
+const lib = new LibPython(undefined);
 
 test('str(1)', () => {
   expect(lib.str(1)).toBe('1');

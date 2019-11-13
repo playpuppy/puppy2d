@@ -1,4 +1,5 @@
 import { Type, Types as ts } from './types';
+import { type } from 'os';
 
 export class Symbol {
   public code: string;
@@ -24,45 +25,162 @@ const sym = (code: string, ty: Type, isMatter = false, isMutable = false) => {
   }
   return new Symbol(code, ty);
 }
-
+const tFuncIntInt = ts.func(ts.Int, ts.Int);
+const tFuncIntIntInt = ts.func(ts.Int, ts.Int, ts.Int);
 const tFuncFloatFloat = ts.func(ts.Float, ts.Float);
 const tFuncFloatFloatFloat = ts.func(ts.Float, ts.Float, ts.Float);
+const tFuncFloatListFloat = ts.func(ts.Float, ts.ListInt);
+const tFuncBoolFloat = ts.func(ts.Bool, ts.Float);
 
-const import_math = {
-  'pi': sym('Math.PI', ts.Float),
-  'sin': sym('Math.sin', tFuncFloatFloat),
-  'cos': sym('Math.cos', tFuncFloatFloat),
-  'tan': sym('Math.tan', tFuncFloatFloat),
-  'sqrt': sym('Math.sqrt', tFuncFloatFloat),
+
+const import_math: { [key: string]: Symbol | undefined } = {
+  'ceil': sym('Math.ceil', tFuncFloatFloat),
+  'comb': undefined,
+  'copysign': undefined,
+  'fabs': sym('Math.abs', tFuncFloatFloat),
+  'factorial': undefined,
+  'floor': sym('Math.floor', tFuncFloatFloat),
+  'fmod': undefined,
+  'frexp': undefined,
+  'isfinite': sym('Number.isFinite', tFuncBoolFloat),
+  'isinf': sym('Number.isInf', tFuncBoolFloat),
+  'isnan': sym('Number.isNaN', tFuncBoolFloat),
+  'isqrt': undefined,
+  'ldexp': undefined,
+  'modf': undefined,
+  'perm': undefined,
+  'prod': undefined,
+  'remainder': undefined,
+  'trunc': sym('Math.trunc', tFuncFloatFloat),
+  // 指数関数と対数関数
+  'exp': sym('Math.exp', tFuncFloatFloat),
+  'expm1': sym('Math.expm1', tFuncFloatFloat),
   'log': sym('Math.log', tFuncFloatFloat),
+  'log1p': sym('Math.log1p', tFuncFloatFloat),
+  'log2': sym('Math.log2', tFuncFloatFloat),
   'log10': sym('Math.log10', tFuncFloatFloat),
-
   'pow': sym('Math.pow', tFuncFloatFloatFloat),
-  'hypot': sym('Math.hypot', tFuncFloatFloatFloat),
+  'sqrt': sym('Math.sqrt', tFuncFloatFloat),
+
+  // 三角関数
+  'acos': sym('Math.acos', tFuncFloatFloat),
+  'asin': sym('Math.asin', tFuncFloatFloat),
+  'atan': sym('Math.atan', tFuncFloatFloat),
+  'atan2': sym('Math.atan2', tFuncFloatFloatFloat),
+  'cos': sym('Math.cos', tFuncFloatFloat),
+  'dist': undefined,
+  'hypot': undefined,
+  'sin': sym('Math.sin', tFuncFloatFloat),
+  'tan': sym('Math.tan', tFuncFloatFloat),
+
+  // 角度変換
+  'degrees': sym('lib.degrees', tFuncFloatFloat),
+  'radians': sym('lib.radians', tFuncFloatFloat),
+  // 双曲線関数
+  'acosh': sym('Math.acosh', tFuncFloatFloat),
+  'asinh': sym('Math.asinh', tFuncFloatFloat),
+  'atanh': sym('Math.atanh', tFuncFloatFloat),
+  'cosh': sym('Math.cosh', tFuncFloatFloat),
+  'sinh': sym('Math.sinh', tFuncFloatFloat),
+  'tanh': sym('Math.tanh', tFuncFloatFloat),
+  // 特殊関数
+  'erf': undefined,
+  'erfc': undefined,
+  'gamma': undefined,
+  'lgamma': undefined,
+  // 定数
+  'pi': sym('Math.PI', ts.Float),
+  'e': sym('Math.E', ts.Float),
+  'tau': undefined,
+  'inf': sym('Infinity', ts.Float),
+  'nan': sym('NaN', ts.Float),
+  // 
   'gcd': sym('lib.gcd', tFuncFloatFloatFloat),
 }
 
 const Visual = true;
 
-const import_python: { [key: string]: Symbol } = {
-  'input@0': sym('await puppy.input', ts.func(ts.String)),
-  'input': sym('await puppy.input', ts.func(ts.String, ts.String)),
-  'print': sym('puppy.print', ts.func(ts.Void, ts.Any, ts.Option), Visual),
+const import_python: { [key: string]: Symbol | undefined } = {
+  'abs': sym('Math.abs', tFuncIntInt),
+  'all': undefined,
+  'any': undefined,
+  'ascii': undefined,
+  'bin': undefined,
+  'bool': sym('lib.bool', ts.func(ts.Bool, ts.Any)),
+  'breakpoint': undefined,
+  'bytearray': undefined,
+  'bytes': undefined,
+  'callable': undefined,
+  'chr': sym('lib.chr', ts.func(ts.String, ts.Int)),
+  'classmethod': undefined,
+  'compile': undefined,
+  'complex': undefined,
+  'delattr': sym('lib.delattr', ts.func(ts.Void, ts.Object, ts.String)),
+  'dict': undefined,
+  'dir': undefined,
+  'divmod': undefined,
+  'enumerate': undefined,
+  'eval': undefined,
+  'exec': undefined,
+  'filter': sym('lib.filter', ts.func(ts.ListA, ts.func(ts.Bool, ts.A), ts.ListA)),
+  'float': sym('lib.float', ts.func(ts.Float, ts.union(ts.Bool, ts.String, ts.Int))),
+  'format': undefined,
+  'frozenset': undefined,
+  'getattr': sym('lib.getattr', ts.func(ts.A, ts.Object, ts.String, ts.A)),
+  'globals': undefined,
+  'hasattr': sym('lib.hasattr', ts.func(ts.Bool, ts.Object, ts.String)),
+  'hash': undefined,
+  'help': undefined,
+  'hex': undefined,
+  'id': undefined,
+  'input@0': sym('puppy.input', ts.func(ts.String)),
+  'input': sym('puppy.input', ts.func(ts.String, ts.String)),
+  'int': sym('lib.int', ts.func(ts.Int, ts.union(ts.Bool, ts.String, ts.Int))),
+  'int@2': sym('puppy.int', ts.func(ts.Int, ts.String, ts.Int)),
+  'isinstance': undefined,
+  'issubclass': undefined,
+  'iter': undefined,
+  'len': sym('lib.len', ts.func(ts.Int, ts.union(ts.String, ts.ListAny))),
+  'list': undefined,
+  'locals': undefined,
+  'map': sym('lib.map', ts.func(ts.ListB, ts.func(ts.B, ts.A), ts.ListA)),
+  'max@1': sym('lib.max1', tFuncFloatListFloat),
+  'max': sym('lib.max', tFuncFloatFloatFloat),
+  'memoryview': undefined,
+  'min@1': sym('lib.min1', tFuncFloatListFloat),
+  'min': sym('lib.min', tFuncFloatFloatFloat),
+  'next': undefined,
+  'object': undefined,
+  'oct': undefined,
+  'open': undefined,
+  'ord': undefined,
+  'pow': sym('Math.pow', tFuncFloatFloatFloat),
 
-  //# 返値, 引数..None はなんでもいい
-  'len': sym('lib.len', ts.func(ts.Int, ts.union(ts.String, ts.ListA))),
-  //可変長引数
+  'print': sym('puppy.print', ts.func(ts.Void, ts.Any, ts.Option), Visual),
+  'property': undefined,
+  //
   'range@1': sym('lib.range1', ts.func(ts.ListInt, ts.Int)),
   'range@2': sym('lib.range2', ts.func(ts.ListInt, ts.Int, ts.Int)),
   'range': sym('lib.range', ts.func(ts.ListInt, ts.Int, ts.Int, ts.Int)),
+  //
+  'reserved': sym('lib.reserved', ts.func(ts.ListA, ts.ListA)),
+  'round': sym('Math.round', tFuncIntInt),
+  'set': undefined,
+  'setattr': sym('Math.round', ts.func(ts.Void, ts.Object, ts.String, ts.Any)),
+  //
+  'slice': undefined,
+  'sorted': sym('lib.sorted', ts.func(ts.ListA, ts.ListA)),
+  'str': sym('lib.str', ts.func(ts.String, ts.Any)),
+  'sum': sym('lib.str', ts.func(ts.Int, ts.ListInt)),
+  'super': undefined,
+  'tuple': undefined,
+  'type': undefined,
+  'vars': undefined,
+  'zip': undefined,
+
   //append
   '.append': sym('lib.append', ts.func(ts.Void, ts.ListA, ts.A)),
 
-  // 変換
-  'int': sym('lib.int', ts.func(ts.Int, ts.union(ts.Bool, ts.String, ts.Int))),
-  'float': sym('lib.float', ts.func(ts.Float, ts.union(ts.Bool, ts.String, ts.Int))),
-  'str': sym('lib.str', ts.func(ts.String, ts.Any)),
-  //'random': sym('Math.random', ts.func(t.Int)),
 }
 
 const import_random: { [key: string]: Symbol } = {
@@ -103,7 +221,7 @@ const import_puppy2d: { [key: string]: Symbol } = {
   '.setVelocity': sym('lib.setVelocity', ts.func(ts.Void, ts.Matter, ts.Int)),
 };
 
-export const PuppyModules: { [key: string]: { [key: string]: Symbol } } = {
+export const PuppyModules: { [key: string]: { [key: string]: Symbol | undefined } } = {
   '': import_python,
   'math': import_math,
   'random': import_random,
@@ -116,8 +234,11 @@ export const PackageSymbolMap: any = {
 
 const checkSymbolNames = () => {
   for (const pkgname of Object.keys(PuppyModules)) {
-    for (const name of Object.keys(PuppyModules[pkgname])) {
-      PackageSymbolMap[name] = pkgname;
+    const pack = PuppyModules[pkgname];
+    for (const name of Object.keys(pack)) {
+      if (pack[name] !== undefined) {
+        PackageSymbolMap[name] = pkgname;
+      }
     }
   }
 }
