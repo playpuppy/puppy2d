@@ -21,15 +21,6 @@ export class Impulse extends Vector {
   }
 }
 
-/**
-* The `Matter.Body` module contains methods for creating and manipulating body models.
-* A `Matter.Body` is a rigid body that can be simulated by a `Matter.Engine`.
-* Factories for commonly used body configurations (such as rectangles, circles and other polygons) can be found in the module `Matter.Bodies`.
-*
-* See the included usage [examples](https://github.com/liabru/matter-js/tree/master/examples).
-* @class Body
-*/
-
 export type Filter = {
   category: number;
   mask: number;
@@ -42,14 +33,14 @@ export const DefaultCollisionFilter: Filter = {
   group: 0
 };
 
-// export type BodyState = {
-//   position: Vector;
-//   angle: number;
-//   force: Vector;
-//   torque: number;
-//   positionImpulse: Vector;
-//   isStatic: boolean;
-// }
+/**
+* The `Matter.Body` module contains methods for creating and manipulating body models.
+* A `Matter.Body` is a rigid body that can be simulated by a `Matter.Engine`.
+* Factories for commonly used body configurations (such as rectangles, circles and other polygons) can be found in the module `Matter.Bodies`.
+*
+* See the included usage [examples](https://github.com/liabru/matter-js/tree/master/examples).
+* @class Body
+*/
 
 export class Body {
   public id: number = -1;
@@ -84,17 +75,8 @@ export class Body {
   public collisionFilter = DefaultCollisionFilter;
   public slop = 0.05;
   public timeScale = 1;
-  // public render = {
-  //   visible: true,
-  //   opacity: 1,
-  //   sprite: {
-  //     xScale: 1,
-  //     yScale: 1,
-  //     xOffset: 0,
-  //     yOffset: 0
-  //   },
-  //   lineWidth: 0
-  // };
+
+  // render
   public visible = true;
   public opacity = 1;
   public texture: string | undefined;
@@ -109,6 +91,7 @@ export class Body {
   public bounds: Bounds;
   public chamfer = null;
   public circleRadius: number | undefined;
+
   public positionPrev = new Vector();
   public anglePrev = 0;
   public parent: Body | undefined;
@@ -166,10 +149,7 @@ export class Body {
     }
     this.xOffset += -(this.bounds.min.x - this.position.x) / (this.bounds.max.x - this.bounds.min.x);
     this.yOffset += -(this.bounds.min.y - this.position.y) / (this.bounds.max.y - this.bounds.min.y);
-    //console.log(`inertia=${this.inertia}, inverseIneria=${this.inverseInertia}, isStatic=${this.isStatic}`);
   }
-
-  //public static None: Body = new Body();
 
   /**
  * Sets the body as static, including isStatic flag and setting mass and inertia to Infinity.
@@ -275,6 +255,7 @@ export class Body {
    * @param {body} this
    * @param {vector[]} vertices
    */
+
   public setVertices(vertices: Vertex[]) {
     // change vertices
     if (vertices[0].body === this) {
@@ -296,7 +277,7 @@ export class Body {
     this.setInertia(_inertiaScale * Vertices.inertia(this.vertices, this.mass));
 
     // update geometry
-    Vertices.translate(this.vertices, this.position);
+    Vertices.translate2(this.vertices, this.position.x, this.position.y);
     Bounds.update(this.bounds, this.vertices, this.velocity);
   }
 
@@ -534,9 +515,9 @@ export class Body {
       part.setMass(this.density * part.area);
 
       // update inertia (requires vertices to be at origin)
-      Vertices.translate(part.vertices, new Vector(-part.position.x, -part.position.y));
+      Vertices.translate2(part.vertices, -part.position.x, -part.position.y);
       part.setInertia(_inertiaScale * Vertices.inertia(part.vertices, part.mass));
-      Vertices.translate(part.vertices, new Vector(part.position.x, part.position.y));
+      Vertices.translate2(part.vertices, part.position.x, part.position.y);
 
       if (i > 0) {
         totalArea += part.area;
@@ -580,22 +561,29 @@ export class Body {
    * @param {number} timeScale
    * @param {number} correction
    */
+
   public update(deltaTime: number, timeScale: number, correction: number) {
-    var deltaTimeSquared = Math.pow(deltaTime * timeScale * this.timeScale, 2);
+    const deltaTimeSquared = Math.pow(deltaTime * timeScale * this.timeScale, 2);
 
     // from the previous step
-    var frictionAir = 1 - this.frictionAir * timeScale * this.timeScale,
-      velocityPrevX = this.position.x - this.positionPrev.x,
-      velocityPrevY = this.position.y - this.positionPrev.y;
+    const frictionAir = 1 - this.frictionAir * timeScale * this.timeScale;
+    const velocityPrevX = this.position.x - this.positionPrev.x;
+    const velocityPrevY = this.position.y - this.positionPrev.y;
 
     // update velocity with Verlet integration
-    this.velocity.x = (velocityPrevX * frictionAir * correction) + (this.force.x / this.mass) * deltaTimeSquared;
-    this.velocity.y = (velocityPrevY * frictionAir * correction) + (this.force.y / this.mass) * deltaTimeSquared;
+    // this.velocity.x = (velocityPrevX * frictionAir * correction) + (this.force.x / this.mass) * deltaTimeSquared;
+    // this.velocity.y = (velocityPrevY * frictionAir * correction) + (this.force.y / this.mass) * deltaTimeSquared;
+    // update velocity with maximum velocity
+    this.velocity.x = Math.min(10, velocityPrevX * frictionAir * correction) + (this.force.x / this.mass) * deltaTimeSquared;
+    this.velocity.y = Math.min(10, velocityPrevY * frictionAir * correction) + (this.force.y / this.mass) * deltaTimeSquared;
+
+    const velocityX = this.velocity.x;
+    const velocityY = this.velocity.y;
 
     this.positionPrev.x = this.position.x;
     this.positionPrev.y = this.position.y;
-    this.position.x += this.velocity.x;
-    this.position.y += this.velocity.y;
+    this.position.x += velocityX;
+    this.position.y += velocityY;
 
     // update angular velocity with Verlet integration
     this.angularVelocity = ((this.angle - this.anglePrev) * frictionAir * correction) + (this.torque / this.inertia) * deltaTimeSquared;
@@ -610,11 +598,11 @@ export class Body {
     for (var i = 0; i < this.parts.length; i++) {
       var part = this.parts[i];
 
-      Vertices.translate(part.vertices, this.velocity);
+      Vertices.translate2(part.vertices, velocityX, velocityY);
 
       if (i > 0) {
-        part.position.x += this.velocity.x;
-        part.position.y += this.velocity.y;
+        part.position.x += velocityX;
+        part.position.y += velocityY;
       }
 
       if (this.angularVelocity !== 0) {
@@ -624,7 +612,6 @@ export class Body {
           Vector.rotateAbout(part.position, this.angularVelocity, this.position, part.position);
         }
       }
-
       Bounds.update(part.bounds, part.vertices, this.velocity);
     }
   }
@@ -692,7 +679,7 @@ export class Body {
 * @class Constraint
 */
 
-const _warming = 0.4;
+const _warming = 0.0001;//0.4;
 const _torqueDampen = 1;
 const _minLength = 0.000001;
 
@@ -710,9 +697,6 @@ export class Constraint {
   public angularStiffness: number = 0;
   public angleA: number = 0;
   public angleB: number = 0;
-  //plugin = {};
-  // render
-
   // render
   //     var render = {
   //   visible: true,
@@ -722,7 +706,7 @@ export class Constraint {
   //   anchors: true
   // };
   public visible = true;
-  public lineWidth = 2;
+  public lineWidth = 5;
   public strokeStyle = '#ffffff';
   public renderType = 'line'; // type
   public anchors = true;
@@ -740,19 +724,20 @@ export class Constraint {
    */
 
   public constructor(options?: any) {
-    this.id = Common.nextId();
-    this.label = this.label || 'Constraint';
-    this.type = 'constraint';
-
     if (options !== undefined) {
       Object.assign(this, options);
     }
+    this.id = options.id || Common.nextId();
+    this.label = options.label || 'Constraint';
+    this.type = 'constraint';
 
     // if bodies defined but no points, use body centre
-    if (this.bodyA && !this.pointA)
+    if (this.bodyA && !this.pointA) {
       this.pointA = new Vector();
-    if (this.bodyB && !this.pointB)
+    }
+    if (this.bodyB && !this.pointB) {
       this.pointB = new Vector();
+    }
 
     // calculate static length using initial world space points
     if (this.length === -1) {
@@ -763,9 +748,9 @@ export class Constraint {
 
     // option defaults
 
-    this.stiffness = this.stiffness || (this.length > 0 ? 1 : 0.7);
-    this.damping = this.damping || 0;
-    this.angularStiffness = this.angularStiffness || 0;
+    this.stiffness = options.stiffness || (this.length > 0 ? 1 : 0.7);
+    this.damping = options.damping || 0;
+    this.angularStiffness = options.angularStiffness || 0;
     this.angleA = this.bodyA ? this.bodyA.angle : this.angleA;
     this.angleB = this.bodyB ? this.bodyB.angle : this.angleB;
 
@@ -775,7 +760,7 @@ export class Constraint {
     } else if (this.stiffness < 0.9) {
       this.renderType = 'spring';
     }
-    return this;
+    //console.log(this);
   }
 
   /**
@@ -787,13 +772,12 @@ export class Constraint {
 
   public static preSolveAll(bodies: Body[]) {
     for (var i = 0; i < bodies.length; i += 1) {
-      var body = bodies[i];
-      var impulse = body.constraintImpulse;
+      const body = bodies[i];
+      const impulse = body.constraintImpulse;
 
       if (body.isStatic || (impulse.x === 0 && impulse.y === 0 && impulse.angle === 0)) {
         continue;
       }
-
       body.position.x += impulse.x;
       body.position.y += impulse.y;
       body.angle += impulse.angle;
@@ -807,6 +791,7 @@ export class Constraint {
    * @param {constraint[]} constraints
    * @param {number} timeScale
    */
+
   public static solveAll(constraints: Constraint[], timeScale: number) {
     // Solve fixed constraints first.
     for (var i = 0; i < constraints.length; i += 1) {
@@ -842,29 +827,30 @@ export class Constraint {
   static solve(constraint: Constraint, timeScale: number) {
     const bodyA = constraint.bodyA;
     const bodyB = constraint.bodyB;
-    const pointA = constraint.pointA!;
-    const pointB = constraint.pointB!;
+    const pointA = constraint.pointA;
+    const pointB = constraint.pointB;
 
     if (!bodyA && !bodyB)
       return;
 
+    // if (bodyB && Number.isNaN(bodyB.position.x)) {
+    //   return; // DEBUG
+    // }
+
     // update reference angle
     if (bodyA && !bodyA.isStatic) {
-      Vector.rotate(pointA, bodyA.angle - constraint.angleA, pointA);
+      Vector.rotate(pointA!, bodyA.angle - constraint.angleA, pointA!);
       constraint.angleA = bodyA.angle;
     }
 
     // update reference angle
     if (bodyB && !bodyB.isStatic) {
-      Vector.rotate(pointB, bodyB.angle - constraint.angleB, pointB);
+      Vector.rotate(pointB!, bodyB.angle - constraint.angleB, pointB!);
       constraint.angleB = bodyB.angle;
     }
 
-    var pointAWorld = pointA;
-    var pointBWorld = pointB;
-
-    if (bodyA) pointAWorld = Vector.add(bodyA.position, pointA);
-    if (bodyB) pointBWorld = Vector.add(bodyB.position, pointB);
+    var pointAWorld = (bodyA) ? Vector.add(bodyA.position, pointA!) : pointA;
+    var pointBWorld = (bodyB) ? Vector.add(bodyB.position, pointB!) : pointB;
 
     if (!pointAWorld || !pointBWorld)
       return;
@@ -887,15 +873,14 @@ export class Constraint {
     const zero = new Vector();
     var normal = zero;
     var normalVelocity = 0;
+    //console.log(`difference=${difference} force=${force.x | 0},${force.y | 0}`);
 
-    if (constraint.damping) {
+    if (constraint.damping !== 0) {
       normal = Vector.div(delta, currentLength);
-
       var relativeVelocity = Vector.sub(
         bodyB && Vector.sub(bodyB.position, bodyB.positionPrev) || zero,
         bodyA && Vector.sub(bodyA.position, bodyA.positionPrev) || zero
       );
-
       normalVelocity = Vector.dot(normal, relativeVelocity);
     }
 
@@ -911,13 +896,13 @@ export class Constraint {
       bodyA.position.y -= force.y * share;
 
       // apply damping
-      if (constraint.damping) {
+      if (constraint.damping !== 0) {
         bodyA.positionPrev.x -= constraint.damping * normal.x * normalVelocity * share;
         bodyA.positionPrev.y -= constraint.damping * normal.y * normalVelocity * share;
       }
 
       // apply torque
-      const torque = (Vector.cross(pointA, force) / resistanceTotal) * _torqueDampen * bodyA.inverseInertia * (1 - constraint.angularStiffness);
+      const torque = (Vector.cross(pointA!, force) / resistanceTotal) * _torqueDampen * bodyA.inverseInertia * (1 - constraint.angularStiffness);
       bodyA.constraintImpulse.angle -= torque;
       bodyA.angle -= torque;
     }
@@ -934,13 +919,13 @@ export class Constraint {
       bodyB.position.y += force.y * share;
 
       // apply damping
-      if (constraint.damping) {
+      if (constraint.damping !== 0) {
         bodyB.positionPrev.x += constraint.damping * normal.x * normalVelocity * share;
         bodyB.positionPrev.y += constraint.damping * normal.y * normalVelocity * share;
       }
 
       // apply torque
-      const torque = (Vector.cross(pointB, force) / resistanceTotal) * _torqueDampen * bodyB.inverseInertia * (1 - constraint.angularStiffness);
+      const torque = (Vector.cross(pointB!, force) / resistanceTotal) * _torqueDampen * bodyB.inverseInertia * (1 - constraint.angularStiffness);
       bodyB.constraintImpulse.angle += torque;
       bodyB.angle += torque;
     }
@@ -962,12 +947,9 @@ export class Constraint {
         continue;
       }
 
-      //FIXME
-      //Sleeping.set(body, false);
-
       // update geometry and reset
       for (var j = 0; j < body.parts.length; j++) {
-        var part = body.parts[j];
+        const part = body.parts[j];
 
         Vertices.translate(part.vertices, impulse);
 

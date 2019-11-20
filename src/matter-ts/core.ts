@@ -268,23 +268,23 @@ export class Engine {
  */
 
   private bodiesApplyGravity(bodies: Body[], gravity: any) {
-    var gravityScale = typeof gravity.scale !== 'undefined' ? gravity.scale : 0.001;
+    const gravityScale: number = gravity.scale || 0.001;
+    const gravityX: number = gravity.x * gravityScale;
+    const gravityY: number = gravity.y * gravityScale;
 
     if ((gravity.x === 0 && gravity.y === 0) || gravityScale === 0) {
       return;
     }
 
     for (var i = 0; i < bodies.length; i++) {
-      var body = bodies[i];
-
+      const body = bodies[i];
       if (body.isStatic || body.isSleeping)
         continue;
-
       // apply gravity
-      body.force.y += body.mass * gravity.y * gravityScale;
-      body.force.x += body.mass * gravity.x * gravityScale;
+      body.force.x += body.mass * gravityX;
+      body.force.y += body.mass * gravityY;
     }
-  };
+  }
 
   /**
    * Applys `Body.update` to all given `bodies`.
@@ -299,9 +299,9 @@ export class Engine {
    * @param {bounds} worldBounds
    */
 
-  private bodiesUpdate(bodies: Body[], deltaTime: number, timeScale: number, correction: number, worldBounds?: Bounds) {
+  private bodiesUpdate(bodies: Body[], deltaTime: number, timeScale: number, correction: number) {
     for (var i = 0; i < bodies.length; i++) {
-      var body = bodies[i];
+      const body = bodies[i];
       if (body.isStatic || body.isSleeping)
         continue;
       body.update(deltaTime, timeScale, correction);
@@ -343,43 +343,34 @@ export class Engine {
     const allBodies = this.world.allBodies();
     const allConstraints = this.world.allConstraints();
 
-    // @if DEBUG
-    // reset metrics logging
-    //Metrics.reset(engine.metrics);
-    // @endif
-
     // if sleeping enabled, call the sleeping controller
-    if (this.enableSleeping)
-      Sleeping.update(allBodies, timing.timeScale);
+    // if (this.enableSleeping)
+    //   Sleeping.update(allBodies, timing.timeScale);
 
     // applies gravity to all bodies
     this.bodiesApplyGravity(allBodies, this.world.gravity);
 
     // update all body position and rotation by integration
-    this.bodiesUpdate(allBodies, delta, timing.timeScale, correction, this.world.bounds);
+
+    this.bodiesUpdate(allBodies, delta, timing.timeScale, correction);
 
     // update all constraints (first pass)
     Constraint.preSolveAll(allBodies);
-
     for (var i = 0; i < this.constraintIterations; i++) {
       Constraint.solveAll(allConstraints, timing.timeScale);
     }
-
     Constraint.postSolveAll(allBodies);
 
     // broadphase pass: find potential collision pairs
-    // if (broadphase) {
     // if world is dirty, we must flush the whole grid
     if (world.isModified)
       broadphase.clear();
 
     // update the grid buckets based on current bodies
     broadphase.update(allBodies, world, world.isModified);
+    //this.foundNaN('broadphase.update', allBodies);
+
     const broadphasePairs = broadphase.pairsList;
-    // } else {
-    //   // if no broadphase set, we just pass all bodies
-    //   // broadphasePairs = allBodies;
-    // }
 
     // clear all composite modified flags
     if (world.isModified) {
@@ -406,18 +397,28 @@ export class Engine {
       Events.trigger(this, 'collisionStart', { pairs: pairs.collisionStart });
 
     // iteratively resolve position between collisions
+    //this.foundNaN('collisionStart', allBodies);
+
     Resolver.preSolvePosition(pairs.list);
+    //this.foundNaN('preSolvePosition', allBodies);
+
     for (i = 0; i < this.positionIterations; i++) {
       Resolver.solvePosition(pairs.list, allBodies, timing.timeScale);
+      //this.foundNaN(`solvePosition ${i}`, allBodies);
     }
+    //this.foundNaN('postSolvePosition', allBodies);
     Resolver.postSolvePosition(allBodies);
 
     // update all constraints (second pass)
+    //this.foundNaN('second pre', allBodies);
     Constraint.preSolveAll(allBodies);
     for (i = 0; i < this.constraintIterations; i++) {
+      //this.foundNaN(`second ${i}`, allBodies);
       Constraint.solveAll(allConstraints, timing.timeScale);
     }
+    //this.foundNaN('second post', allBodies);
     Constraint.postSolveAll(allBodies);
+    //this.foundNaN('second done', allBodies);
 
     // iteratively resolve velocity between collisions
     Resolver.preSolveVelocity(pairs.list);
@@ -444,30 +445,6 @@ export class Engine {
     Events.trigger(this, 'afterUpdate', event);
   }
 
-  // /**
-  //  * Merges two engines by keeping the configuration of `engineA` but replacing the world with the one from `engineB`.
-  //  * @method merge
-  //  * @param {engine} engineA
-  //  * @param {engine} engineB
-  //  */
-
-  // Engine.merge = function (engineA, engineB) {
-  //   Common.extend(engineA, engineB);
-
-  //   if (engineB.world) {
-  //     engineA.world = engineB.world;
-
-  //     Engine.clear(engineA);
-
-  //     var bodies = Composite.allBodies(engineA.world);
-
-  //     for (var i = 0; i < bodies.length; i++) {
-  //       var body = bodies[i];
-  //       Sleeping.set(body, false);
-  //       body.id = Common.nextId();
-  //     }
-  //   }
-  // };
 
   /**
    * Clears the engine including the world, pairs and broadphase.
@@ -636,12 +613,6 @@ export class Runner {
    */
 
   public static run(runner: Runner, engine: Engine) {
-    // // create runner if engine is first argument
-    // if (typeof runner.positionIterations !== 'undefined') {
-    //   engine = runner;
-    //   runner = Runner.create();
-    // }
-
     (function render(time: number) {
       runner.frameRequestId = _requestAnimationFrame(render);
 

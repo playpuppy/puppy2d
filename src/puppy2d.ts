@@ -409,23 +409,30 @@ const newtonsCradle = (world: PuppyWorld, options: any): Composite => {
   const height = (options.height = (!options.height) ? width : options.height);
   const num = options.columns || options.N || 5;
   const position = options.position;
-  const sx = position.x - (width / 2);
-  const sy = position.y - world.yscale(height / 2);
   const separation = 1.9;
   const size = width / num / separation;
   const newtonsCradle = world.newComposite();
+  const sx = position.x - (width / 2);
+  const sy = position.y - world.yscale(height / 2);
+  //console.log(`sx=${sx},sy=${sy}`);
   for (var i = 0; i < num; i++) {
     const cx = sx + i * (size * separation);
     const cy = sy + world.yscale(height - size);
+    //console.log(`cx=${cx},cy=${cy}`);
+    const parts = options.part || {};
     const circle = world.newBody({
-      shape: 'circle',
+      shape: parts.shape || 'circle',
       width: size * 2,
       position: world.newVec(cx, cy),
-      inertia: Infinity, restitution: 1, friction: 0, frictionAir: 0.0001, slop: 1
+      inertia: parts.inertia || Infinity,
+      restitution: parts.restitution || 1,
+      friction: parts.friction || 0,
+      frictionAir: parts.frictionAir || 0.0001,
+      slop: parts.slop || 1
     });
     const constraint = world.newConstraint({
-      pointA: world.newVec(cx + i * (size * separation), cy),
-      bodyB: circle
+      pointA: world.newVec(cx, cy - world.yscale(height)),
+      bodyB: circle,
     });
     newtonsCradle.addBody(circle);
     newtonsCradle.addConstraint(constraint);
@@ -534,7 +541,7 @@ export class PuppyWorld extends World {
       ux = this.bounds.min.x + (this.width * Math.random() * 0.8);
     }
     if (uy === undefined) {
-      uy = this.bounds.min.y + (this.width * Math.random() * 0.8);
+      uy = this.bounds.min.y + this.yscale(this.height * Math.random() * 0.8);
     }
     return new Vector(ux, uy);
   }
@@ -681,7 +688,6 @@ export class PuppyWorld extends World {
       fontColor: Common.choose(this.colors, 1),
       move: (body: Body, time: number) => {
         body.translate2(-2, 0);
-        //body.position.dump(`print`);
         if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
           this.removeBody(body);
         }
@@ -761,16 +767,9 @@ export class PuppyWorld extends World {
   }
 }
 
-// export type PuppyCode = {
-//   world: any;
-//   main: (puppy: any) => IterableIterator<number>;
-//   errors: any[];
-//   code: string;
-// };
-
 const trail = (body: Body, timestamp: number, world: PuppyWorld) => {
   if (Math.abs(body.position.x - body.positionPrev.x) > 2) {
-    body.position.dump('moved');
+    //body.position.dump('moved');
     world.paint(body.position.x, body.position.y, 10, body.fillStyle);
   }
 }
@@ -787,16 +786,23 @@ const DefaultPuppyCode: PuppyCode = {
     // world.Rectangle(200, -200, 60, 60, { frictionAir: 0.01, move: trail });
     // world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
     // world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
-    // world.setGravity(0, -1);
+    world.setGravity(0, -1.0);
     world.newObject({
-      shape: 'array',
+      shape: 'newtonsCradle',
       position: new Vector(0, 0),
       margin: 10,
-      part: { shape: 'circle' },
+      columns: 3,
+      //part: { shape: 'rectangle' },
     });
+    // world.newObject({
+    //   shape: 'array',
+    //   position: new Vector(0, 0),
+    //   margin: 10,
+    //   part: { shape: 'circle', restitution: 1.0 },
+    // });
     world.Variable('TIME', 320, -400, 260);
     world.Variable('MOUSE', 320, -440, 260);
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 40; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
       yield 200;
     }

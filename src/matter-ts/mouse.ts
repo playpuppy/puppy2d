@@ -88,7 +88,7 @@ export class Mouse {
       this.mousedownPosition.x = this.position.x;
       this.mousedownPosition.y = this.position.y;
       this.sourceEvents.mousedown = event;
-      console.log(`clicked (${this.absolute.x}, ${this.absolute.y}) (${this.position.x | 0}, ${this.position.y | 0})`);
+      //console.log(`clicked (${this.absolute.x}, ${this.absolute.y}) (${this.position.x | 0}, ${this.position.y | 0})`);
     };
 
     this.mouseup = (event) => {
@@ -297,7 +297,7 @@ export class MouseConstraint {
                 constraint.angleB = body.angle;
                 Sleeping.set(body, false);
                 Events.trigger(mouseConstraint, 'startdrag', { mouse: mouse, body: body });
-                console.log(`clicked ${body.id} at ${mouse.position.x} ${mouse.position.y}`)
+                console.log(`mousedown ${body.id} at ${mouse.position.x} ${mouse.position.y}`)
                 break;
               }
             }
@@ -310,8 +310,11 @@ export class MouseConstraint {
     } else {
       constraint.bodyB = mouseConstraint.body = null;
       constraint.pointB = null;
-      if (body)
+      if (body) {
+        console.log(`mouseup ${body.id} at ${mouse.position.x} ${mouse.position.y}`)
         Events.trigger(mouseConstraint, 'enddrag', { mouse: mouse, body: body });
+      }
+
     }
   }
 

@@ -9,7 +9,7 @@ import { Common } from './commons';
 import { Vector, Contact, Vertex, Vertices, Bounds } from './geometry';
 import { Body, Filter, World } from './body';
 import { Bodies } from './factory';
-//import assert from 'assert';
+import assert from 'assert';
 
 /**
 * The `Matter.Pair` module contains methods for creating and manipulating collision pairs.
@@ -47,7 +47,7 @@ export class Pair {
   public isSensor: boolean;
   public timeCreated: number;
   public timeUpdated: number;
-  public collision: Collision | undefined; // = CollisionNull;
+  public collision: Collision | null = null;
   public inverseMass = 0;
   public friction = 0;
   public frictionStatic = 0;
@@ -61,6 +61,7 @@ export class Pair {
  * @param {body} bodyB
  * @return {string} Unique pairId
  */
+
   public static id(bodyA: Body, bodyB: Body): string {
     if (bodyA.id < bodyB.id) {
       return 'A' + bodyA.id + 'B' + bodyB.id;
@@ -212,9 +213,11 @@ export class Pairs {
           // pair already exists (but may or may not be active)
           if (pair.isActive) {
             // pair exists and is active
+            //console.log(`collisionActive ${pairId}`);
             collisionActive.push(pair);
           } else {
             // pair exists but was inactive, so a collision has just started again
+            // console.log(`collisionStart ${pairId}`);
             collisionStart.push(pair);
           }
 
@@ -224,11 +227,11 @@ export class Pairs {
         } else {
           // pair did not exist, create a new pair
           const pair = new Pair(collision, timestamp);
+          pairsList.push(pair);
           pairsTable[pairId] = pair;
-
           // push the new pair
           collisionStart.push(pair);
-          pairsList.push(pair);
+          // console.log(`collisionStart new ${pairId}`);
         }
       }
     }
@@ -238,6 +241,7 @@ export class Pairs {
       const pair = pairsList[i];
       if (pair.isActive && !pair.confirmedActive) {
         pair.setActive(false, timestamp);
+        //console.log(`collisionEnd ${pair.id}`);
         collisionEnd.push(pair);
       }
     }
@@ -334,7 +338,7 @@ class SAT {
     // var overlapBA: Overlap;
     // var minOverlap: Overlap;
     // var collision: Collision;
-    const canReusePrevCol = false;
+    var canReusePrevCol = false;
 
     if (previousCollision) {
       // estimate total motion
@@ -345,7 +349,7 @@ class SAT {
 
       // we may be able to (partially) reuse collision result 
       // but only safe if collision was resting
-      const canReusePrevCol = previousCollision && previousCollision.collided && motion < 0.2;
+      canReusePrevCol = previousCollision && previousCollision.collided && motion < 0.2;
 
       // reuse collision object
       var collision = previousCollision;
@@ -364,6 +368,7 @@ class SAT {
       collision.reused = true;
 
       if (minOverlap.overlap <= 0) {
+        //console.log(`reused ${minOverlap.overlap}`)
         collision.collided = false;
         return collision;
       }
@@ -371,9 +376,12 @@ class SAT {
       // if we can't reuse a result, perform a full SAT test
 
       const overlapAB = SAT.overlapAxes(bodyA.vertices, bodyB.vertices, bodyA.axes);
+      //console.log(`(${bodyA.position}) bodyA=${bodyA.vertices} overlapAB ${overlapAB.overlap}`)
+      //console.log(`A ${bodyA.angle} B ${bodyB.angle} overlapAB ${overlapAB.overlap}`)
 
       if (overlapAB.overlap <= 0) {
         collision.collided = false;
+        //console.log(`(${bodyA.position}) ${bodyA.angle} (${bodyB.position}) ${bodyB.angle} overlapAB ${overlapAB.overlap}`)
         return collision;
       }
 
@@ -381,6 +389,7 @@ class SAT {
 
       if (overlapBA.overlap <= 0) {
         collision.collided = false;
+        //console.log(`(${bodyA.position}) ${bodyA.angle} (${bodyB.position}) ${bodyB.angle} overlapBA ${overlapBA.overlap}`)
         return collision;
       }
 
@@ -477,7 +486,9 @@ class SAT {
       SAT.projectToAxis(projectionA, verticesA, axis);
       SAT.projectToAxis(projectionB, verticesB, axis);
 
-      const overlap = Math.min(projectionA.max - projectionB.min, projectionB.max - projectionA.min);
+      const overlap = Math.min(
+        projectionA.max - projectionB.min,
+        projectionB.max - projectionA.min);
 
       if (overlap <= 0) {
         result.overlap = overlap;
@@ -501,6 +512,7 @@ class SAT {
    * @param {} vertices
    * @param {} axis
    */
+
   private static projectToAxis(projection: Projection, vertices: Vertex[], axis: Vector) {
     var min = Vector.dot(vertices[0], axis);
     var max = min;
@@ -611,23 +623,21 @@ export class Detector {
       const bodyA = broadphasePairs[i][0];
       const bodyB = broadphasePairs[i][1];
 
-      if ((bodyA.isStatic || bodyA.isSleeping) && (bodyB.isStatic || bodyB.isSleeping))
+      if ((bodyA.isStatic || bodyA.isSleeping) && (bodyB.isStatic || bodyB.isSleeping)) {
         continue;
+      }
 
-      if (!Detector.canCollide(bodyA.collisionFilter, bodyB.collisionFilter))
+      if (!Detector.canCollide(bodyA.collisionFilter, bodyB.collisionFilter)) {
         continue;
-
-      // @if DEBUG
-      // metrics.midphaseTests += 1;
-      // @endif
+      }
 
       // mid phase
       if (Bounds.overlaps(bodyA.bounds, bodyB.bounds)) {
         for (var j = bodyA.parts.length > 1 ? 1 : 0; j < bodyA.parts.length; j++) {
-          var partA = bodyA.parts[j];
+          const partA = bodyA.parts[j];
 
           for (var k = bodyB.parts.length > 1 ? 1 : 0; k < bodyB.parts.length; k++) {
-            var partB = bodyB.parts[k];
+            const partB = bodyB.parts[k];
 
             if ((partA === bodyA && partB === bodyB) || Bounds.overlaps(partA.bounds, partB.bounds)) {
               // find a previous collision we could reuse
@@ -643,17 +653,8 @@ export class Detector {
 
               // narrow phase
               var collision = SAT.collides(partA, partB, previousCollision);
-              // @if DEBUG
-              //metrics.narrowphaseTests += 1;
-              //if (collision.reused)
-              //  metrics.narrowReuseCount += 1;
-              // @endif
-
               if (collision.collided) {
                 collisions.push(collision);
-                // @if DEBUG
-                // metrics.narrowDetections += 1;
-                // @endif
               }
             }
           }
@@ -729,10 +730,6 @@ export class Grid {
     const buckets = this.buckets;
     var gridChanged = false;
 
-    // @if DEBUG
-    // var metrics = engine.metrics;
-    // metrics.broadphaseTests = 0;
-    // @endif
     const worldMinX = Math.min(world.bounds.min.x, world.bounds.max.x)
     const worldMinY = Math.min(world.bounds.min.y, world.bounds.max.y)
     const worldMaxX = Math.max(world.bounds.min.x, world.bounds.max.x)
@@ -745,10 +742,9 @@ export class Grid {
         continue;
 
       // don't update out of world bodies
-
       if (body.bounds.max.x < worldMinX || body.bounds.min.x > worldMaxX
         || body.bounds.max.y < worldMinY || body.bounds.min.y > worldMaxY) {
-        //body.bounds.dump(`body ${body.id}`);
+        body.bounds.dump(`grid out of woeld bodies ${body.id}`);
         continue;
       }
 
@@ -758,21 +754,22 @@ export class Grid {
       // if the body has changed grid region
       if (!bodyRegion || newRegion.id !== bodyRegion.id || forceUpdate) {
 
-        // @if DEBUG
-        // metrics.broadphaseTests += 1;
-        // @endif
-
         if (!bodyRegion || forceUpdate) {
           (body as any)['region'] = newRegion;
           bodyRegion = newRegion;
         }
 
-        var union = Grid.regionUnion(newRegion, bodyRegion);
+        //var union = Grid.regionUnion(newRegion, bodyRegion);
+        const startCol = Math.min(newRegion.startCol, bodyRegion.startCol);
+        const endCol = Math.max(newRegion.endCol, bodyRegion.endCol);
+        const startRow = Math.min(newRegion.startRow, bodyRegion.startRow);
+        const endRow = Math.max(newRegion.endRow, bodyRegion.endRow);
 
         // update grid buckets affected by region change
         // iterate over the union of both regions
-        for (var col = union.startCol; col <= union.endCol; col++) {
-          for (var row = union.startRow; row <= union.endRow; row++) {
+
+        for (var col = startCol; col <= endCol; col++) {
+          for (var row = startRow; row <= endRow; row++) {
             var bucketId = Grid.getBucketId(col, row);
             var bucket = buckets[bucketId];
 
@@ -808,8 +805,10 @@ export class Grid {
     }
 
     // update pairs list only if pairs changed (i.e. a body changed region)
-    if (gridChanged)
+    if (gridChanged) {
+      //console.log('grid changed')
       this.pairsList = Grid.createActivePairsList(this);
+    }
   }
 
   /**
@@ -825,7 +824,7 @@ export class Grid {
 
   /**
    * Finds the union of two regions.
-   * @method _regionUnion
+   * @method regionUnion
    * @private
    * @param {} regionA
    * @param {} regionB
@@ -842,7 +841,7 @@ export class Grid {
 
   /**
    * Gets the region a given body falls in for a given grid.
-   * @method _getRegion
+   * @method getRegion
    * @private
    * @param {} grid
    * @param {} body
@@ -977,7 +976,7 @@ export class Grid {
     const pairs: [Body, Body, number][] = [];
 
     // grid.pairs is used as a hashmap
-    var pairKeys = Common.keys(grid.pairs);
+    const pairKeys = Object.keys(grid.pairs);
 
     // iterate over grid.pairs
     for (var k = 0; k < pairKeys.length; k++) {
@@ -1132,19 +1131,16 @@ export class Resolver {
    * @method preSolvePosition
    * @param {pair[]} pairs
    */
-  public static preSolvePosition(pairs: Pair[]) {
-    var i,
-      pair,
-      activeCount;
 
+  public static preSolvePosition(pairs: Pair[]) {
     // find total contacts on each body
-    for (i = 0; i < pairs.length; i++) {
-      pair = pairs[i];
+    for (var i = 0; i < pairs.length; i++) {
+      const pair = pairs[i];
 
       if (!pair.isActive)
         continue;
 
-      activeCount = pair.activeContacts.length;
+      const activeCount = pair.activeContacts.length;
       pair.collision!.parentA.totalContacts += activeCount;
       pair.collision!.parentB.totalContacts += activeCount;
     }
@@ -1179,6 +1175,8 @@ export class Resolver {
 
     for (i = 0; i < bodies.length; i++) {
       var body = bodies[i];
+      // assert(!Number.isNaN(body.positionImpulse.x), "body.positionImpulse.x");
+      // assert(!Number.isNaN(body.positionImpulse.y), "body.positionImpulse.y");
       body.previousPositionImpulse.x = body.positionImpulse.x;
       body.previousPositionImpulse.y = body.positionImpulse.y;
     }
@@ -1193,7 +1191,10 @@ export class Resolver {
       collision = pair.collision!;
       bodyA = collision.parentA;
       bodyB = collision.parentB;
+      if (bodyA.totalContacts === 0 || bodyB.totalContacts === 0)
+        console.log(`totalContacts A ${bodyA.totalContacts} B ${bodyB.totalContacts}`)
       normal = collision.normal;
+
 
       positionImpulseA = bodyA.previousPositionImpulse;
       positionImpulseB = bodyB.previousPositionImpulse;
@@ -1214,16 +1215,20 @@ export class Resolver {
       if (bodyA.isStatic || bodyB.isStatic)
         positionImpulse *= 2;
 
-      if (!(bodyA.isStatic || bodyA.isSleeping)) {
+      if (!(bodyA.isStatic || bodyA.isSleeping) /*&& bodyA.totalContacts !== 0 */) {
+        assert(bodyA.totalContacts !== 0, "bodyA.totalContacts");
         contactShare = positionImpulse / bodyA.totalContacts;
         bodyA.positionImpulse.x += normalX * contactShare;
         bodyA.positionImpulse.y += normalY * contactShare;
+        //assert(!Number.isNaN(bodyA.positionImpulse.x), "A bodyA.positionImpulse.x ");
       }
 
-      if (!(bodyB.isStatic || bodyB.isSleeping)) {
+      if (!(bodyB.isStatic || bodyB.isSleeping) /* && bodyB.totalContacts !== 0 */) {
+        assert(bodyB.totalContacts !== 0, "bodyB.totalContacts");
         contactShare = positionImpulse / bodyB.totalContacts;
         bodyB.positionImpulse.x -= normalX * contactShare;
         bodyB.positionImpulse.y -= normalY * contactShare;
+        //assert(!Number.isNaN(bodyB.positionImpulse.x), "bodyB.positionImpulse.x ");
       }
     }
   }
@@ -1236,26 +1241,28 @@ export class Resolver {
 
   public static postSolvePosition(bodies: Body[]) {
     for (var i = 0; i < bodies.length; i++) {
-      var body = bodies[i];
+      const body = bodies[i];
 
       // reset contact count
       body.totalContacts = 0;
 
-      if (body.positionImpulse.x !== 0 || body.positionImpulse.y !== 0) {
+      const impulseX = body.positionImpulse.x;
+      const impulseY = body.positionImpulse.y;
+
+      if (impulseX !== 0 || impulseY !== 0) {
         // update body geometry
         for (var j = 0; j < body.parts.length; j++) {
           var part = body.parts[j];
-          Vertices.translate(part.vertices, body.positionImpulse);
+          Vertices.translate2(part.vertices, impulseX, impulseY);
           Bounds.update(part.bounds, part.vertices, body.velocity);
-          //assert(!Number.isNaN(part.position.x));
-          part.position.x += body.positionImpulse.x;
-          part.position.y += body.positionImpulse.y;
+          part.position.x += impulseX;
+          part.position.y += impulseY;
         }
 
         // move the body without changing velocity
-        body.positionPrev.x += body.positionImpulse.x;
+        body.positionPrev.x += impulseX;
         //assert(!Number.isNaN(body.positionPrev.x), '1242');
-        body.positionPrev.y += body.positionImpulse.y;
+        body.positionPrev.y += impulseY;
 
         if (Vector.dot(body.positionImpulse, body.velocity) < 0) {
           // reset cached impulse if the body has velocity along it
@@ -1412,9 +1419,6 @@ export class Resolver {
         var oAcN = Vector.cross(offsetA, normal),
           oBcN = Vector.cross(offsetB, normal),
           share = contactShare / (bodyA.inverseMass + bodyB.inverseMass + bodyA.inverseInertia * oAcN * oAcN + bodyB.inverseInertia * oBcN * oBcN);
-
-        //console.log(`share=${share}, contactShare=${contactShare} oAcN=${oAcN}, oBcN=${oBcN}`);
-        //console.log(`bodyA.inverseMass=${bodyA.inverseMass}, ${bodyA.inverseInertia}`);
 
         normalImpulse *= share;
         tangentImpulse *= share;

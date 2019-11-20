@@ -424,25 +424,36 @@ export class Vertices {
    * @param {number} scalar
    */
 
-  public static translate(vertices: Vertex[], vector: Vector, scalar?: number) {
-    if (scalar) {
-      for (var i = 0; i < vertices.length; i++) {
-        vertices[i].x += vector.x * scalar;
-        vertices[i].y += vector.y * scalar;
-      }
-    } else {
-      for (var i = 0; i < vertices.length; i++) {
-        vertices[i].x += vector.x;
-        vertices[i].y += vector.y;
-      }
+  public static translate(vertices: Vertex[], vector: Vector, scalar = 1.0) {
+    const dx = vector.x * scalar;
+    const dy = vector.y * scalar;
+    //console.log(`Vertices.translate ${where} ${dx} ${dy}`);
+    for (var i = 0; i < vertices.length; i++) {
+      vertices[i].x += dx;
+      vertices[i].y += dy;
     }
+    // if (scalar) {
+    //   for (var i = 0; i < vertices.length; i++) {
+    //     vertices[i].x += vector.x * scalar;
+    //     vertices[i].y += vector.y * scalar;
+    //   }
+    // } else {
+    //   for (var i = 0; i < vertices.length; i++) {
+    //     vertices[i].x += vector.x;
+    //     vertices[i].y += vector.y;
+    //   }
+    // }
     return vertices;
   }
 
-  public static translate2(vertices: Vertex[], x: number, y: number, scalar = 1) {
+
+  public static translate2(vertices: Vertex[], x: number, y: number, scalar = 1.0) {
+    const dx = x * scalar;
+    const dy = y * scalar;
+    //console.log(`Vertices.translate2 ${x} ${y}`);
     for (var i = 0; i < vertices.length; i++) {
-      vertices[i].x += x * scalar;
-      vertices[i].y += y * scalar;
+      vertices[i].x += dx;
+      vertices[i].y += dy;
     }
     return vertices;
   }
@@ -733,8 +744,6 @@ export class Bounds {
     return maxY < minY ? maxY + (h + mergin) : minY + (h + mergin);
   }
 
-
-
   public static Null = new Bounds(0, 0, 0, 0);
 
   /**
@@ -790,7 +799,6 @@ export class Bounds {
       } else {
         bounds.min.x += velocity.x;
       }
-
       if (velocity.y > 0) {
         bounds.max.y += velocity.y;
       } else {
@@ -905,12 +913,13 @@ export class Axes {
    * @param {axes} axes
    * @param {number} angle
    */
+
   public static rotate(axes: Vector[], angle: number) {
     if (angle === 0)
       return;
 
-    var cos = Math.cos(angle),
-      sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
 
     for (var i = 0; i < axes.length; i++) {
       var axis = axes[i];

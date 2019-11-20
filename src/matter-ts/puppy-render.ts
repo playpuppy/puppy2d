@@ -146,6 +146,7 @@ export class Render {
     this.engine = engine;
     this.world = engine.world;
     this.options = this.world;
+    this.options.wireframes = true;
     this.canvas = createCanvas(element, element.clientWidth, element.clientHeight);
     this.mouse = engine.setRender(this);
     this.context = this.canvas.getContext('2d')!;
@@ -232,6 +233,10 @@ export class Render {
 
   public isComputerScreen() {
     return this.scale.y > 0;
+  }
+
+  private yscale(y: number) {
+    return this.scale.y > 0 ? y : -y;
   }
 
   public setViewport(x1: number, y1: number, x2: number, y2: number, center = true) {
@@ -454,50 +459,22 @@ export class Render {
     // transform the view
     this.startViewTransform();
 
-    if (!options.wireframes || (engine.enableSleeping && options.showSleeping)) {
+    if (!options.wireframes) {
       // fully featured rendering of bodies
       this.bodies(paints, context);
       this.bodies(bodies, context);
-      this.bodies(tickers, context);
     } else {
-      if (options.showConvexHulls)
-        this.bodyConvexHulls(bodies, context);
-
       // optimised method for wireframes only
       this.bodyWireframes(bodies, context);
-    }
-
-    if (options.showBounds)
       this.bodyBounds(bodies, context);
-
-    if (options.showAxes || options.showAngleIndicator)
       this.bodyAxes(bodies, context);
-
-    if (options.showPositions)
       this.bodyPositions(bodies, context);
-
-    if (options.showVelocity)
       this.bodyVelocity(bodies, context);
-
-    if (options.showIds)
-      this.bodyIds(bodies, context);
-
-    if (options.showSeparations)
-      this.separations(engine.pairs.list, context);
-
-    if (options.showCollisions)
       this.collisions(engine.pairs.list, context);
-
-    if (options.showVertexNumbers)
-      this.vertexNumbers(bodies, context);
-
-    if (options.showMousePosition)
-      this.mousePosition(this.mouse, context);
-
-    Render.constraints(constraints, context);
-
-    if (options.showBroadphase && engine.broadphase instanceof Grid)
       this.grid(engine.broadphase, context);
+    }
+    this.constraints(constraints, context);
+    this.bodies(tickers, context);
 
     this.endViewTransform();
 
@@ -542,36 +519,26 @@ export class Render {
    * @param {RenderingContext} context
    */
 
-  private static constraints(constraints: Constraint[], context: CanvasRenderingContext2D) {
-    var c = context;
+  private constraints(constraints: Constraint[], context: CanvasRenderingContext2D) {
+    const c = context;
 
     for (var i = 0; i < constraints.length; i++) {
-      var constraint = constraints[i];
+      const constraint = constraints[i];
 
       if (!constraint.visible || !constraint.pointA || !constraint.pointB)
         continue;
 
-      var bodyA = constraint.bodyA,
-        bodyB = constraint.bodyB,
-        start,
-        end = Vector.Null;
+      const bodyA = constraint.bodyA;
+      const bodyB = constraint.bodyB;
+      const start = (bodyA) ? Vector.add(bodyA.position, constraint.pointA) : constraint.pointA;
 
-      if (bodyA) {
-        start = Vector.add(bodyA.position, constraint.pointA);
-      } else {
-        start = constraint.pointA;
-      }
 
       if (constraint.renderType === 'pin') {
         c.beginPath();
         c.arc(start.x, start.y, 3, 0, 2 * Math.PI);
         c.closePath();
       } else {
-        if (bodyB) {
-          end = Vector.add(bodyB.position, constraint.pointB);
-        } else {
-          end = constraint.pointB;
-        }
+        const end = (bodyB) ? Vector.add(bodyB.position, constraint.pointB) : constraint.pointB;
 
         c.beginPath();
         c.moveTo(start.x, start.y);
@@ -593,22 +560,23 @@ export class Render {
         }
 
         c.lineTo(end.x, end.y);
+        //console.log(`c ${start.x},${start.y} ${end.x},${end.y}`)
       }
 
       if (constraint.lineWidth) {
         c.lineWidth = constraint.lineWidth;
-        c.strokeStyle = constraint.strokeStyle;
+        c.strokeStyle = 'gray'; //constraint.strokeStyle;
         c.stroke();
       }
 
-      if (constraint.anchors) {
-        c.fillStyle = constraint.strokeStyle;
-        c.beginPath();
-        c.arc(start.x, start.y, 3, 0, 2 * Math.PI);
-        c.arc(end.x, end.y, 3, 0, 2 * Math.PI);
-        c.closePath();
-        c.fill();
-      }
+      // if (constraint.anchors) {
+      //   c.fillStyle = constraint.strokeStyle;
+      //   c.beginPath();
+      //   c.arc(start.x, start.y, 3, 0, 2 * Math.PI);
+      //   c.arc(end.x, end.y, 3, 0, 2 * Math.PI);
+      //   c.closePath();
+      //   c.fill();
+      // }
     }
   }
 
@@ -988,7 +956,6 @@ export class Render {
 
   private bodyAxes(bodies: Body[], context: CanvasRenderingContext2D) {
     var c = context,
-      engine = this.engine,
       options = this.options,
       part,
       i,
@@ -1027,18 +994,18 @@ export class Render {
       }
     }
 
-    if (options.wireframes) {
-      c.strokeStyle = 'indianred';
-      c.lineWidth = 1;
-    } else {
-      c.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      c.globalCompositeOperation = 'overlay';
-      c.lineWidth = 2;
-    }
+    // if (options.wireframes) {
+    c.strokeStyle = 'indianred';
+    c.lineWidth = 1;
+    // } else {
+    //   c.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    //   c.globalCompositeOperation = 'overlay';
+    //   c.lineWidth = 2;
+    // }
 
     c.stroke();
-    c.globalCompositeOperation = 'source-over';
-  };
+    // c.globalCompositeOperation = 'source-over';
+  }
 
   /**
    * Draws body positions
@@ -1050,50 +1017,39 @@ export class Render {
    */
 
   private bodyPositions(bodies: Body[], context: CanvasRenderingContext2D) {
-    var c = context,
-      engine = this.engine,
-      options = this.options,
-      body,
-      part,
-      i,
-      k;
+    var c = context;
 
     c.beginPath();
 
     // render current positions
-    for (i = 0; i < bodies.length; i++) {
-      body = bodies[i];
-
+    for (var i = 0; i < bodies.length; i++) {
+      const body = bodies[i];
       if (!body.visible)
         continue;
 
       // handle compound parts
-      for (k = 0; k < body.parts.length; k++) {
-        part = body.parts[k];
-        c.arc(part.position.x, part.position.y, 3, 0, 2 * Math.PI, false);
+      for (var k = 0; k < body.parts.length; k++) {
+        const part = body.parts[k];
+        c.arc(part.position.x, part.position.y, 10, 0, 2 * Math.PI, false);
         c.closePath();
       }
     }
 
-    if (options.wireframes) {
-      c.fillStyle = 'indianred';
-    } else {
-      c.fillStyle = 'rgba(0,0,0,0.5)';
-    }
+    c.fillStyle = 'indianred';
     c.fill();
 
     c.beginPath();
 
     // render previous positions
-    for (i = 0; i < bodies.length; i++) {
-      body = bodies[i];
+    for (var i = 0; i < bodies.length; i++) {
+      const body = bodies[i];
       if (body.visible) {
-        c.arc(body.positionPrev.x, body.positionPrev.y, 2, 0, 2 * Math.PI, false);
+        c.arc(body.positionPrev.x, body.positionPrev.y, 5, 0, 2 * Math.PI, false);
         c.closePath();
       }
     }
 
-    c.fillStyle = 'rgba(255,165,0,0.8)';
+    c.fillStyle = 'blue';
     c.fill();
   }
 
@@ -1105,22 +1061,19 @@ export class Render {
    * @param {body[]} bodies
    * @param {RenderingContext} context
    */
+
   private bodyVelocity(bodies: Body[], context: CanvasRenderingContext2D) {
-    var c = context;
-
+    const c = context;
     c.beginPath();
-
     for (var i = 0; i < bodies.length; i++) {
       var body = bodies[i];
-
       if (!body.visible)
         continue;
-
       c.moveTo(body.position.x, body.position.y);
       c.lineTo(body.position.x + (body.position.x - body.positionPrev.x) * 2, body.position.y + (body.position.y - body.positionPrev.y) * 2);
     }
 
-    c.lineWidth = 3;
+    c.lineWidth = 8;
     c.strokeStyle = 'cornflowerblue';
     c.stroke();
   }
@@ -1165,76 +1118,66 @@ export class Render {
   private collisions(pairs: Pair[], context: CanvasRenderingContext2D) {
     var c = context,
       options = this.options,
-      pair,
-      collision,
       corrected,
       bodyA,
-      bodyB,
-      i,
-      j;
+      bodyB;
+    const fillStyle = 'orange';
+    // if (options.wireframes) {
+    //   c.fillStyle = 'rgba(255,255,255,0.7)';
+    // } else {
+    //   c.fillStyle = 'orange';
+    // }
+    const world = this.world;
 
     c.beginPath();
 
     // render collision positions
-    for (i = 0; i < pairs.length; i++) {
-      pair = pairs[i];
-
+    for (var i = 0; i < pairs.length; i++) {
+      const pair = pairs[i];
       if (!pair.isActive)
         continue;
-
-      collision = pair.collision;
-      for (j = 0; j < pair.activeContacts.length; j++) {
-        var contact = pair.activeContacts[j],
-          vertex = contact.vertex;
-        c.rect(vertex.x - 1.5, vertex.y - 1.5, 3.5, 3.5);
+      for (var j = 0; j < pair.activeContacts.length; j++) {
+        const vertex = pair.activeContacts[j].vertex;
+        //c.rect(vertex.x - 1.5, vertex.y - 1.5, 3.5, 3.5);
+        c.rect(vertex.x - 4, vertex.y - this.yscale(4), 9, 9);
       }
     }
 
-    if (options.wireframes) {
-      c.fillStyle = 'rgba(255,255,255,0.7)';
-    } else {
-      c.fillStyle = 'orange';
-    }
+    c.fillStyle = fillStyle;
     c.fill();
 
-    c.beginPath();
+    // c.beginPath();
 
-    // render collision normals
-    for (i = 0; i < pairs.length; i++) {
-      pair = pairs[i];
+    // // render collision normals
+    // for (var i = 0; i < pairs.length; i++) {
+    //   const pair = pairs[i];
 
-      if (!pair.isActive)
-        continue;
+    //   if (!pair.isActive)
+    //     continue;
 
-      collision = pair.collision!;
+    //   const collision = pair.collision!;
 
-      if (pair.activeContacts.length > 0) {
-        var normalPosX = pair.activeContacts[0].vertex.x,
-          normalPosY = pair.activeContacts[0].vertex.y;
+    //   if (pair.activeContacts.length > 0) {
+    //     var normalPosX = pair.activeContacts[0].vertex.x,
+    //       normalPosY = pair.activeContacts[0].vertex.y;
 
-        if (pair.activeContacts.length === 2) {
-          normalPosX = (pair.activeContacts[0].vertex.x + pair.activeContacts[1].vertex.x) / 2;
-          normalPosY = (pair.activeContacts[0].vertex.y + pair.activeContacts[1].vertex.y) / 2;
-        }
+    //     if (pair.activeContacts.length === 2) {
+    //       normalPosX = (pair.activeContacts[0].vertex.x + pair.activeContacts[1].vertex.x) / 2;
+    //       normalPosY = (pair.activeContacts[0].vertex.y + pair.activeContacts[1].vertex.y) / 2;
+    //     }
 
-        if (collision.bodyB === collision.supports[0].body || collision.bodyA.isStatic === true) {
-          c.moveTo(normalPosX - collision.normal.x * 8, normalPosY - collision.normal.y * 8);
-        } else {
-          c.moveTo(normalPosX + collision.normal.x * 8, normalPosY + collision.normal.y * 8);
-        }
+    //     if (collision.bodyB === collision.supports[0].body || collision.bodyA.isStatic === true) {
+    //       c.moveTo(normalPosX - collision.normal.x * 8, normalPosY - collision.normal.y * 8);
+    //     } else {
+    //       c.moveTo(normalPosX + collision.normal.x * 8, normalPosY + collision.normal.y * 8);
+    //     }
 
-        c.lineTo(normalPosX, normalPosY);
-      }
-    }
-
-    if (options.wireframes) {
-      c.strokeStyle = 'rgba(255,165,0,0.7)';
-    } else {
-      c.strokeStyle = 'orange';
-    }
-
-    c.lineWidth = 1;
-    c.stroke();
+    //     c.lineTo(normalPosX, normalPosY);
+    //   }
+    // }
+    // c.fillStyle = fillStyle;
+    // c.lineWidth = 5;
+    // c.stroke();
   }
 
   /**
@@ -1286,11 +1229,7 @@ export class Render {
       c.lineTo(bodyA.position.x + collision.penetration.x * k, bodyA.position.y + collision.penetration.y * k);
     }
 
-    if (options.wireframes) {
-      c.strokeStyle = 'rgba(255,165,0,0.5)';
-    } else {
-      c.strokeStyle = 'orange';
-    }
+    c.strokeStyle = 'black' // 'rgba(255,165,0,0.5)';
     c.stroke();
   }
 
@@ -1304,30 +1243,23 @@ export class Render {
    */
 
   private grid(grid: Grid, context: CanvasRenderingContext2D) {
-    var c = context,
-      options = this.options;
-
-    if (options.wireframes) {
-      c.strokeStyle = 'rgba(255,180,0,0.1)';
-    } else {
-      c.strokeStyle = 'rgba(255,180,0,0.5)';
-    }
-
+    const c = context;
+    const width = grid.bucketWidth;
+    const height = grid.bucketHeight;
+    c.strokeStyle = 'black';
     c.beginPath();
 
-    var bucketKeys = Common.keys(grid.buckets);
+    const bucketIds = Object.keys(grid.buckets);
 
-    for (var i = 0; i < bucketKeys.length; i++) {
-      var bucketId = bucketKeys[i];
-
-      if (grid.buckets[bucketId].length < 2)
+    for (const bucketId of bucketIds) {
+      if (grid.buckets[bucketId].length < 1)
         continue;
 
       var region = bucketId.split(/C|R/);
-      c.rect(0.5 + parseInt(region[1], 10) * grid.bucketWidth,
-        0.5 + parseInt(region[2], 10) * grid.bucketHeight,
-        grid.bucketWidth,
-        grid.bucketHeight);
+      c.rect(parseInt(region[1], 10) * width + 0.5,
+        parseInt(region[2], 10) * height + 0.5,
+        width,
+        height);
     }
 
     c.lineWidth = 1;
