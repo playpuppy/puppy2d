@@ -49,6 +49,7 @@ export class Body {
   public shape = '';
   public parts: Body[] = []; //
   //plugin: { },
+  public zindex = 1;
   public position: Vector = new Vector(); //{ x: 0, y: 0 },
   public angle = 0;
   public vertices: Vertex[];
@@ -1531,10 +1532,70 @@ export class Composite {
 export class World extends Composite {
   public gravity: Vector = new Vector(0, 0);
   public bounds: Bounds = new Bounds(0, 0, 1000, 1000);
-  public upsideDown = false;
+  public width: number;
+  public height: number;
+  public screen = false;
+  protected bodies0: Body[] = [];
+  protected bodiesZ: Body[] = [];
 
-  public constructor(options: any = {}) {
+  public constructor(options: any) {
     super(options);
+    this.width = options.width || 1000;
+    this.height = options.height || this.width;
+  }
+
+  public yscale(y = 1) {
+    return this.screen ? y : -y;
+  }
+
+  private uniqueId = 1;
+
+  public newId() {
+    return this.uniqueId++;
+  }
+
+  public addBody(body: Body) {
+    const zindex = body.zindex;
+    if (zindex === 0) {
+      this.bodies0.push(body);
+      return this;
+    }
+    else if (zindex === Infinity) {
+      this.bodiesZ.push(body);
+      return this;
+    }
+    else {
+      return super.addBody(body);
+    }
+  }
+
+  public removeBody(body: Body) {
+    const zindex = body.zindex;
+    if (zindex === 0) {
+      const position = Common.indexOf(this.bodies0, body);
+      if (position !== -1) {
+        this.bodies0.splice(position, 1);
+        this.setModified(true, true, false);
+      }
+      return this;
+    }
+    if (body.shape === 'ticker') {
+      const position = Common.indexOf(this.bodiesZ, body);
+      if (position !== -1) {
+        this.bodiesZ.splice(position, 1);
+        this.setModified(true, true, false);
+      }
+      return this;
+    }
+    return super.removeBody(body);
+  }
+
+  public allBodies0() {
+    return this.bodies0;
+  }
+
+  public allBodiesZ() {
+    return this.bodiesZ;
   }
 
 }

@@ -1,472 +1,23 @@
 import { Common } from './matter-ts/commons'
 import { Vector, Vertices, Bounds } from './matter-ts/geometry'
 import { Body, World, Composite, Constraint } from './matter-ts/body'
-import { Render } from './matter-ts/puppy-render';
+import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { LibPython } from './lang/libpython';
 import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
+import { chooseColorScheme } from './color';
+import { ShapeWorld } from './shape';
 
-// puppy extension
 
-const PuppyColorScheme: { [key: string]: string[] } = {
-  pop: [
-    '#de9610', '#c93a40', '#fff001', '#d06d8c', '#65ace4', '#a0c238',
-    '#56a764', '#d16b16', '#cc528b', '#9460a0', '#f2cf01', '#0074bf',
-  ],
-  cute: [
-    '#e2b2c0', '#fff353', '#a5d1f4', '#e4ad6d', '#d685b0', '#dbe159',
-    '#7fc2ef', '#c4a6ca', '#eabf4c', '#f9e697', '#b3d3ac', '#eac7cd',
-  ],
-  dynamic: [
-    '#b80117', '#222584', '#00904a', '#edc600', '#261e1c', '#6d1782',
-    '#8f253b', '#a0c238', '#d16b16', '#0168b3', '#b88b26', '#c30068',
-  ],
-  gorgeous: [
-    '#7d0f80', '#b08829', '#a03c44', '#018a9a', '#ab045c', '#391d2b',
-    '#d5a417', '#546474', '#0f5ca0', '#d0b98d', '#d4c91f', '#c1541c',
-  ],
-  casual: [
-    '#7b9ad0', '#f8e352', '#c8d627', '#d5848b', '#e5ab47', '#e1cea3',
-    '#51a1a2', '#b1d7e4', '#66b7ec', '#c08e47', '#ae8dbc', '#c3cfa9',
-  ],
-  psychedelic: [
-    '#b7007c', '#009b85', '#382284', '#e2c80f', '#009dc6', '#c4c829',
-    '#95007e', '#d685b0', '#eee800', '#bf5116', '#b80e3b', '#0178bc',
-  ],
-  bright: [
-    '#fff001', '#cb5393', '#a0c238', '#d78114', '#00a5e7', '#cd5638',
-    '#0168b3', '#d685b0', '#00984b', '#f2cf01', '#6bb6bb', '#a563a0',
-  ],
-  fairytale: [
-    '#cca9ca', '#9bcad0', '#dd9dbf', '#edef9c', '#aabade', '#f2dae8',
-    '#c7ddae', '#a199c8', '#faede5', '#d5a87f', '#f7f06e', '#95bfe7',
-  ],
-  heavy: [
-    '#000000', '#998c69', '#5c002f', '#244765', '#814523', '#5e2a58',
-    '#1a653c', '#6a6a68', '#bf7220', '#5f556e', '#84762f', '#872226',
-  ],
-  impact: [
-    '#c60019', '#fff001', '#1d4293', '#00984b', '#019fe6', '#c2007b',
-    '#261e1c', '#7d0f80', '#dc9610', '#dbdf19', '#d685b0', '#a0c238',
-  ],
-  street: [
-    '#33476a', '#211917', '#6c7822', '#c2007b', '#44aeea', '#5e3032',
-    '#d16b16', '#c8d627', '#9193a0', '#816945', '#c50030', '#0080c9',
-  ],
-  cool: [
-    '#b0d7f4', '#c0cbe9', '#eef0b1', '#44aeea', '#85beab', '#c4a6ca',
-    '#f7f06e', '#c8d627', '#bcccd9', '#e4f0fc', '#f2dae8', '#6490cd',
-  ],
-  elegant: [
-    '#ae8dbc', '#e3b3cd', '#d6ddf0', '#e5d57d', '#82c0cd', '#afc7a7',
-    '#834e62', '#6a9176', '#7f7eb8', '#a04e90', '#dbbc86', '#c4c829',
-  ],
-  fresh: [
-    '#70b062', '#c8d85b', '#f8e133', '#dbdf19', '#e3ab30', '#dd9dbf',
-    '#a979ad', '#cd5638', '#399548', '#6bb6bb', '#f7f39c', '#9acce3',
-  ],
-  warm: [
-    '#c59f22', '#dd9b9d', '#ebcc00', '#d6d11d', '#8d4f42', '#d8836e',
-    '#f8e469', '#cbb586', '#e4aa01', '#eac287', '#f2d8bf', '#a6658d',
-  ],
-  soft: [
-    '#f8e469', '#e7e0aa', '#d9de84', '#e4bd60', '#9ac29f', '#e3be87',
-    '#edef9c', '#dd9b9d', '#b2d6d4', '#f5dfa6', '#ebeddf', '#e1d4e6',
-  ],
-  man: [
-    '#23466e', '#4d639f', '#dfe0d8', '#1d695f', '#9aadbe', '#844f30',
-    '#934e61', '#7e9895', '#77aad7', '#848a96', '#a76535', '#7e8639',
-  ],
-  woman: [
-    '#7b0050', '#a8006d', '#bea620', '#a26c54', '#949b34', '#614983',
-    '#cba777', '#de9610', '#bd8683', '#be87a6', '#bf5346', '#e1d0b4',
-  ],
-  boy: [
-    '#0168b3', '#66b7ec', '#afd0ef', '#88b83e', '#b8b2d6', '#6bb6bb',
-    '#5e4694', '#f2cf01', '#c6e2f8', '#d5dbcf', '#7a8bc3', '#e8e6f3',
-  ],
-  girl: [
-    '#d06da3', '#c2d3ed', '#be91bc', '#c73576', '#f8e352', '#c8d627',
-    '#e3b3cd', '#c6e0d5', '#e4ab5a', '#cb6c58', '#845d9e', '#82c0cd',
-  ],
-  smart: [
-    '#4d639f', '#356c92', '#c9ced1', '#dfd4be', '#92a1a6', '#a67b2d',
-    '#bda5bb', '#2c4b79', '#d6d680', '#babea5', '#ebc175', '#3a614f',
-  ],
-  light: [
-    '#44aeea', '#b4cb32', '#b2b6db', '#b2d6d4', '#ebe9ae', '#0080c9',
-    '#71b174', '#e4c4db', '#7da8db', '#eac39a', '#dbe585', '#6db5a9',
-  ],
-  stylish: [
-    '#58656e', '#bac1c7', '#487ca3', '#dfd4be', '#004679', '#c0542d',
-    '#a44682', '#9599b2', '#d6d680', '#8eb4d9', '#6c5776', '#499475',
-  ],
-  natural: [
-    '#ba9648', '#87643e', '#c2b5d1', '#ba7d8c', '#b8ac60', '#797c85',
-    '#f9ebd1', '#9cb1c2', '#81a47a', '#acb130', '#8b342a', '#acae98',
-  ],
-  spring: [
-    '#dd9cb4', '#eeea55', '#ebc061', '#b2d6d4', '#f2dae8', '#c9d744',
-    '#b8b2d6', '#afd0ef', '#d7847e', '#f8e352', '#b3ce5b', '#cbacbe',
-  ],
-  summer: [
-    '#174e9e', '#68b8dd', '#d16b16', '#88b83e', '#f2cf01', '#019fe6',
-    '#c60019', '#019c96', '#b0d7f4', '#fff001', '#0074bf', '#c83955',
-  ],
-  fall: [
-    '#ae3c22', '#902342', '#c59f22', '#7e8639', '#eabd00', '#a49e2e',
-    '#ac5238', '#9f832f', '#ba7c6f', '#875f3b', '#bba929', '#786b4b',
-  ],
-  winter: [
-    '#a5aad4', '#6591b6', '#623d82', '#5f897b', '#858aa0', '#eff3f6',
-    '#c2d3dd', '#4f616f', '#7f7073', '#42629f', '#674c51', '#b38da4',
-  ],
-  japan: [
-    '#c3003a', '#3a546b', '#d5a02e', '#918d43', '#787cac', '#604439',
-    '#6f2757', '#c1541c', '#565d63', '#afc9ca', '#baaa52', '#e2b2c0',
-  ],
-  euro: [
-    '#bf541c', '#25a4b7', '#e4aa01', '#b2bfe1', '#ad438e', '#1d4293',
-    '#b71232', '#e8e2be', '#b0bf30', '#6aa43e', '#6276b5', '#d7832d',
-  ],
-  nordic: [
-    '#149bdf', '#dbdf19', '#c97a2b', '#945141', '#9abca4', '#a5a79a',
-    '#e6d9b9', '#eabd00', '#bf545e', '#86b070', '#665e51', '#b59a4d',
-  ],
-  asian: [
-    '#946761', '#b80040', '#4eacb8', '#7f1f69', '#c8b568', '#147472',
-    '#1d518b', '#b1623b', '#95a578', '#b9b327', '#af508a', '#dab100',
-  ],
-}
-
-export const chooseColorScheme = (key: string) => {
-  const cs =
-    key in PuppyColorScheme
-      ? PuppyColorScheme[key]
-      : PuppyColorScheme[Common.choose(Object.keys(PuppyColorScheme))];
-  var targets = <HTMLCollectionOf<HTMLElement>>(
-    document.getElementsByClassName('puppy-background')
-  );
-  for (let i = 0; i < targets.length; i += 1) {
-    targets[i].style.borderColor = cs[i % cs.length];
-    targets[i].style.backgroundColor = cs[i % cs.length];
-  }
-  targets = <HTMLCollectionOf<HTMLElement>>(
-    document.getElementsByClassName('puppy-color')
-  );
-  for (let i = 0; i < targets.length; i += 1) {
-    targets[i].style.color = cs[i % cs.length];
-  }
-  return cs;
-}
-
-const colorToNumber = (colorString: string) => {
-  colorString = colorString.replace('#', '');
-  if (colorString.length == 3) {
-    colorString = colorString.charAt(0) + colorString.charAt(0)
-      + colorString.charAt(1) + colorString.charAt(1)
-      + colorString.charAt(2) + colorString.charAt(2);
-  }
-  return {
-    r: parseInt(colorString.charAt(0) + colorString.charAt(1), 16),
-    g: parseInt(colorString.charAt(2) + colorString.charAt(3), 16),
-    b: parseInt(colorString.charAt(4) + colorString.charAt(5), 16),
-  }
-}
-
-const RGBtoHSV = (r: number, g: number, b: number) => {
-  var max = Math.max(r, g, b), min = Math.min(r, g, b),
-    d = max - min,
-    h,
-    s = (max === 0 ? 0 : d / max),
-    v = max / 255;
-
-  switch (max) {
-    case min: h = 0; break;
-    case r: h = (g - b) + d * (g < b ? 6 : 0); h /= 6 * d; break;
-    case g: h = (b - r) + d * 2; h /= 6 * d; break;
-    case b: h = (r - g) + d * 4; h /= 6 * d; break;
-  }
-
-  return {
-    h: h,
-    s: s,
-    v: v
-  };
-}
-
-const HSVtoRGB = (h: number, s: number, v: number) => {
-  var r, g, b, i, f, p, q, t;
-  i = Math.floor(h * 6);
-  f = h * 6 - i;
-  p = v * (1 - s);
-  q = v * (1 - f * s);
-  t = v * (1 - (1 - f) * s);
-  switch (i % 6) {
-    case 0: r = v, g = t, b = p; break;
-    case 1: r = q, g = v, b = p; break;
-    case 2: r = p, g = v, b = t; break;
-    case 3: r = p, g = q, b = v; break;
-    case 4: r = t, g = p, b = v; break;
-    default: r = v, g = p, b = q; break;
-  }
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255)
-  };
-}
-
-const brightness = (color: string | string[]) => {
-  if (Array.isArray(color)) {
-    var d = 1;
-    for (const c of color) {
-      const rgb = colorToNumber(c);
-      const hsv = RGBtoHSV(rgb.r, rgb.g, rgb.b);
-      //console.log(`${c} ${hsv.v}`);
-      d = Math.min(hsv.v, d);
-    }
-    return d;
-  }
-  const rgb = colorToNumber(color);
-  const hsv = RGBtoHSV(rgb.r, rgb.g, rgb.b);
-  return hsv.v;
-}
-
-// shape setting
-
-const initSize = (world: PuppyWorld, options: any, width = 100, height = width) => {
-  options.width = options.width || width;
-  options.height = options.height || height;
-  if (options.width < 2.0) {
-    options.width = world.width * options.width;
-  }
-  if (options.height < 2.0) {
-    options.height = world.height * options.height;
-  }
-  return options;
-}
-
-const initVertices = (options: any, path: number[]) => {
-  options.vertices = Vertices.fromPath(path);
-  if (options.chamfer) {
-    var chamfer = options.chamfer;
-    options.vertices = Vertices.chamfer(options.vertices, chamfer.radius,
-      chamfer.quality, chamfer.qualityMin, chamfer.qualityMax);
-    delete options.chamfer;
-  }
-}
-
-const getradius = (options: any, radius = 50): number => {
-  if (options.width) {
-    if (options.height) {
-      return Math.min(options.width, options.height) / 2;
-    }
-    return options.width / 2;
-  }
-  if (options.height) {
-    return options.height / 2;
-  }
-  return radius;
-}
-
-const _polygon = (world: PuppyWorld, options: any, sides?: number, radius?: number) => {
-  if (sides === undefined) {
-    sides = options.sides !== undefined ? options.sides : 3;
-  }
-  if (radius === undefined) {
-    radius = getradius(options, 50);
-  }
-  const theta = 2 * Math.PI / sides!;
-  const path: number[] = [];
-  const offset = theta * 0.5;
-  for (var i = 0; i < sides!; i += 1) {
-    var angle = offset + (i * theta),
-      xx = Math.cos(angle) * radius,
-      yy = Math.sin(angle) * radius;
-    //path += 'L ' + xx.toFixed(3) + ' ' + yy.toFixed(3) + ' ';
-    path.push(xx);
-    path.push(yy);
-  }
-  initVertices(options, path);
-  return options;
-}
-
-const _circle = (world: PuppyWorld, options: any, radius?: number) => {
-  radius = options.circleRadius = getradius(options, radius || 50);
-  const maxSides = 25;
-  var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
-  if (sides % 2 === 1)
-    sides += 1;
-  return _polygon(world, options, sides, radius);
-}
-
-const _label = (world: PuppyWorld, options: any) => {
-  const width = (!options.width) ? 100 : options.width;
-  const height = (!options.height) ? 30 : options.height;
-  initVertices(options, [0, 0, width, 0, width, height, 0, height]);
-  if (!options.fillStyle) {
-    options.fillStyle = '#000000';
-    options.opacity = 0;
-  }
-  options.shape = 'ticker';
-  return options;
-}
-
-export const PuppyShape: { [key: string]: (world: PuppyWorld, options: any) => any } = {
-  'rectangle': (world: PuppyWorld, options: any) => {
-    const width = options.width || 100;
-    const height = options.height || 100;
-    initVertices(options, [0, 0, width, 0, width, height, 0, height]);
-    return options;
-  },
-  'polygon': _polygon,
-  'circle': _circle,
-  'ticker': (world: PuppyWorld, options: any) => {
-    return _label(world, options);
-  },
-  'var': (world: PuppyWorld, options: any) => {
-    const name = options.name;
-    options.caption = options.caption || name;
-    if (name === 'TIME') {
-      options.textRef = (body: Body) => {
-        return `${(world.timestamp / 1000) | 0}`;
-      }
-    }
-    else {
-      options.textRef = (body: Body) => {
-        return `${world.vars[name]}`;
-      }
-    }
-    return _label(world, options);
-  },
-  'paint': (world: PuppyWorld, options: any) => {
-    const radius = options.circleRadius = getradius(options, 10);
-    const maxSides = 25;
-    var sides = Math.ceil(Math.max(10, Math.min(maxSides, radius)));
-    if (sides % 2 === 1)
-      sides += 1;
-    options.timeToLive = options.timeToLive || 1000;
-    options.opacity = 0.5;
-    if (!options.move) {
-      options.move = (body: Body, timestamp: number) => {
-        const timeToLive = (body as any).timeToLive--;
-        if (timeToLive < 1000) {
-          body.opacity = (timeToLive / 1000) * 0.5;
-        }
-        if (timeToLive < 0) {
-          world.removeBody(body);
-        }
-      }
-    }
-    return _polygon(world, options, sides, radius);
-  },
-}
-
-const common = (world: PuppyWorld, options: any) => {
-  options.id = world.newId();
-  options.position = (!options.position) ? world.newVec() : options.position;
-  if (!options.fillStyle) {
-    if (options.isStatic) {
-      options.fillStyle = world.colors[0];
-    }
-    else {
-      options.fillStyle = Common.choose(world.colors);
-    }
-  }
-  return options;
-}
-
-const stackArray = (world: PuppyWorld, options: any) => {
-  const width = (options.width = (!options.width) ? world.width * 0.5 : options.width);
-  const height = (options.height = (!options.height) ? width : options.height);
-  const columns = options.columns || 4;
-  const rows = options.rows || columns;
-  const margin = options.margin || 0;
-  const partOptions = options.part || { shape: 'rectangle' }
-  const pwidth = partOptions.width = (width - (columns - 1) * margin) / columns;
-  const pheight = partOptions.height = (height - (rows - 1) * margin) / rows;
-  const position = options.position;
-  var yy = position.y - world.yscale(height / 2);
-  const composite = world.newComposite();
-  for (var row = 0; row < rows; row++) {
-    var xx = position.x - (width / 2);
-    for (var column = 0; column < columns; column++) {
-      const opt = Object.assign({}, partOptions);
-      opt.position = new Vector(xx + pwidth / 2, yy + world.yscale(pheight / 2));
-      var body = world.newObject(opt);
-      xx += pwidth + margin;
-      composite.add(body);
-    }
-    yy += world.yscale(pheight + margin);
-  }
-  return composite;
-}
-
-const newtonsCradle = (world: PuppyWorld, options: any): Composite => {
-  const width = (options.width = (!options.width) ? world.width * 0.5 : options.width);
-  const height = (options.height = (!options.height) ? width : options.height);
-  const num = options.columns || options.N || 5;
-  const position = options.position;
-  const separation = 1.9;
-  const size = width / num / separation;
-  const newtonsCradle = world.newComposite();
-  const sx = position.x - (width / 2);
-  const sy = position.y - world.yscale(height / 2);
-  //console.log(`sx=${sx},sy=${sy}`);
-  for (var i = 0; i < num; i++) {
-    const cx = sx + i * (size * separation);
-    const cy = sy + world.yscale(height - size);
-    //console.log(`cx=${cx},cy=${cy}`);
-    const parts = options.part || {};
-    const circle = world.newBody({
-      shape: parts.shape || 'circle',
-      width: size * 2,
-      position: world.newVec(cx, cy),
-      inertia: parts.inertia || Infinity,
-      restitution: parts.restitution || 1,
-      friction: parts.friction || 0,
-      frictionAir: parts.frictionAir || 0.0001,
-      slop: parts.slop || 1
-    });
-    const constraint = world.newConstraint({
-      pointA: world.newVec(cx, cy - world.yscale(height)),
-      bodyB: circle,
-    });
-    newtonsCradle.addBody(circle);
-    newtonsCradle.addConstraint(constraint);
-  }
-  return newtonsCradle;
-}
-
-const PuppyObjects: { [key: string]: (world: PuppyWorld, options: any) => any } = {
-  'array': stackArray,
-  'stack': stackArray,
-  'newtonsCradle': newtonsCradle,
-}
-
-const DefaultPuppyOption: any = {
-  id: 0,
-  width: 1000,
-  height: 1000,
-  gravity: new Vector(0, -1),
-  background: '#F7F6EB',
-}
-
-export class PuppyWorld extends World {
+export class PuppyWorld extends ShapeWorld {
   base: Puppy;
-  public width: number;
-  public height: number;
-  public screen = false;
   public timestamp = 0;
   public colors: string[];
-  public darkmode: boolean;
-  public background = '';
+  public darkmode = false;
+  public background = '#F7F6EB';
   public vars: any = {};
   public lib: LibPython;
-  paints: Body[] = [];
-  tickers: Body[] = [];
 
   public constructor(base: Puppy, options: any = {}) {
     super(Object.assign(options, { id: 0 }));
@@ -481,98 +32,11 @@ export class PuppyWorld extends World {
     }
     this.colors = chooseColorScheme(options.colorScheme);
     //console.log(`brightness ${brightness(this.colors)}`);
-    this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
+    //this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
     this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
     this.lib = new LibPython(base);
   }
 
-  public allPaints() {
-    return this.paints;
-  }
-
-  public allTickers() {
-    return this.tickers;
-  }
-
-  public yscale(y = 1) {
-    return this.screen ? y : -y;
-  }
-
-  private uniqueId = 1;
-
-  public newId() {
-    return this.uniqueId++;
-  }
-
-  public addBody(body: Body) {
-    if (body.shape === 'paint') {
-      this.paints.push(body);
-      return this;
-    }
-    if (body.shape === 'ticker') {
-      this.tickers.push(body);
-      return this;
-    }
-    return super.addBody(body);
-  }
-
-  public removeBody(body: Body) {
-    if (body.shape === 'paint') {
-      const position = Common.indexOf(this.paints, body);
-      if (position !== -1) {
-        this.paints.splice(position, 1);
-        this.setModified(true, true, false);
-      }
-      return this;
-    }
-    if (body.shape === 'ticker') {
-      const position = Common.indexOf(this.tickers, body);
-      if (position !== -1) {
-        this.tickers.splice(position, 1);
-        this.setModified(true, true, false);
-      }
-      return this;
-    }
-    return super.removeBody(body);
-  }
-
-  public newVec(ux?: number, uy?: number) {
-    if (ux === undefined) {
-      ux = this.bounds.min.x + (this.width * Math.random() * 0.8);
-    }
-    if (uy === undefined) {
-      uy = this.bounds.min.y + this.yscale(this.height * Math.random() * 0.8);
-    }
-    return new Vector(ux, uy);
-  }
-
-  public newBody(options: any = {}) {
-    const shape: string = options.shape in PuppyShape ? options.shape : 'rectangle';
-    options = PuppyShape[shape](this, options);
-    const body = new Body(common(this, options));
-    this.addBody(body);
-    return body;
-  }
-
-  public newComposite(options: any = {}) {
-    const composite = new Composite(common(this, options));
-    this.addComposite(composite);
-    return composite;
-  }
-
-  public newObject(options: any = {}) {
-    const shape: string = options.shape;
-    if (shape in PuppyObjects) {
-      return PuppyObjects[shape](this, options);
-    }
-    return this.newBody(options);
-  }
-
-  public newConstraint(options: any = {}) {
-    const constraint = new Constraint(options);
-    this.addConstraint(constraint);
-    return constraint;
-  }
 
   public World(options: any = {}) {
     if (options.width && options.height) {
@@ -587,93 +51,37 @@ export class PuppyWorld extends World {
     }
   }
 
+
+  public setDarkMode(flag: boolean) {
+    this.darkmode = flag;
+    if (flag) {
+
+    }
+    else {
+
+    }
+  }
+
   public setViewport(x1: number, y1: number, x2: number, y2: number) {
     if (this.base.render !== null) {
       this.base.render.setViewport(x1, y1, x2, y2);
     }
   }
 
-  public Rectangle(x: number, y: number, width: number, height = width, options: any = {}) {
-    options = Object.assign(options, {
-      shape: 'rectangle',
-      position: this.newVec(x, y),
-    });
-    initSize(this, options, width, height);
-    return this.newBody(options);
-  }
-
-  Rectangle3(x: number, y: number, width: number, options: any = {}) {
-    return this.Rectangle(x, y, width, width, options);
-  }
-
-  Rectangle2(x: number, y: number, options: any = {}) {
-    return this.Rectangle(x, y, 100, 100, options);
-  }
-
-  Rectangle0(options: any = {}) {
-    if (options.position) {
-      return this.Rectangle(options.position.x, options.position.y, 100, 100, options);
-    }
-    return this.Rectangle(options.x, options.y, 100, 100, options);
-  }
-
-  public Circle(x: number, y: number, width = 100, options: any = {}) {
-    options = Object.assign(options, {
-      shape: 'circle', position: this.newVec(x, y),
-    });
-    initSize(this, options, width);
-    return this.newBody(options);
-  }
-
-  Circle2(x: number, y: number, options: any = {}) {
-    return this.Circle(x, y, 100, options);
-  }
-
-  Circle0(options: any = {}) {
-    if (options.position) {
-      return this.Circle(options.position.x, options.position.y, 100, options);
-    }
-    return this.Circle(options.x, options.y, 100, options);
-  }
-
-  public Variable(name: string, x: number, y: number, width: number, options: any = {}) {
-    options = Object.assign(options, {
-      shape: 'var', position: this.newVec(x, y),
-      width: width,
-      name: name, caption: name,
-    });
-    return this.newBody(options);
-  }
-
   // from puppy vm
-
-  // public async input(msg?: string) {
-  //   const cahce = window.sessionStorage.getItem('/input/cahche');
-  //   if (this.inTimeLeap && cahce) {
-  //     return cahce;
-  //   }
-  //   this.runner!.enabled = false;
-  //   const x = await getInputValue(msg ? msg : '');
-  //   this.runner!.enabled = true;
-  //   this.waitForRun(500);
-  //   window.sessionStorage.setItem(`/input/cahche`, x);
-  //   console.log(`input ${x}`);
-  //   return x;
-  // }
-
 
   public setGravity(x: number, y: number) {
     this.gravity = new Vector(x, y);
   }
 
-  public paint(x: number, y: number, radius = 5, color?: string) {
+  public paint(x: number, y: number, radius = 5) {
     const options = {
       position: new Vector(x, y),
-      shape: 'paint',
-      radius: radius,
-      fillStyle: color || Common.choose(this.colors, 1),
+      shape: 'circle',
+      width: radius * 2,
+      zindex: 0,
     }
-    this.newObject(options);
+    this.timeToLive(this.newObject(options), 5000);
   }
 
   public print(text: string = '', options: any = {}) {
@@ -684,9 +92,10 @@ export class PuppyWorld extends World {
     options = Object.assign({
       textRef: (body: Body) => `${text}`,
       position: new Vector(x, y),
-      shape: 'ticker',
+      shape: 'label',
+      zindex: Infinity,
       fontColor: Common.choose(this.colors, 1),
-      move: (body: Body, time: number) => {
+      move: (body: Body) => {
         body.translate2(-2, 0);
         if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
           this.removeBody(body);
@@ -765,13 +174,7 @@ export class PuppyWorld extends World {
       target.setPosition(position);
     })
   }
-}
 
-const trail = (body: Body, timestamp: number, world: PuppyWorld) => {
-  if (Math.abs(body.position.x - body.positionPrev.x) > 2) {
-    //body.position.dump('moved');
-    world.paint(body.position.x, body.position.y, 10, body.fillStyle);
-  }
 }
 
 const DefaultPuppyCode: PuppyCode = {
@@ -800,8 +203,8 @@ const DefaultPuppyCode: PuppyCode = {
     //   margin: 10,
     //   part: { shape: 'circle', restitution: 1.0 },
     // });
-    world.Variable('TIME', 320, -400, 260);
-    world.Variable('MOUSE', 320, -440, 260);
+    world.Variable('TIME', 320, -400, { width: 260 });
+    world.Variable('MOUSE', 320, -440, { width: 260 });
     for (var i = 0; i < 40; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
       yield 200;
@@ -811,11 +214,6 @@ const DefaultPuppyCode: PuppyCode = {
   errors: [],
   code: '',
 }
-
-const syscallKeywords = [
-  'nop', 'input',
-];
-
 
 const initSyscalls = (element: HTMLElement, options: any) => {
   const syscalls: { [key: string]: any } = {}
@@ -848,24 +246,7 @@ const initSyscalls = (element: HTMLElement, options: any) => {
   return syscalls;
 }
 
-export class Puppy {
-  element: HTMLElement;
-  public code = DefaultPuppyCode;
-  public engine: Engine | null = null;
-  public render: Render | null = null;
-  public runner: Runner | null = null;
-  runtime: IterableIterator<number> | null = null;
-  private syscalls: any;
-
-  public constructor(element: HTMLElement, options: any = {}) {
-    this.element = element;
-    this.syscalls = initSyscalls(element, options);
-    if (!options.jest) {
-      this.load();
-      this.start();
-    }
-  }
-
+class PuppyEventHandler {
   private eventMap: { [key: string]: ((event: any) => void)[] } = {};
 
   public addEventListener(key: string, callback: (event: any) => void) {
@@ -884,6 +265,47 @@ export class Puppy {
       }
     }
     console.log(event); // for debugging
+  }
+}
+
+export class Puppy extends PuppyEventHandler {
+  element: HTMLElement;
+  public code = DefaultPuppyCode;
+  public engine: Engine | null = null;
+  public render: PuppyRender | null = null;
+  public runner: Runner | null = null;
+  runtime: IterableIterator<number> | null = null;
+  private syscalls: any;
+
+  public constructor(element: HTMLElement, options: any = {}) {
+    super();
+    this.element = element;
+    this.syscalls = initSyscalls(element, options);
+    if (!options.jest) {
+      this.load();
+      this.start();
+    }
+  }
+
+  // render control
+
+  public resize(width: number, height: number) {
+    if (this.render !== null) {
+      this.render.resize(width, height);
+    }
+  }
+
+  public setWireframes(wireframes: boolean, time?: number) {
+    if (this.render !== null) {
+      const currentWireframes = this.render.options.wireframes;
+      this.render.options.wireframes = wireframes;
+      if (time !== undefined) {
+        const render = this.render;
+        setTimeout(() => {
+          render.options.wireframes = currentWireframes;
+        }, time);
+      }
+    }
   }
 
   public load(source?: string, autorun = true) {
@@ -915,7 +337,7 @@ export class Puppy {
       this.unload();
     }
     this.engine = new Engine(world);
-    this.render = new Render(this.engine, this.element);
+    this.render = new PuppyRender(this.engine, this.element);
     this.runner = new Runner();
     this.runtime = this.code.main(world);
     return true;
@@ -1012,10 +434,75 @@ export class Puppy {
   private async wait(msec = 100) {
     await new Promise(resolve => setTimeout(resolve, msec));
   }
+}
 
-  public resize(width: number, height: number) {
-    if (this.render !== null) {
-      this.render.resize(width, height);
+export class PuppyOS extends PuppyEventHandler {
+  private uname: string;
+  private env: { [key: string]: any }
+
+  public constructor(uname = 'guest') {
+    super();
+    this.uname = uname;
+    const data = window.sessionStorage.getItem(this.filePath('settings.json'));
+    this.env = data ? JSON.parse(data) : {}
+    this.env['USER'] = uname;
+  }
+
+  private filePath(fileName = 'settings.json') {
+    return `/puppy/${this.uname}/${fileName}`;
+  }
+
+  private parseKeyValue(keyValue: string): [string, any] {
+    const pos = keyValue.indexOf('=');
+    if (pos === -1) {
+      return [keyValue, true];
+    }
+    return [keyValue.substring(0, pos), keyValue.substring(pos + 1)];
+  }
+
+  public getenv(key: string, value: any) {
+    const data = this.env[key];
+    return data || value;
+  }
+
+  public setenv(key: string, value: any) {
+    const oldValue = this.env[key];
+    this.env[key] = value;
+    const data = JSON.stringify(this.env);
+    window.sessionStorage.setItem(this.filePath('settings.json'), data);
+    if (oldValue !== value) {
+      this.trigger('changed', { key, value, oldValue, env: this.env })
     }
   }
+
+  public save(fileName: string, data: any) {
+    data = JSON.stringify(data);
+    window.sessionStorage.setItem(this.filePath(fileName), data);
+  }
+
+
+
+  public exec(cmd: string, args: string[] = []) {
+    switch (cmd) {
+      case 'set':
+        const pair = this.parseKeyValue(args[0]);
+        this.setenv(pair[0], pair[1]);
+        return;
+      case 'submit':
+        this.submit(args[0], args[1]);
+        return;
+      default:
+        this.trigger('undefined', { cmd, args })
+    }
+  }
+
+  public shell(command: string) {
+    const args = command.split(' ');
+  }
+
+  public submit(url: string, text: string) {
+
+  }
+
+
 }

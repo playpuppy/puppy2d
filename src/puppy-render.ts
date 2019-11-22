@@ -5,10 +5,10 @@
 // 
 // Porting to TypeScript by Kimio Kuramitsu 
 
-import { Common, Events } from './commons';
-import { Vector, Bounds } from './geometry';
-import { Body, Constraint, Composite, World } from './body';
-import { Pair, Grid } from './collision';
+import { Common, Events } from './matter-ts/commons';
+import { Vector, Bounds } from './matter-ts/geometry';
+import { Body, Constraint, Composite, World } from './matter-ts/body';
+import { Pair, Grid } from './matter-ts/collision';
 //import { Mouse } from './mouse';
 
 /**
@@ -118,11 +118,11 @@ const _cancelAnimationFrame = window.cancelAnimationFrame;
 //     || window.webkitCancelAnimationFrame || window.msCancelAnimationFrame;
 // }
 
-export class Render {
+export class PuppyRender {
   public engine: any; // Engine
   public mouse: any; //Mouse;
   private world: World;
-  private options: any;
+  public options: any;
   public canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;//?
   // background: string;
@@ -146,7 +146,7 @@ export class Render {
     this.engine = engine;
     this.world = engine.world;
     this.options = this.world;
-    this.options.wireframes = true;
+    //this.options.wireframes = true;
     this.canvas = createCanvas(element, element.clientWidth, element.clientHeight);
     this.mouse = engine.setRender(this);
     this.context = this.canvas.getContext('2d')!;
@@ -407,13 +407,14 @@ export class Render {
 
     var bodies: Body[] = [];
     var constraints: Constraint[] = [];
-    const paints: Body[] = world.allPaints();
-    const tickers: Body[] = world.allTickers();
+    const bodies0: Body[] = world.allBodies0();
+    const bodiesZ: Body[] = world.allBodiesZ();
 
     var event = {
       timestamp: timestamp
     }
-    world.timestamp = timestamp;
+    //world.timestamp = timestamp;
+    world.vars['TIME'] = ((timestamp * 1000) | 0);
     world.vars['MOUSE'] = engine.mouse.position;
     world.vars['VIEWPORT'] = this.bounds;
 
@@ -461,7 +462,7 @@ export class Render {
 
     if (!options.wireframes) {
       // fully featured rendering of bodies
-      this.bodies(paints, context);
+      this.bodies(bodies0, context);
       this.bodies(bodies, context);
     } else {
       // optimised method for wireframes only
@@ -474,7 +475,7 @@ export class Render {
       this.grid(engine.broadphase, context);
     }
     this.constraints(constraints, context);
-    this.bodies(tickers, context);
+    this.bodies(bodiesZ, context);
 
     this.endViewTransform();
 

@@ -450,7 +450,6 @@ export class Vertices {
   public static translate2(vertices: Vertex[], x: number, y: number, scalar = 1.0) {
     const dx = x * scalar;
     const dy = y * scalar;
-    //console.log(`Vertices.translate2 ${x} ${y}`);
     for (var i = 0; i < vertices.length; i++) {
       vertices[i].x += dx;
       vertices[i].y += dy;
