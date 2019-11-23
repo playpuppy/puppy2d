@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 
-import { Puppy } from '../src/puppy2d';
+import { PuppyVM } from '../src/puppy2d';
 
-const puppy = new Puppy(document.body, { jest: true });
+const puppy = new PuppyVM(document.body, { jest: true });
 
 test('puppy.eval()', () => {
   expect(puppy.eval('x = 1', 'x')).toBe(1);
@@ -30,3 +30,9 @@ test('puppy.Circle(10,10,100)', () => {
   expect(puppy.eval('c = Circle(10,10,100,opacity=1)', 'c')).toMatchObject({ circleRadius: 50 });
 });
 
+test('def __keyup__)', () => {
+  expect(puppy.eval(`
+def __keyup__(key, time):
+  print(key)
+`, '__keyup__')).toBeDefined();
+});

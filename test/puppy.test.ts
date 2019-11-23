@@ -215,6 +215,14 @@ test('(1,2)', () => {
 	expect(utest(`(1,2)`)).toBe("puppy.vec(1,2)");
 });
 
+test('keyup', () => {
+	expect(utest(`
+def __keyup__(key, time):
+	print(key)
+
+`)).toBe('}');
+})
+
 
 // error
 test('ERR x=x+1', () => {

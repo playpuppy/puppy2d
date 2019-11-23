@@ -152,7 +152,7 @@ export class PuppyRender {
     this.context = this.canvas.getContext('2d')!;
     // init viewport
     this.bounds = new Bounds(0, 0, this.canvas.width, this.canvas.height);
-    if (this.options.computerScreen) {
+    if (this.options.screen) {
       this.lookAt(0, 0, this.options.width, this.options.height);
     }
     else {
@@ -160,11 +160,85 @@ export class PuppyRender {
       const hh = this.options.height / 2;
       this.lookAt(-hw, hh, hw, -hh);
     }
+    this.initEvents();
   }
 
   public clear() {
     if (this.canvas.parentElement) {
       this.canvas.parentElement.removeChild(this.canvas);
+    }
+  }
+
+  // Events 
+
+  private keyDown: any = null;
+  private keyUp: any = null;
+
+  private initEvents() {
+    var startTime = 0;
+    var prevKey = '';
+    this.keyDown = (event: KeyboardEvent) => {
+      var keyName = event.key;
+      if (prevKey !== keyName) {
+        prevKey = keyName;
+        startTime = this.engine.timing.timestamp;
+      }
+      const keyDown = (this.engine.world as any).keyDown;
+      if (keyDown) {
+        keyDown(keyName);
+      }
+      // if (event.ctrlKey) {
+      //   console.log(`keydown:Ctrl + ${keyName}`);
+      // } else if (event.shiftKey) {
+      //   console.log(`keydown:Shift + ${keyName}`);
+      // } else {
+      //   console.log(`keydown:${keyName}`);
+      // }
+    }
+    this.keyUp = (event: KeyboardEvent) => {
+      var keyName = event.key;
+      const endTime = this.engine.timing.timestamp;
+      const keyUp = (this.engine.world as any).keyUp;
+      if (keyUp) {
+        keyUp(keyName, Math.max(0, endTime - startTime));
+      }
+      console.log(`keyup ${keyName} time=${Math.max(0, endTime - startTime)}`);
+      prevKey = '';
+    }
+
+    // var updateGravity = function (event) {
+    //   var orientation = typeof window.orientation !== 'undefined' ? window.orientation : 0,
+    //     gravity = engine.world.gravity;
+
+    //   if (orientation === 0) {
+    //     gravity.x = Common.clamp(event.gamma, -90, 90) / 90;
+    //     gravity.y = Common.clamp(event.beta, -90, 90) / 90;
+    //   } else if (orientation === 180) {
+    //     gravity.x = Common.clamp(event.gamma, -90, 90) / 90;
+    //     gravity.y = Common.clamp(-event.beta, -90, 90) / 90;
+    //   } else if (orientation === 90) {
+    //     gravity.x = Common.clamp(event.beta, -90, 90) / 90;
+    //     gravity.y = Common.clamp(-event.gamma, -90, 90) / 90;
+    //   } else if (orientation === -90) {
+    //     gravity.x = Common.clamp(-event.beta, -90, 90) / 90;
+    //     gravity.y = Common.clamp(event.gamma, -90, 90) / 90;
+    //   }
+    // };
+    // window.addEventListener('deviceorientation', updateGravity);
+
+  }
+
+  private enableInputDevices() {
+    if (this.keyDown != null) {
+      document.addEventListener('keydown', this.keyDown);
+      document.addEventListener('keyup', this.keyUp);
+    }
+  }
+
+  private disableInputDevices() {
+    if (this.keyDown != null) {
+      document.removeEventListener('keydown', this.keyDown);
+      document.removeEventListener('keyup', this.keyUp);
     }
   }
 
@@ -292,17 +366,7 @@ export class PuppyRender {
    */
 
   public start(message?: string) {
-    // document.addEventListener('keydown', (event) => {
-    //   var keyName = event.key;
-
-    //   if (event.ctrlKey) {
-    //     console.log(`keydown:Ctrl + ${keyName}`);
-    //   } else if (event.shiftKey) {
-    //     console.log(`keydown:Shift + ${keyName}`);
-    //   } else {
-    //     console.log(`keydown:${keyName}`);
-    //   }
-    // });
+    this.enableInputDevices();
     if (message !== undefined) {
       this.show(message);
     }
@@ -323,6 +387,7 @@ export class PuppyRender {
    */
 
   public stop(message?: string) {
+    this.disableInputDevices();
     if (message !== undefined) {
       this.show(message);
       setTimeout(() => {
@@ -413,8 +478,8 @@ export class PuppyRender {
     var event = {
       timestamp: timestamp
     }
-    //world.timestamp = timestamp;
-    world.vars['TIME'] = ((timestamp * 1000) | 0);
+    world.vars['TIMESTAMP'] = timestamp;
+    world.vars['TIME'] = ((timestamp / 1000) | 0);
     world.vars['MOUSE'] = engine.mouse.position;
     world.vars['VIEWPORT'] = this.bounds;
 

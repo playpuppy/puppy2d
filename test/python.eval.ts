@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 
-import { Puppy } from '../src/puppy2d';
+import { PuppyVM } from '../src/puppy2d';
 
-const puppy = new Puppy(document.body, { jest: true });
+const puppy = new PuppyVM(document.body, { jest: true });
 
 test('True', () => {
   expect(puppy.eval(`x = True`, 'x')).toStrictEqual(true);

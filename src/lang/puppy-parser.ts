@@ -556,7 +556,7 @@ const grammar = (start: string) => {
     peg['ForStmt'] = pNode(pSeq(pSeq2(pChar('for'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('each', pRef(peg, 'Name')), pSeq2(pChar('in'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('list', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'Statement')))), 'ForStmt', 0);
     peg['WhileStmt'] = pNode(pSeq(pSeq2(pChar('while'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'Statement')))), 'WhileStmt', 0);
     peg['VarDecl'] = pOre2(pNode(pSeq(pEdge('left', pRef(peg, 'LeftHand')), pChar('='), pRef(peg, '_'), pEdge('right', pRef(peg, 'Expression'))), 'VarDecl', 0), pRef(peg, 'SelfAssign'));
-    peg['LeftHand'] = pSeq2(pRef(peg, 'Name'), pMany(pOre2(pFold('recv', pSeq3(pChar('.'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
+    peg['LeftHand'] = pSeq2(pRef(peg, 'Name'), pMany(pOre2(pFold('recv', pSeq3(pRange('.', []), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
     peg['SelfAssign'] = pNode(pSeq3(pEdge('left', pRef(peg, 'LeftHand')), pEdge('name', pRef(peg, 'SelfAssignOp')), pEdge('right', pRef(peg, 'Expression'))), 'SelfAssign', 0);
     peg['SelfAssignOp'] = pSeq2(pNode(pSeq2(pOre(pChar('<<'), pChar('>>'), pChar('**'), pChar('//'), pRange('+=*@/%&|^', [])), pChar('=')), '', 0), pRef(peg, '_'));
     peg['Expression'] = pSeq2(pRef(peg, 'Operator'), pOption(pFold('then', pSeq(pChar('if'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('else', pRef(peg, 'Expression'))), 'IfExpr', 0)));
@@ -575,7 +575,7 @@ const grammar = (start: string) => {
     peg['PowExpr'] = pSeq2(pRef(peg, 'UnaryExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pChar('**'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'UnaryExpr'))), 'Infix', 0)));
     peg['UnaryExpr'] = pOre2(pNode(pSeq3(pEdge('name', pNode(pRef(peg, 'PRE'), 'Name', 0)), pRef(peg, '_'), pEdge('expr', pRef(peg, 'UnaryExpr'))), 'Unary', 0), pRef(peg, 'SuffixExpr'));
     peg['PRE'] = pRange('+-~', []);
-    peg['SuffixExpr'] = pSeq2(pRef(peg, 'Primary'), pMany(pOre(pFold('recv', pSeq(pChar('.'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name')), pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pRef(peg, '__'), pRef(peg, '")"')), 'MethodExpr', 0), pFold('recv', pSeq3(pChar('.'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('name', pSeq(pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pRef(peg, '__'), pRef(peg, '")"')), 'ApplyExpr', 0), pFold('recv', pSeq(pRef(peg, '"["'), pOption(pEdge('left', pRef(peg, 'Expression'))), pChar(':'), pRef(peg, '_'), pOption(pEdge('right', pRef(peg, 'Expression'))), pRef(peg, '"]"')), 'Slice', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
+    peg['SuffixExpr'] = pSeq2(pRef(peg, 'Primary'), pMany(pOre(pFold('recv', pSeq(pChar('.'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name')), pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pRef(peg, '__'), pRef(peg, '")"')), 'MethodExpr', 0), pFold('recv', pSeq3(pRange('.', []), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('name', pSeq(pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pRef(peg, '__'), pRef(peg, '")"')), 'ApplyExpr', 0), pFold('recv', pSeq(pRef(peg, '"["'), pOption(pEdge('left', pRef(peg, 'Expression'))), pChar(':'), pRef(peg, '_'), pOption(pEdge('right', pRef(peg, 'Expression'))), pRef(peg, '"]"')), 'Slice', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
     peg['Arguments'] = pNode(pSeq3(pOption(pSeq2(pEdge('', pRef(peg, 'Expression')), pNot(pChar('=')))), pMany(pSeq(pChar(','), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')), pNot(pChar('=')))), pOption(pEdge('', pRef(peg, 'KeywordArgument')))), 'Arguments', 0);
     peg['KeywordArgument'] = pNode(pSeq3(pOption(pSeq2(pChar(','), pRef(peg, '__'))), pEdge('', pRef(peg, 'Argument')), pMany(pSeq3(pChar(','), pRef(peg, '__'), pEdge('', pRef(peg, 'Argument'))))), 'Data', 0);
     peg['Argument'] = pOre2(pNode(pSeq(pEdge('name', pRef(peg, 'Name')), pChar('='), pRef(peg, '_'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0), pRef(peg, 'NLKeyValue'));
@@ -585,7 +585,7 @@ const grammar = (start: string) => {
     peg['DataExpr'] = pNode(pSeq(pRef(peg, '"{"'), pEdge('', pRef(peg, 'KeyValue')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'KeyValue')))), pOption(pRef(peg, '","')), pRef(peg, '__'), pRef(peg, '"}"')), 'Data', 0);
     peg['KeyValue'] = pNode(pSeq3(pEdge('name', pOre(pRef(peg, 'Name'), pRef(peg, 'StringExpr'), pRef(peg, 'CharExpr'))), pRef(peg, '":"'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0);
     peg['Name'] = pRef(peg, 'Identifier');
-    peg['Identifier'] = pSeq2(pNode(pSeq2(pRange('', ['AZ', 'az']), pMany(pRef(peg, 'W'))), 'Name', 0), pRef(peg, '_'));
+    peg['Identifier'] = pSeq2(pNode(pSeq2(pRange('_', ['AZ', 'az']), pMany(pRef(peg, 'W'))), 'Name', 0), pRef(peg, '_'));
     peg['NLPSymbol'] = pSeq2(pNode(pMany1(pOre(pRef(peg, 'HIRA'), pRef(peg, 'KATA'), pRef(peg, 'KANJI'))), 'NLPSymbol', 0), pRef(peg, '_'));
     peg['NLKeyValue'] = pSeq2(pNode(pMany1(pOre(pRef(peg, 'HIRA'), pRef(peg, 'KATA'), pRef(peg, 'KANJI'))), 'NLKeyValue', 0), pRef(peg, '_'));
     peg['W'] = pRange('_', ['AZ', 'az', '09']);
@@ -631,7 +631,7 @@ const grammar = (start: string) => {
     peg['HIRA'] = pRange('', ['ぁん']);
     peg['KATA'] = pRange('', ['ァヶ']);
     peg['KANJI'] = pRange('々〇〻ー', ['㐀䶵', '一龠']);
-    peg['MARK'] = pChar('ー');
+    peg['MARK'] = pRange('ー', []);
     peg['"{"'] = pSeq2(pRange('{｛', []), pRef(peg, '__'));
     peg['"}"'] = pSeq2(pRange('}｝', []), pRef(peg, '_'));
     peg['"["'] = pSeq2(pRange('[［【', []), pRef(peg, '__'));

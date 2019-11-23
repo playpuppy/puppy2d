@@ -369,7 +369,7 @@ KeyValue = {
 Name = Identifier // NLPSymbol
 
 Identifier = {
-    [A-Za-z] W*
+    [A-Za-z_] W*
     #Name
 } _
 

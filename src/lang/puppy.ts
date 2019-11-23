@@ -562,10 +562,21 @@ class Transpiler {
       const pname = p.tokenize('name');
       const ptype = env.varType(p['name']);
       const symbol = lenv.declVar(pname, ptype);
-      names.push(symbol.code)
-      types.push(ptype)
+      names.push(symbol.code);
+      types.push(ptype);
     }
     const funcType = Types.func(...types);
+    const defined = env.getSymbol(name);
+    if (defined !== undefined) {
+      if (!defined.isMutable) {
+        env.perror(t.name, { key: 'RedefinedImmutable' });
+        return this.skip(env, t, out);
+      }
+      if (defined.ty.accept(funcType, true)) {
+        env.perror(t.name, { key: 'TypeError', });
+        return this.skip(env, t, out);
+      }
+    }
     const symbol = env.declVar(name, funcType);
     const defun = symbol.isGlobal() ? '' : 'var ';
     out.push(`${defun}${symbol.code} = (${names.join(', ')}) => `)
@@ -574,7 +585,10 @@ class Transpiler {
     if (!funcData['hasReturn']) {
       types[0].accept(Types.Void, true);
     }
-    console.log(`DEFINED ${name} :: ${funcType}`)
+    if (symbol.isGlobal() && name.length > 2 && name[0] === '_' && name[1] === '_' && name[name.length - 1] === '_') {
+      out.push(`;puppy.fsync('${name}');`);
+    }
+    //console.log(`DEFINED ${name} :: ${funcType}`)
     return Types.Void;
   }
 

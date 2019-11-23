@@ -1,7 +1,6 @@
-import { Common, chooseColorScheme } from './matter-ts/commons'
-import { Vector, Vertices, Bounds } from './matter-ts/geometry'
-import { Body, Constraint, Composite, World } from './matter-ts/body'
-import { labeledStatement, optionalCallExpression } from '@babel/types';
+import { Common, chooseColorScheme } from './matter-ts/commons';
+import { Vector, Vertices } from './matter-ts/geometry';
+import { Body, Constraint, Composite, World } from './matter-ts/body';
 
 // shape setting
 
@@ -295,7 +294,7 @@ export class ShapeWorld extends World {
     var tick = 0;
     (body as any).move = (body: Body) => {
       tick += 16;
-      console.log(tick);
+      //console.log(tick);
       if (tick > time) {
         this.removeBody(body);
         delete (body as any).move;

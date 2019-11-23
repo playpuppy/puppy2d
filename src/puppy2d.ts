@@ -8,10 +8,11 @@ import { LibPython } from './lang/libpython';
 import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
+import { optionalCallExpression } from '@babel/types';
 
 
 export class PuppyWorld extends ShapeWorld {
-  base: Puppy;
+  base: PuppyVM;
   public timestamp = 0;
   public colors: string[];
   public darkmode = false;
@@ -19,7 +20,7 @@ export class PuppyWorld extends ShapeWorld {
   public vars: any = {};
   public lib: LibPython;
 
-  public constructor(base: Puppy, options: any = {}) {
+  public constructor(base: PuppyVM, options: any = {}) {
     super(Object.assign(options, { id: 0 }));
     this.base = base;
     this.width = options.width || 1000;
@@ -50,7 +51,6 @@ export class PuppyWorld extends ShapeWorld {
       this.gravity = options.gravity;
     }
   }
-
 
   public setDarkMode(flag: boolean) {
     this.darkmode = flag;
@@ -107,6 +107,15 @@ export class PuppyWorld extends ShapeWorld {
 
   public input(text: string = '') {
     return this.base.syscall('input', { text });
+  }
+
+  public fsync(name: string) {
+    if (name === '__keydown__') {
+      (this as any).keydown = this.vars[name];
+    }
+    if (name === '__keyup__') {
+      (this as any).keyup = this.vars[name];
+    }
   }
 
   public line(linenum: number) {
@@ -268,12 +277,13 @@ class PuppyEventHandler {
   }
 }
 
-export class Puppy extends PuppyEventHandler {
+export class PuppyVM extends PuppyEventHandler {
   element: HTMLElement;
-  public code = DefaultPuppyCode;
-  public engine: Engine | null = null;
-  public render: PuppyRender | null = null;
-  public runner: Runner | null = null;
+  os: PuppyOS;
+  code: PuppyCode;
+  engine: Engine | null = null;
+  render: PuppyRender | null = null;
+  runner: Runner | null = null;
   runtime: IterableIterator<number> | null = null;
   private syscalls: any;
 
@@ -281,6 +291,8 @@ export class Puppy extends PuppyEventHandler {
     super();
     this.element = element;
     this.syscalls = initSyscalls(element, options);
+    this.os = options.os || new PuppyOS();
+    this.code = options.code || DefaultPuppyCode;
     if (!options.jest) {
       this.load();
       this.start();
@@ -307,6 +319,9 @@ export class Puppy extends PuppyEventHandler {
       }
     }
   }
+
+
+  //
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
@@ -374,8 +389,6 @@ export class Puppy extends PuppyEventHandler {
 
   public start() {
     if (this.runner !== null && this.runtime != null) {
-      //console.log(this.code);
-      //this.running = true;
       this.pausing = false;
       this.render!.start('▶︎');  // FIXME
       Runner.run(this.runner, this.engine!);
@@ -436,20 +449,29 @@ export class Puppy extends PuppyEventHandler {
   }
 }
 
+
 export class PuppyOS extends PuppyEventHandler {
-  private uname: string;
+  private uid: string;
   private env: { [key: string]: any }
 
-  public constructor(uname = 'guest') {
+  public constructor(uid = 'guest') {
     super();
-    this.uname = uname;
+    this.uid = uid;
     const data = window.sessionStorage.getItem(this.filePath('settings.json'));
     this.env = data ? JSON.parse(data) : {}
-    this.env['USER'] = uname;
+    this.env['USER'] = uid;
   }
 
+  public newPuppy(element: HTMLElement) {
+    return new PuppyVM(element, this);
+  }
+
+
+
+
+
   private filePath(fileName = 'settings.json') {
-    return `/puppy/${this.uname}/${fileName}`;
+    return `/puppy/${this.uid}/${fileName}`;
   }
 
   private parseKeyValue(keyValue: string): [string, any] {
@@ -479,8 +501,6 @@ export class PuppyOS extends PuppyEventHandler {
     data = JSON.stringify(data);
     window.sessionStorage.setItem(this.filePath(fileName), data);
   }
-
-
 
   public exec(cmd: string, args: string[] = []) {
     switch (cmd) {
