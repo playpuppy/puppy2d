@@ -5,7 +5,7 @@ import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { LibPython } from './lang/libpython';
-import { compile as PuppyCompile, PuppyCode } from './lang/puppy';
+import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
 
@@ -310,21 +310,31 @@ export class Puppy extends PuppyEventHandler {
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
-      var hasError = false;
+      var hasError = false, hasWarning=false, hasInfos = false;
+      const errors: ErrorLog[] = [], warnings: ErrorLog[] = [], infos: ErrorLog[] = [];
       const compiled = PuppyCompile({ source });
       for (const error of compiled.errors) {
         if (error.type === 'error') {
           hasError = true;
-          this.trigger('error', error);
+          errors.push(error);
         }
         else if (error.type === 'warning') {
-          this.trigger('warning', error);
+          hasWarning = true;
+          warnings.push(error);
         }
         else {
-          this.trigger('info', error);
+          hasInfos = true;
+          infos.push(error);
         }
       }
+      if (hasInfos) {
+        this.trigger('info', infos);
+      }
+      if (hasWarning) {
+        this.trigger('warning', warnings);
+      }
       if (hasError) {
+        this.trigger('error', errors);
         return false;
       }
       if (!autorun) {
