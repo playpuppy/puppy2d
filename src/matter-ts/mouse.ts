@@ -27,12 +27,12 @@ export class Mouse {
   public scale = new Vector(1, 1); //{ x: 1, y: 1 };
   public wheelDelta = 0;
   public button = -1;
-  public pixelRatio: number;
+  public pixelRatio = 1.0;
 
-  mousemove: (e: any) => void;
-  mousedown: (e: any) => void;
-  mouseup: (e: any) => void;
-  mousewheel: (e: any) => void;
+  mousemove: any;
+  mousedown: any;
+  mouseup: any;
+  mousewheel: any;
 
   sourceEvents = {
     mousemove: null,
@@ -50,70 +50,73 @@ export class Mouse {
    * @return {mouse} A new mouse
    */
 
-  public constructor(element: HTMLElement) {
+  public constructor(element: HTMLElement, options: any) {
     this.element = element;
-    this.pixelRatio = element.getAttribute('data-pixel-ratio') ?
-      parseInt(element.getAttribute('data-pixel-ratio')!, 10) : 1;
+    if (element) {
+      this.pixelRatio = element.getAttribute('data-pixel-ratio') ?
+        parseInt(element.getAttribute('data-pixel-ratio')!, 10) : 1;
 
-    this.mousemove = (event) => {
-      const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
-      const touches = event.changedTouches;
+      this.mousemove = (event: any) => {
+        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const touches = event.changedTouches;
 
-      if (touches) {
-        this.button = 0;
+        if (touches) {
+          this.button = 0;
+          event.preventDefault();
+        }
+
+        this.absolute.x = position.x;
+        this.absolute.y = position.y;
+        this.position.x = this.absolute.x * this.scale.x + this.offset.x;
+        this.position.y = this.absolute.y * this.scale.y + this.offset.y;
+        this.sourceEvents.mousemove = event;
+
+      };
+
+      this.mousedown = (event: any) => {
+        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const touches = event.changedTouches;
+        if (touches) {
+          this.button = 0;
+          event.preventDefault();
+        } else {
+          this.button = event.button;
+        }
+
+        this.absolute.x = position.x;
+        this.absolute.y = position.y;
+        this.position.x = this.absolute.x * this.scale.x + this.offset.x;
+        this.position.y = this.absolute.y * this.scale.y + this.offset.y;
+        this.mousedownPosition.x = this.position.x;
+        this.mousedownPosition.y = this.position.y;
+        this.sourceEvents.mousedown = event;
+        //console.log(`clicked (${this.absolute.x}, ${this.absolute.y}) (${this.position.x | 0}, ${this.position.y | 0})`);
+      };
+
+      this.mouseup = (event: any) => {
+        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const touches = event.changedTouches;
+
+        if (touches) {
+          event.preventDefault();
+        }
+
+        this.button = -1;
+        this.absolute.x = position.x;
+        this.absolute.y = position.y;
+        this.position.x = this.absolute.x * this.scale.x + this.offset.x;
+        this.position.y = this.absolute.y * this.scale.y + this.offset.y;
+        this.mouseupPosition.x = this.position.x;
+        this.mouseupPosition.y = this.position.y;
+        this.sourceEvents.mouseup = event;
+      };
+
+      this.mousewheel = (event: any) => {
+        this.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
         event.preventDefault();
-      }
-
-      this.absolute.x = position.x;
-      this.absolute.y = position.y;
-      this.position.x = this.absolute.x * this.scale.x + this.offset.x;
-      this.position.y = this.absolute.y * this.scale.y + this.offset.y;
-      this.sourceEvents.mousemove = event;
-    };
-
-    this.mousedown = (event) => {
-      const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
-      const touches = event.changedTouches;
-      if (touches) {
-        this.button = 0;
-        event.preventDefault();
-      } else {
-        this.button = event.button;
-      }
-
-      this.absolute.x = position.x;
-      this.absolute.y = position.y;
-      this.position.x = this.absolute.x * this.scale.x + this.offset.x;
-      this.position.y = this.absolute.y * this.scale.y + this.offset.y;
-      this.mousedownPosition.x = this.position.x;
-      this.mousedownPosition.y = this.position.y;
-      this.sourceEvents.mousedown = event;
-      //console.log(`clicked (${this.absolute.x}, ${this.absolute.y}) (${this.position.x | 0}, ${this.position.y | 0})`);
-    };
-
-    this.mouseup = (event) => {
-      const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
-      const touches = event.changedTouches;
-
-      if (touches) {
-        event.preventDefault();
-      }
-
-      this.button = -1;
-      this.absolute.x = position.x;
-      this.absolute.y = position.y;
-      this.position.x = this.absolute.x * this.scale.x + this.offset.x;
-      this.position.y = this.absolute.y * this.scale.y + this.offset.y;
-      this.mouseupPosition.x = this.position.x;
-      this.mouseupPosition.y = this.position.y;
-      this.sourceEvents.mouseup = event;
-    };
-
-    this.mousewheel = (event) => {
-      this.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
-      event.preventDefault();
-    };
-    this.setElement(this.element);
+      };
+      this.setElement(this.element);
+    }
   }
 
   /**

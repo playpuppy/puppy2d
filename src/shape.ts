@@ -1,5 +1,5 @@
 import { Common, chooseColorScheme } from './matter-ts/commons';
-import { Vector, Vertices } from './matter-ts/geometry';
+import { Vector, Vertices, Bounds } from './matter-ts/geometry';
 import { Body, Constraint, Composite, World } from './matter-ts/body';
 
 // shape setting
@@ -16,6 +16,17 @@ const common = (world: any, options: any) => {
     }
     else {
       options.fillStyle = Common.choose(world.colors);
+    }
+  }
+  if (!options.opacity) {
+    if (options.isStatic) {
+      options.opacity = 0.4;
+    }
+    else if (options.isStatic) {
+      options.opacity = 0.8;
+    }
+    else {
+      options.opacity = 1;
     }
   }
   return options;
@@ -284,23 +295,66 @@ export class ShapeWorld extends World {
       shape: 'variable',
       position: this.newVec(x, y),
       name: name, caption: name,
+      zindex: Infinity,
     });
-    const width = name.length * 25 + 50;
+    const width = this.width * 0.4;
     initSize(this, options, width, 50);
     return this.newBody(options);
   }
 
   public timeToLive(body: Body, time = 5000) {
     var tick = 0;
-    (body as any).move = (body: Body) => {
+    body.addMotion((body: Body) => {
       tick += 16;
       //console.log(tick);
       if (tick > time) {
         this.removeBody(body);
-        delete (body as any).move;
+        return false;
       }
       body.opacity = 0.7 * (1.0 - tick / time)
-    }
+      return true;
+    });
+    return body;
+  }
+
+  public translation(body: Body, x: number, y: number, time = 5000) {
+    var tick = 0;
+    body.addMotion((body: Body) => {
+      tick += 16;
+      body.translate2(x, y);
+      if (tick > time) {
+        return false;
+      }
+      return true;
+    });
+    return body;
+  }
+
+  public Bye(body: Body) {
+    const bounds = this.bounds;
+    body.addMotion((body: Body) => {
+      if (!Bounds.overlaps(body.bounds, bounds)) {
+        this.removeBody(body);
+        return false;
+      }
+      return true;
+    });
+    return body;
+  }
+
+  public Wrap(body: Body) {
+    const bounds = this.bounds;
+    body.addMotion((body: Body) => {
+      if (body.bounds.max.x < bounds.min.x) {
+        body.translate2(bounds.getWidth(), 0);
+        return true;
+      }
+      if (bounds.max.x < body.bounds.min.x) {
+        body.translate2(-bounds.getWidth(), 0);
+        return true;
+      }
+      return true;
+    });
     return body;
   }
 

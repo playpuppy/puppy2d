@@ -668,6 +668,59 @@ export class Body {
 
     return properties;
   }
+
+  // ffi, anime
+  // movein, moveover, moveout
+  // body.movein = ...
+  // body.clicked = f
+
+  public fficall(key: string, ...params: any[]) {
+    const callback = (this as any)[key];
+    if (callback !== undefined) {
+      try {
+        return callback(this, ...params);
+      }
+      catch (e) {
+        console.log(e);
+      }
+    }
+  }
+
+  private motionCallbacks: any = null;
+
+  public addMotion(callback: (body: Body) => boolean) {
+    if (this.motionCallbacks === null) {
+      this.motionCallbacks = [];
+    }
+    this.motionCallbacks.push(callback);
+  }
+
+  public doMotion() {
+    if (this.motionCallbacks) {
+      try {
+        if (this.motionCallbacks.length === 1) {
+          if (!this.motionCallbacks[0](this)) {
+            this.motionCallbacks = null;
+          }
+        }
+        else {
+          const cs = []
+          for (const callback of this.motionCallbacks) {
+            if (callback(this)) {
+              cs.push(callback);
+            }
+          }
+          this.motionCallbacks = cs;
+        }
+      }
+      catch (e) {
+        console.log(e);
+      }
+    }
+  }
+
+
+
 }
 
 /**

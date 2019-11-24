@@ -36,6 +36,9 @@ export class PuppyWorld extends ShapeWorld {
     //this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
     this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
     this.lib = new LibPython(base);
+    this.vars['__keyup__'] = (key: string, time: number) => {
+      console.log(`keyup '${key}' time=${time}`);
+    }
   }
 
 
@@ -115,6 +118,18 @@ export class PuppyWorld extends ShapeWorld {
     }
     if (name === '__keyup__') {
       (this as any).keyup = this.vars[name];
+    }
+  }
+
+  public fficall(name: string, ...params: any[]) {
+    const callback = this.vars[name];
+    if (callback !== undefined) {
+      try {
+        return callback(...params);
+      }
+      catch (e) {
+        console.log(e);
+      }
     }
   }
 
@@ -320,7 +335,6 @@ export class PuppyVM extends PuppyEventHandler {
     }
   }
 
-
   //
 
   public load(source?: string, autorun = true) {
@@ -345,6 +359,7 @@ export class PuppyVM extends PuppyEventHandler {
       if (!autorun) {
         return true;
       }
+      console.log(compiled.code);
       this.code = compiled;
     }
     const world = new PuppyWorld(this, this.code);

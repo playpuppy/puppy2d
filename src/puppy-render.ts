@@ -96,6 +96,38 @@ const _getTexture = (imagePath: string) => {
 }
 
 /**
+* Gets the mouse position relative to an element given a screen pixel ratio.
+* @method _getRelativeMousePosition
+* @private
+* @param {} event
+* @param {} element
+* @param {number} pixelRatio
+* @return {}
+*/
+
+const getMousePosition = (event: any, element: HTMLElement, pixelRatio: number, position: Vector) => {
+  const elementBounds = element.getBoundingClientRect();
+  const rootNode = (document.documentElement || document.body.parentNode || document.body);
+  const scrollX = (window.pageXOffset !== undefined) ? window.pageXOffset : rootNode.scrollLeft;
+  const scrollY = (window.pageYOffset !== undefined) ? window.pageYOffset : rootNode.scrollTop;
+  const touches = event.changedTouches;
+  var x, y;
+
+  if (touches) {
+    x = touches[0].pageX - elementBounds.left - scrollX;
+    y = touches[0].pageY - elementBounds.top - scrollY;
+  } else {
+    x = event.pageX - elementBounds.left - scrollX;
+    y = event.pageY - elementBounds.top - scrollY;
+  }
+  position.x =
+    x / (element.clientWidth / ((element as any)['width'] || element.clientWidth) * pixelRatio);
+  position.y =
+    y / (element.clientHeight / ((element as any)['height'] || element.clientHeight) * pixelRatio);
+  return position;
+}
+
+/**
 * The `Matter.Render` module is a simple HTML5 canvas based renderer for visualising instances of `Matter.Engine`.
 * It is intended for development and debugging purposes, but may also be suitable for simple games.
 * It includes a number of drawing options including wireframe, vector with support for sprites and viewports.
@@ -174,7 +206,13 @@ export class PuppyRender {
   private keyDown: any = null;
   private keyUp: any = null;
 
+  private mouseMove: any = null;
+  private mouseDown: any = null;
+  private mouseUp: any = null;
+  private mouseWheel: any = null;
+
   private initEvents() {
+    const mouse = this.mouse;
     var startTime = 0;
     var prevKey = '';
     this.keyDown = (event: KeyboardEvent) => {
@@ -183,28 +221,69 @@ export class PuppyRender {
         prevKey = keyName;
         startTime = this.engine.timing.timestamp;
       }
-      const keyDown = (this.engine.world as any).keyDown;
-      if (keyDown) {
-        keyDown(keyName);
-      }
-      // if (event.ctrlKey) {
-      //   console.log(`keydown:Ctrl + ${keyName}`);
-      // } else if (event.shiftKey) {
-      //   console.log(`keydown:Shift + ${keyName}`);
-      // } else {
-      //   console.log(`keydown:${keyName}`);
-      // }
+      this.engine.world.fficall('__keydown__', keyName);
     }
+
     this.keyUp = (event: KeyboardEvent) => {
       var keyName = event.key;
       const endTime = this.engine.timing.timestamp;
-      const keyUp = (this.engine.world as any).keyUp;
-      if (keyUp) {
-        keyUp(keyName, Math.max(0, endTime - startTime));
-      }
-      console.log(`keyup ${keyName} time=${Math.max(0, endTime - startTime)}`);
+      this.engine.world.fficall('__keyup__', keyName, Math.max(0, endTime - startTime) | 0);
       prevKey = '';
     }
+
+    this.mouseMove = (event: any) => {
+      getMousePosition(event, this.canvas, this.pixelRatio, mouse.absolute);
+      const touches = event.changedTouches;
+
+      if (touches) {
+        mouse.button = 0;
+        event.preventDefault();
+      }
+
+      mouse.position.x = mouse.absolute.x * this.scale.x + this.offset.x;
+      mouse.position.y = mouse.absolute.y * this.scale.y + this.offset.y;
+      mouse.sourceEvents.mousemove = event;
+      this.engine.world.fficall('__mousemove__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
+    };
+
+    this.mouseDown = (event: any) => {
+      getMousePosition(event, this.canvas, this.pixelRatio, mouse.absolute);
+      const touches = event.changedTouches;
+      if (touches) {
+        mouse.button = 0;
+        event.preventDefault();
+      } else {
+        mouse.button = event.button;
+      }
+      mouse.position.x = mouse.absolute.x * this.scale.x + this.offset.x;
+      mouse.position.y = mouse.absolute.y * this.scale.y + this.offset.y;
+      mouse.mousedownPosition.x = mouse.position.x;
+      mouse.mousedownPosition.y = mouse.position.y;
+      mouse.sourceEvents.mousedown = event;
+      this.engine.world.fficall('__mousedown__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
+    };
+
+    this.mouseUp = (event: any) => {
+      getMousePosition(event, this.canvas, this.pixelRatio, mouse.absolute);
+      const touches = event.changedTouches;
+
+      if (touches) {
+        event.preventDefault();
+      }
+
+      mouse.button = -1;
+      mouse.position.x = mouse.absolute.x * this.scale.x + this.offset.x;
+      mouse.position.y = mouse.absolute.y * this.scale.y + this.offset.y;
+      mouse.mouseupPosition.x = mouse.position.x;
+      mouse.mouseupPosition.y = mouse.position.y;
+      mouse.sourceEvents.mouseup = event;
+      this.engine.world.fficall('__mouseup__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
+    }
+
+    this.mouseWheel = (event: any) => {
+      mouse.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
+      event.preventDefault();
+    };
 
     // var updateGravity = function (event) {
     //   var orientation = typeof window.orientation !== 'undefined' ? window.orientation : 0,
@@ -232,6 +311,18 @@ export class PuppyRender {
     if (this.keyDown != null) {
       document.addEventListener('keydown', this.keyDown);
       document.addEventListener('keyup', this.keyUp);
+
+      const element = this.canvas;
+      element.addEventListener('mousemove', this.mouseMove);
+      element.addEventListener('mousedown', this.mouseDown);
+      element.addEventListener('mouseup', this.mouseUp);
+
+      element.addEventListener('mousewheel', this.mouseWheel);
+      // element.addEventListener('DOMMouseScroll', this.mouseWheel);
+
+      element.addEventListener('touchmove', this.mouseMove);
+      element.addEventListener('touchstart', this.mouseDown);
+      element.addEventListener('touchend', this.mouseUp);
     }
   }
 
@@ -239,6 +330,18 @@ export class PuppyRender {
     if (this.keyDown != null) {
       document.removeEventListener('keydown', this.keyDown);
       document.removeEventListener('keyup', this.keyUp);
+
+      const element = this.canvas;
+      element.removeEventListener('mousemove', this.mouseMove);
+      element.removeEventListener('mousedown', this.mouseDown);
+      element.removeEventListener('mouseup', this.mouseUp);
+
+      element.removeEventListener('mousewheel', this.mouseWheel);
+      // element.addEventListener('DOMMouseScroll', this.mouseWheel);
+
+      element.removeEventListener('touchmove', this.mouseMove);
+      element.removeEventListener('touchstart', this.mouseDown);
+      element.removeEventListener('touchend', this.mouseUp);
     }
   }
 
@@ -427,7 +530,6 @@ export class PuppyRender {
     // 
   }
 
-
   /**
    * Applies viewport transforms based on `render.bounds` to a render context.
    * @method startViewTransform
@@ -445,6 +547,7 @@ export class PuppyRender {
    * @method endViewTransform
    * @param {render} render
    */
+
   private endViewTransform() {
     this.context.restore();
   }
@@ -711,7 +814,7 @@ export class PuppyRender {
     const options = this.world as any;
     const showInternalEdges = options.showInternalEdges || !options.wireframes;
     const globalAlpha = this.globalAlpha;
-    const defaultFont = options.defaultFont || "28px Arial";
+    const defaultFont = options.defaultFont || "36px Arial";
     const defaultFontColor = options.defaultFontColor || 'gray';
 
     for (var i = 0; i < bodies.length; i++) {
@@ -833,9 +936,7 @@ export class PuppyRender {
         c.restore();
       }
       // quick anime
-      if (ticker.move) {
-        ticker.move(body, options.timestamp, this.world/*FIXME*/);
-      }
+      ticker.doMotion();
     }
   }
 

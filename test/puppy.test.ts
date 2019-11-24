@@ -219,7 +219,6 @@ test('keyup', () => {
 	expect(utest(`
 def __keyup__(key, time):
 	print(key)
-
 `)).toBe('}');
 })
 

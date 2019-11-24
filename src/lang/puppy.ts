@@ -1113,7 +1113,7 @@ export const compile = (s: Source): PuppyCode => {
   const jscode = out.join('');
   const main = `
 return {
-  main: async function*(puppy) {
+  main: function*(puppy) {
 \tconst lib = puppy.lib;
 \tconst vars = puppy.vars;
 ${jscode}
