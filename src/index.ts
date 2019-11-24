@@ -4,7 +4,7 @@
 import { PuppyVM, PuppyOS } from './puppy2d';
 
 const puppyOS = new PuppyOS();
-const puppy = puppyOS.newPuppy(document.body);
+const puppy = puppyOS.newPuppyVM(document.body);
 
 // puppy.load(`
 // print('Hello, World')

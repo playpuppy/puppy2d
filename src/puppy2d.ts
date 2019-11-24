@@ -98,14 +98,15 @@ export class PuppyWorld extends ShapeWorld {
       shape: 'label',
       zindex: Infinity,
       fontColor: Common.choose(this.colors, 1),
-      move: (body: Body) => {
-        body.translate2(-2, 0);
-        if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
-          this.removeBody(body);
-        }
-      },
     }, options);
-    this.newObject(options);
+    return this.newObject(options).addMotion((body: Body) => {
+      body.translate2(-2, 0);
+      if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
+        this.removeBody(body);
+        return false;
+      }
+      return true;
+    });
   }
 
   public input(text: string = '') {
@@ -339,7 +340,7 @@ export class PuppyVM extends PuppyEventHandler {
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
-      var hasError = false, hasWarning=false, hasInfos = false;
+      var hasError = false, hasWarning = false, hasInfos = false;
       const errors: ErrorLog[] = [], warnings: ErrorLog[] = [], infos: ErrorLog[] = [];
       const compiled = PuppyCompile({ source });
       for (const error of compiled.errors) {
@@ -487,7 +488,7 @@ export class PuppyOS extends PuppyEventHandler {
     this.env['USER'] = uid;
   }
 
-  public newPuppy(element: HTMLElement) {
+  public newPuppyVM(element: HTMLElement) {
     return new PuppyVM(element, this);
   }
 
