@@ -251,7 +251,7 @@ export class Engine {
 
   public setRender(render: Render) {
     this.render = render;
-    this.mouse = new Mouse(render.canvas);
+    this.mouse = new Mouse(render.canvas, {});
     this.mouseConstraint = new MouseConstraint(this, {
       stiffness: 0.2,
     });
