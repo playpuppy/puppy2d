@@ -1168,9 +1168,8 @@ export const utest = (s: string) => {
 
 // console.log(transpile(`
 // from puppy2d import *
-// c = Circle(0,0,100)
-// c.width
-// c.width = 100
+// for n in range(10):
+//   print(n)
 // `));
 
 
