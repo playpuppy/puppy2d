@@ -893,8 +893,11 @@ class Transpiler {
     }
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
+    const fmts = field.getter.split('$');
+    console.log(fmts);
+    out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
-    out.push(`.${field.getter}`);
+    out.push(fmts[1]);
     return field.ty;
   }
 
@@ -907,11 +910,13 @@ class Transpiler {
     t.tag = 'GetExpr'; // see SelfAssign
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
-    out.push(field.setter);
+    const fmts = field.setter.split('$');
+    console.log(fmts);
+    out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
-    out.push(',');
+    out.push(fmts[1]);
     this.check(field.ty, env, t['right'], out);
-    out.push(')');
+    out.push(fmts[2]);
     return Types.Void;
   }
 
@@ -1124,6 +1129,8 @@ ${jscode}
     code = (new Function(main))();
   }
   catch (e) {
+    console.log(main);
+    console.log(e);
     env.perror(t, {
       type: 'error',
       key: 'CompileError',
@@ -1157,33 +1164,13 @@ export const utest = (s: string) => {
   return '';
 }
 
-// console.log(transpile(`
-// '''
-// This is a apple.
-// I'm from Chiba.
-// '''
-// `));
+//console.log(1)
 
 // console.log(transpile(`
-// from matterjs import *
-// def Ball(x,y):
-//   Circle(x,y)
-// Ball(1,1)
+// from puppy2d import *
+// c = Circle(0,0,100)
+// c.width
+// c.width = 100
 // `));
 
 
-// console.log(transpile(`
-// for x in range(1,2):
-//   for y in range(x,2):
-//     x+y
-// `));
-
-// console.log(transpile(`
-// def f(x,y):
-//   return x*y;
-// `));
-
-// console.log(transpile(`
-// def f(x,y):
-//   return x//y;
-// `));

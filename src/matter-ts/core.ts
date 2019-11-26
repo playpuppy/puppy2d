@@ -11,6 +11,7 @@ import { Body, Constraint, World } from "./body";
 import { Pair, Pairs, Resolver, Grid } from "./collision";
 import { Render } from "./render";
 import { Mouse, MouseConstraint } from "./mouse";
+import { triggerAsyncId } from 'async_hooks';
 
 /**
 * The `Matter.Sleeping` module contains methods to manage the sleeping state of bodies.
@@ -393,8 +394,10 @@ export class Engine {
 
 
     // trigger collision events
-    if (pairs.collisionStart.length > 0)
+    if (pairs.collisionStart.length > 0) {
+      Engine.triggerCollision('movein', pairs.collisionStart);
       Events.trigger(this, 'collisionStart', { pairs: pairs.collisionStart });
+    }
 
     // iteratively resolve position between collisions
     //this.foundNaN('collisionStart', allBodies);
@@ -428,11 +431,13 @@ export class Engine {
     }
 
     // trigger collision events
-    if (pairs.collisionActive.length > 0)
+    if (pairs.collisionActive.length > 0) {
       Events.trigger(this, 'collisionActive', { pairs: pairs.collisionActive });
+    }
 
-    if (pairs.collisionEnd.length > 0)
+    if (pairs.collisionEnd.length > 0) {
       Events.trigger(this, 'collisionEnd', { pairs: pairs.collisionEnd });
+    }
 
     // @if DEBUG
     // update metrics log
@@ -445,6 +450,15 @@ export class Engine {
     Events.trigger(this, 'afterUpdate', event);
   }
 
+  static triggerCollision(key: string, pairs: Pair[]) {
+    for (var i = 0; i < pairs.length; i++) {
+      const pair = pairs[i];
+      var bodyA = pair.bodyA;
+      var bodyB = pair.bodyB;
+      bodyA.fficall(key, bodyB);
+      bodyB.fficall(key, bodyA);
+    }
+  }
 
   /**
    * Clears the engine including the world, pairs and broadphase.

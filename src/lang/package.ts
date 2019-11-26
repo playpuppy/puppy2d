@@ -260,10 +260,12 @@ const _field_ = (base: Type, getter: string, setter: string, ty: Type) => {
 const FIELDS: { [key: string]: Field } = {
   'x': _field_(ts.Vec, 'x', 'puppy.set("x",', ts.Int),
   'y': _field_(ts.Vec, 'y', 'puppy.set("y",', ts.Int),
-  'position': _field_(ts.Object, 'position', 'puppy.setpos(', ts.Vec),
-  'width': _field_(ts.Object, 'bounds.getWidth()', 'puppy.setwidth(', ts.Int),
-  'height': _field_(ts.Object, 'bounds.getHeight()', 'puppy.setheight(', ts.Int),
-  'fillStyle': _field_(ts.Object, 'fillStyle', "puppy.setlazy('fillStyle',", ts.String),
+  'position': _field_(ts.Object, '$.position', '$.setPosition($)', ts.Vec),
+  'width': _field_(ts.Object, '$.getWidth()', '$.setWidth($)', ts.Int),
+  'height': _field_(ts.Object, '$.getHeight()', '$.setHeight($)', ts.Int),
+  'mass': _field_(ts.Object, '$.mass', '$.setMass($)', ts.Int),
+  'density': _field_(ts.Object, '$.density', '$.setDensity($)', ts.Int),
+  'fillStyle': _field_(ts.Object, 'fillStyle', "$.set('fillStyle',$)", ts.String),
 }
 
 export const getField = (env: any, name: any, tree: any): Field => {
@@ -273,7 +275,8 @@ export const getField = (env: any, name: any, tree: any): Field => {
     field = fields[name];
     if (field === undefined) {
       const ty = env.guessType(name, tree);
-      field = _field_(ts.Object, name, `puppy.setlazy('${name}',`, ty);
+      console.log(`GUESS ${name} ${ty}`);
+      field = _field_(ts.Object, name, `$.set('${name}',$)`, ty);
       fields[name] = field;
     }
   }

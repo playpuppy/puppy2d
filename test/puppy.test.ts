@@ -112,7 +112,7 @@ test('c.width+=1', () => {
 from puppy2d import *
 c = Circle(10, 10, 0)
 c.width += 1
-`)).toBe("puppy.setwidth(vars['c'],(vars['c'].bounds.getWidth() + 1))");
+`)).toBe("vars['c'].setWidth((vars['c'].getWidth() + 1))");
 });
 
 test('c[0]+=1', () => {
