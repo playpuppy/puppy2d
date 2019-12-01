@@ -396,7 +396,7 @@ export class Engine {
     // trigger collision events
     if (pairs.collisionStart.length > 0) {
       Engine.triggerCollision('movein', pairs.collisionStart);
-      Events.trigger(this, 'collisionStart', { pairs: pairs.collisionStart });
+      //Events.trigger(this, 'collisionStart', { pairs: pairs.collisionStart });
     }
 
     // iteratively resolve position between collisions
@@ -432,11 +432,13 @@ export class Engine {
 
     // trigger collision events
     if (pairs.collisionActive.length > 0) {
-      Events.trigger(this, 'collisionActive', { pairs: pairs.collisionActive });
+      //Events.trigger(this, 'collisionActive', { pairs: pairs.collisionActive });
+      Engine.triggerCollision('moveover', pairs.collisionActive);
     }
 
     if (pairs.collisionEnd.length > 0) {
-      Events.trigger(this, 'collisionEnd', { pairs: pairs.collisionEnd });
+      //Events.trigger(this, 'collisionEnd', { pairs: pairs.collisionEnd });
+      Engine.triggerCollision('moveout', pairs.collisionEnd);
     }
 
     // @if DEBUG

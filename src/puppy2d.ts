@@ -204,6 +204,11 @@ const DefaultPuppyCode: PuppyCode = {
       margin: 10,
       part: { shape: 'circle', restitution: 1.0 },
     });
+    const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
+    sensor.moveover = (bodyA: Body, bodyB: Body) => {
+      console.log(bodyA);
+      console.log(bodyB);
+    }
     world.Variable('TIME', 320, -400, { width: 260 });
     world.Variable('MOUSE', 320, -440, { width: 260 });
     for (var i = 0; i < 40; i++) {
