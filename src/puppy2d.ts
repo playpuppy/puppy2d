@@ -17,6 +17,9 @@ export class PuppyWorld extends ShapeWorld {
   public colors: string[];
   public darkmode = false;
   public background = '#F7F6EB';
+  public wireframes = false;
+  public tangible = false;
+  public gyroscope = false;
   public vars: any = {};
   public lib: LibPython;
 
@@ -32,26 +35,39 @@ export class PuppyWorld extends ShapeWorld {
       this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
     }
     this.colors = chooseColorScheme(options.colorScheme);
-    //console.log(`brightness ${brightness(this.colors)}`);
-    //this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
-    this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
+    this.background = options.background || '#F7F6EB';
     this.lib = new LibPython(base);
-    this.vars['__keyup__'] = (key: string, time: number) => {
-      console.log(`keyup '${key}' time=${time}`);
-    }
   }
 
 
   public World(options: any = {}) {
-    if (options.width && options.height) {
+    if (options.screen) {
+      this.screen = options.screen;
+    }
+    if (options.width || options.height) {
       this.width = options.width;
-      this.height = options.height;
+      this.height = options.height || this.width;
+      if (this.screen) {
+        this.bounds = new Bounds(0, 0, this.width, this.height);
+      }
+      else {
+        this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
+      }
     }
     if (typeof options.background === 'string') {
       this.background = options.background;
+      if (this.base.render !== null) {
+        this.base.render.applyBackground(options.background);
+      }
     }
     if (options.gravity instanceof Vector) {
       this.gravity = options.gravity;
+    }
+    if (options.wireframes) {
+      this.wireframes = options.wireframes;
+    }
+    if (options.wireframes) {
+      this.wireframes = options.wireframes;
     }
   }
 
@@ -65,6 +81,10 @@ export class PuppyWorld extends ShapeWorld {
     }
   }
 
+  public setGravity(x: number, y: number) {
+    this.gravity = new Vector(x, y);
+  }
+
   public setViewport(x1: number, y1: number, x2: number, y2: number) {
     if (this.base.render !== null) {
       this.base.render.setViewport(x1, y1, x2, y2);
@@ -72,10 +92,6 @@ export class PuppyWorld extends ShapeWorld {
   }
 
   // from puppy vm
-
-  public setGravity(x: number, y: number) {
-    this.gravity = new Vector(x, y);
-  }
 
   public paint(x: number, y: number, radius = 5) {
     const options = {
@@ -99,6 +115,7 @@ export class PuppyWorld extends ShapeWorld {
       zindex: Infinity,
       fontColor: Common.choose(this.colors, 1),
     }, options);
+    
     return this.newObject(options).addMotion((body: Body) => {
       body.translate2(-2, 0);
       if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
@@ -199,7 +216,6 @@ export class PuppyWorld extends ShapeWorld {
       target.setPosition(position);
     })
   }
-
 }
 
 const DefaultPuppyCode: PuppyCode = {
@@ -215,23 +231,24 @@ const DefaultPuppyCode: PuppyCode = {
     // world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
     // world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
     world.setGravity(0, -1.0);
-    world.newObject({
-      shape: 'newtonsCradle',
-      position: new Vector(0, 0),
-      margin: 10,
-      columns: 3,
-      //part: { shape: 'rectangle' },
-    });
     // world.newObject({
-    //   shape: 'array',
+    //   shape: 'newtonsCradle',
     //   position: new Vector(0, 0),
     //   margin: 10,
-    //   part: { shape: 'circle', restitution: 1.0 },
+    //   columns: 3,
+    //   //part: { shape: 'rectangle' },
     // });
+    world.newObject({
+      shape: 'array',
+      position: new Vector(0, 0),
+      margin: 10,
+      part: { shape: 'circle', restitution: 1.0 },
+    });
     world.Variable('TIME', 320, -400, { width: 260 });
     world.Variable('MOUSE', 320, -440, { width: 260 });
     for (var i = 0; i < 40; i++) {
-      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      //world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      world.print(`count=${i}`);
       yield 200;
     }
     return 0;

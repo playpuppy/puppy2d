@@ -70,21 +70,21 @@ Circle(10, 10)
 test('Circle(10,10,50)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10,50)
+Circle(10,10,50)
 `)).toBe("puppy.Circle(10,10,50)");
 });
 
-test('Circle(10,10, 50, mass=100)', () => {
+test('Circle(10,10,55, mass=100)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10, 50, mass=100)
-`)).toBe("puppy.Circle(10,10,50,{'mass': 100,})");
+Circle(10, 10, 55, mass=100)
+`)).toBe("puppy.Circle(10,10,55,{'mass': 100,})");
 });
 
-test('Circle(10,10, 50, よく弾む)', () => {
+test('Circle(10,10,60, よく弾む)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10, 50, よく弾む)
+Circle(10, 10, 60, よく弾む)
 `)).toBe("NLKeyValues");
 });
 

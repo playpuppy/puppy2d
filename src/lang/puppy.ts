@@ -683,11 +683,6 @@ class Transpiler {
       }
     }
     return this.conv(env, this.asSetter(left, t['right']), out);
-    // t['left'].tag = `Set${t['left'].tag}`;
-    // const ty = this.conv(env, t['left'], out);
-    // out.push(' = ');
-    // this.check(ty, env, t['right'], out)
-    // return Types.Void;
   }
 
   private asSetter(t: ParseTree, right: ParseTree) {
@@ -894,7 +889,6 @@ class Transpiler {
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
     const fmts = field.getter.split('$');
-    console.log(fmts);
     out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
     out.push(fmts[1]);
@@ -911,7 +905,6 @@ class Transpiler {
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
     const fmts = field.setter.split('$');
-    console.log(fmts);
     out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
     out.push(fmts[1]);
@@ -953,11 +946,13 @@ class Transpiler {
 
   public NLPSymbol(env: Env, t: ParseTree | any, out: string[]) {
     env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
 
   public NLKeyValue(env: Env, t: ParseTree | any, out: string[]) {
     env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
 
