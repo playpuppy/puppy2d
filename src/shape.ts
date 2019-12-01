@@ -1,6 +1,7 @@
 import { Common, chooseColorScheme } from './matter-ts/commons';
 import { Vector, Vertices, Bounds } from './matter-ts/geometry';
 import { Body, Constraint, Composite, World } from './matter-ts/body';
+import { LibPython } from './lang/libpython';
 
 // shape setting
 
@@ -207,6 +208,8 @@ export const PuppyObjects: { [key: string]: (world: any, options: any) => any } 
 }
 
 export class ShapeWorld extends World {
+  public vm: any;
+  public lib: LibPython;
   public vars: any = {};
   public colors: string[] = ['#000000', '#ff0000', '#00ff00', '#0000ff'];
   public frictionAir = 0.1;
@@ -216,8 +219,10 @@ export class ShapeWorld extends World {
   public fontSize = 36;
   public fontScale = 0.9;
 
-  public constructor(options: any) {
+  public constructor(vm: any, options: any) {
     super(options);
+    this.vm = vm;
+    this.lib = new LibPython(vm);
     this.font = this.boldFont(this.fontSize);
   }
 
@@ -315,6 +320,54 @@ export class ShapeWorld extends World {
     return this.newBody(options);
   }
 
+  public print(text: string = '', options: any = {}) {
+    this.vm.trigger('stdout', { text: text + (options.end || '\n') });
+    const world = this;
+    const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
+    const x = bounds.max.x;
+    const y = bounds.randomY(50);
+    options = Object.assign({
+      textRef: (body: Body) => text,
+      position: new Vector(x, y),
+      shape: 'label',
+      zindex: Infinity,
+      fontColor: Common.choose(this.colors, 1),
+    }, options);
+    return this.newObject(options).addMotion((body: Body) => {
+      body.translate2(-2, 0);
+      if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
+        this.removeBody(body);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  public print1(v1: any, options: any = {}) {
+    const text = v1 === undefined ? '' : `${this.lib.str(v1)}`;
+    this.print(text, options);
+  }
+
+  public print2(v1: any, v2: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}`;
+    this.print(text, options);
+  }
+
+  public print3(v1: any, v2: any, v3: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}${sep}${str(v3)}`;
+    this.print(text, options);
+  }
+
+  public print4(v1: any, v2: any, v3: any, v4: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}${sep}${str(v3)}${sep}${str(v4)}`;
+    this.print(text, options);
+  }
 
 
   public timeToLive(body: Body, time = 5000) {

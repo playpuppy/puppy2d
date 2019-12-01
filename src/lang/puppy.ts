@@ -585,9 +585,6 @@ class Transpiler {
     if (!funcData['hasReturn']) {
       types[0].accept(Types.Void, true);
     }
-    if (symbol.isGlobal() && name.length > 2 && name[0] === '_' && name[1] === '_' && name[name.length - 1] === '_') {
-      out.push(`;puppy.fsync('${name}');`);
-    }
     //console.log(`DEFINED ${name} :: ${funcType}`)
     return Types.Void;
   }

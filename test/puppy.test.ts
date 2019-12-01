@@ -3,7 +3,19 @@ import { utest } from '../src/lang/puppy';
 test('HelloWorld', () => {
 	expect(utest(`
 print("hello,world")
-`)).toBe('puppy.print("hello,world")');
+`)).toBe('puppy.print1("hello,world")');
+});
+
+test('print(1,2)', () => {
+	expect(utest(`
+print(1,2)
+`)).toBe('puppy.print2(1,2)');
+});
+
+test('print()', () => {
+	expect(utest(`
+print()
+`)).toBe('puppy.print1()');
 });
 
 // test('None', () => {
@@ -219,7 +231,7 @@ test('keyup', () => {
 	expect(utest(`
 def __keyup__(key, time):
 	print(key)
-`)).toBe('}');
+`)).toBe('puppy.print1(key)');
 })
 
 

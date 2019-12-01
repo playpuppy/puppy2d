@@ -4,15 +4,11 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { LibPython } from './lang/libpython';
 import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
-import { optionalCallExpression } from '@babel/types';
-
 
 export class PuppyWorld extends ShapeWorld {
-  base: PuppyVM;
   public timestamp = 0;
   public colors: string[];
   public darkmode = false;
@@ -20,12 +16,9 @@ export class PuppyWorld extends ShapeWorld {
   public wireframes = false;
   public tangible = false;
   public gyroscope = false;
-  public vars: any = {};
-  public lib: LibPython;
 
-  public constructor(base: PuppyVM, options: any = {}) {
-    super(Object.assign(options, { id: 0 }));
-    this.base = base;
+  public constructor(vm: PuppyVM, options: any = {}) {
+    super(vm, Object.assign(options, { id: 0 }));
     this.width = options.width || 1000;
     this.height = options.height || this.width;
     if (this.screen) {
@@ -36,9 +29,7 @@ export class PuppyWorld extends ShapeWorld {
     }
     this.colors = chooseColorScheme(options.colorScheme);
     this.background = options.background || '#F7F6EB';
-    this.lib = new LibPython(base);
   }
-
 
   public World(options: any = {}) {
     if (options.screen) {
@@ -56,8 +47,8 @@ export class PuppyWorld extends ShapeWorld {
     }
     if (typeof options.background === 'string') {
       this.background = options.background;
-      if (this.base.render !== null) {
-        this.base.render.applyBackground(options.background);
+      if (this.vm.render !== null) {
+        this.vm.render.applyBackground(options.background);
       }
     }
     if (options.gravity instanceof Vector) {
@@ -86,8 +77,8 @@ export class PuppyWorld extends ShapeWorld {
   }
 
   public setViewport(x1: number, y1: number, x2: number, y2: number) {
-    if (this.base.render !== null) {
-      this.base.render.setViewport(x1, y1, x2, y2);
+    if (this.vm.render !== null) {
+      this.vm.render.setViewport(x1, y1, x2, y2);
     }
   }
 
@@ -103,40 +94,9 @@ export class PuppyWorld extends ShapeWorld {
     this.timeToLive(this.newObject(options), 5000);
   }
 
-  public print(text: string = '', options: any = {}) {
-    const world = this;
-    const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
-    const x = bounds.max.x;
-    const y = bounds.randomY(50);
-    options = Object.assign({
-      textRef: (body: Body) => `${text}`,
-      position: new Vector(x, y),
-      shape: 'label',
-      zindex: Infinity,
-      fontColor: Common.choose(this.colors, 1),
-    }, options);
-    
-    return this.newObject(options).addMotion((body: Body) => {
-      body.translate2(-2, 0);
-      if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
-        this.removeBody(body);
-        return false;
-      }
-      return true;
-    });
-  }
 
   public input(text: string = '') {
-    return this.base.syscall('input', { text });
-  }
-
-  public fsync(name: string) {
-    if (name === '__keydown__') {
-      (this as any).keydown = this.vars[name];
-    }
-    if (name === '__keyup__') {
-      (this as any).keyup = this.vars[name];
-    }
+    return this.vm.syscall('input', { text });
   }
 
   public fficall(name: string, ...params: any[]) {
@@ -152,42 +112,42 @@ export class PuppyWorld extends ShapeWorld {
   }
 
   public line(linenum: number) {
-    this.base.trigger('line', {
+    this.vm.trigger('line', {
       status: 'executed',
       linenum: linenum
     });
   }
 
-  private token(tkid: number, event: any) {
-    return event;
-  }
+  // private token(tkid: number, event: any) {
+  //   return event;
+  // }
 
-  public v(value: any, tkid: number) {
-    this.base.trigger('variable', this.token(tkid, {
-      value: value,
-    }));
-    return this.v;
-  }
+  // public v(value: any, tkid: number) {
+  //   this.vm.trigger('variable', this.token(tkid, {
+  //     value: value,
+  //   }));
+  //   return this.v;
+  // }
 
-  public ckint(value: any, tkid: number) {
-    if (typeof value !== 'number') {
-      this.base.trigger('error', {
-        status: 'runtime',
-        value: value,
-      });
-    }
-    return this.v;
-  }
+  // public ckint(value: any, tkid: number) {
+  //   if (typeof value !== 'number') {
+  //     this.vm.trigger('error', {
+  //       status: 'runtime',
+  //       value: value,
+  //     });
+  //   }
+  //   return this.v;
+  // }
 
-  public ckstr(value: any, tkid: number) {
-    if (typeof value !== 'string') {
-      this.base.trigger('error', {
-        status: 'runtime',
-        value: value,
-      });
-    }
-    return this.v;
-  }
+  // public ckstr(value: any, tkid: number) {
+  //   if (typeof value !== 'string') {
+  //     this.vm.trigger('error', {
+  //       status: 'runtime',
+  //       value: value,
+  //     });
+  //   }
+  //   return this.v;
+  // }
 
   public trace(log: any) {
     console.log(log);

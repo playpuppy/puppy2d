@@ -156,7 +156,11 @@ const import_python: { [key: string]: Symbol | undefined } = {
   'ord': undefined,
   'pow': sym('Math.pow', tFuncFloatFloatFloat),
 
-  'print': sym('puppy.print', ts.func(ts.Void, ts.Any, ts.Option), Visual),
+  'print@0': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option), Visual),
+  'print': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option), Visual),
+  'print@2': sym('puppy.print2', ts.func(ts.Void, ts.Any, ts.Any, ts.Option), Visual),
+  'print@3': sym('puppy.print3', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Option), Visual),
+  'print@4': sym('puppy.print4', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Any, ts.Option), Visual),
   'property': undefined,
   //
   'range@1': sym('lib.range1', ts.func(ts.ListInt, ts.Int)),
