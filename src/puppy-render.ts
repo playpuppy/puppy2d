@@ -193,6 +193,9 @@ export class PuppyRender {
       this.lookAt(-hw, hh, hw, -hh);
     }
     this.initEvents();
+    if (this.options.background) {
+      this.applyBackground(this.options.background);
+    }
   }
 
   public clear() {
@@ -560,7 +563,6 @@ export class PuppyRender {
    */
 
   private globalAlpha = 0.9;
-  private currentBackground = '';
 
   public draw() {
     const engine = this.engine;
@@ -570,7 +572,7 @@ export class PuppyRender {
     const options = world as any;
     const allBodies = world.allBodies();
     const allConstraints = world.allConstraints();
-    const background = options.wireframes ? options.wireframeBackground : world.background;
+    const background = options.wireframes ? 'rgba(230,230,230,0.5)' : world.background;
     const timestamp = engine.timing.timestamp;
 
     var bodies: Body[] = [];
@@ -589,9 +591,6 @@ export class PuppyRender {
     Events.trigger(this, 'beforeRender', event);
 
     // apply background if it has changed
-    if (this.currentBackground !== background) {
-      this.applyBackground(background);
-    }
 
     // clear the canvas with a transparent fill, 
     // to allow the canvas background to show
@@ -648,7 +647,7 @@ export class PuppyRender {
     this.endViewTransform();
 
     if (this.showingMessage !== null) {
-      context.font = '96px Arial';
+      context.font = 'bold 80px sans-serif';
       const w = context.measureText(this.showingMessage).width;
       const cx = this.canvas.width / 2;
       const cy = this.canvas.height / 2;
@@ -671,13 +670,13 @@ export class PuppyRender {
   * @param {string} background
   */
 
-  private applyBackground(background: string) {
+  public applyBackground(background: string) {
     var cssBackground = background;
-    if (/(jpg|gif|png)$/.test(background))
-      cssBackground = 'url(' + background + ')';
+    if (/(jpg|gif|png)$/.test(background)) {
+      cssBackground = `url(${background})`;
+    }
     this.canvas.style.background = cssBackground;
     this.canvas.style.backgroundSize = "contain";
-    this.currentBackground = background;
   }
 
   /**
@@ -749,56 +748,56 @@ export class PuppyRender {
     }
   }
 
-  /**
-   * Description
-   * @private
-   * @method bodyShadows
-   * @param {render} render
-   * @param {body[]} bodies
-   * @param {RenderingContext} context
-   */
+  // /**
+  //  * Description
+  //  * @private
+  //  * @method bodyShadows
+  //  * @param {render} render
+  //  * @param {body[]} bodies
+  //  * @param {RenderingContext} context
+  //  */
 
-  private bodyShadows(bodies: Body[], context: CanvasRenderingContext2D) {
-    var c = context,
-      engine = this.engine;
+  // private bodyShadows(bodies: Body[], context: CanvasRenderingContext2D) {
+  //   var c = context,
+  //     engine = this.engine;
 
-    for (var i = 0; i < bodies.length; i++) {
-      var body = bodies[i];
+  //   for (var i = 0; i < bodies.length; i++) {
+  //     var body = bodies[i];
 
-      if (!body.visible)
-        continue;
+  //     if (!body.visible)
+  //       continue;
 
-      if (body.circleRadius) {
-        c.beginPath();
-        c.arc(body.position.x, body.position.y, body.circleRadius, 0, 2 * Math.PI);
-        c.closePath();
-      } else {
-        c.beginPath();
-        c.moveTo(body.vertices[0].x, body.vertices[0].y);
-        for (var j = 1; j < body.vertices.length; j++) {
-          c.lineTo(body.vertices[j].x, body.vertices[j].y);
-        }
-        c.closePath();
-      }
+  //     if (body.circleRadius) {
+  //       c.beginPath();
+  //       c.arc(body.position.x, body.position.y, body.circleRadius, 0, 2 * Math.PI);
+  //       c.closePath();
+  //     } else {
+  //       c.beginPath();
+  //       c.moveTo(body.vertices[0].x, body.vertices[0].y);
+  //       for (var j = 1; j < body.vertices.length; j++) {
+  //         c.lineTo(body.vertices[j].x, body.vertices[j].y);
+  //       }
+  //       c.closePath();
+  //     }
 
-      var distanceX = body.position.x - this.options.width * 0.5,
-        distanceY = body.position.y - this.options.height * 0.2,
-        distance = Math.abs(distanceX) + Math.abs(distanceY);
+  //     var distanceX = body.position.x - this.options.width * 0.5,
+  //       distanceY = body.position.y - this.options.height * 0.2,
+  //       distance = Math.abs(distanceX) + Math.abs(distanceY);
 
-      c.shadowColor = 'rgba(0,0,0,0.15)';
-      c.shadowOffsetX = 0.05 * distanceX;
-      c.shadowOffsetY = 0.05 * distanceY;
-      c.shadowBlur = 1 + 12 * Math.min(1, distance / 1000);
+  //     c.shadowColor = 'rgba(0,0,0,0.15)';
+  //     c.shadowOffsetX = 0.05 * distanceX;
+  //     c.shadowOffsetY = 0.05 * distanceY;
+  //     c.shadowBlur = 1 + 12 * Math.min(1, distance / 1000);
 
-      c.fill();
+  //     c.fill();
 
-      // FIXME
-      // c.shadowColor = null;
-      // c.shadowOffsetX = null;
-      // c.shadowOffsetY = null;
-      // c.shadowBlur = null;
-    }
-  }
+  //     // FIXME
+  //     // c.shadowColor = null;
+  //     // c.shadowOffsetX = null;
+  //     // c.shadowOffsetY = null;
+  //     // c.shadowBlur = null;
+  //   }
+  // }
 
   /**
    * Description
@@ -812,10 +811,11 @@ export class PuppyRender {
   private bodies(bodies: Body[], context: CanvasRenderingContext2D) {
     const c = context;
     const options = this.world as any;
-    const showInternalEdges = options.showInternalEdges || !options.wireframes;
+    //const showInternalEdges = options.showInternalEdges || !options.wireframes;
+    const wireframes = options.wireframes;
     const globalAlpha = this.globalAlpha;
-    const defaultFont = options.defaultFont || "36px Arial";
-    const defaultFontColor = options.defaultFontColor || 'gray';
+    const defaultFont = options.font || "36px Arial";
+    const defaultFontColor = options.fontColor || 'gray';
 
     for (var i = 0; i < bodies.length; i++) {
       const body = bodies[i];
@@ -837,8 +837,11 @@ export class PuppyRender {
         if (part.opacity !== 1) {
           c.globalAlpha *= part.opacity;
         }
+        if (c.globalAlpha < 0.1) {
+          console.log(`globalAlpha=${c.globalAlpha}`);
+        }
 
-        if (part.texture && !options.wireframes) {
+        if (part.texture && !wireframes) {
           // part sprite
           const texture = _getTexture(part.texture);
 
@@ -865,34 +868,32 @@ export class PuppyRender {
             c.moveTo(part.vertices[0].x, part.vertices[0].y);
 
             for (var j = 1; j < part.vertices.length; j++) {
-              if (!part.vertices[j - 1].isInternal || showInternalEdges) {
+              if (!part.vertices[j - 1].isInternal /* || showInternalEdges */) {
                 c.lineTo(part.vertices[j].x, part.vertices[j].y);
               } else {
                 c.moveTo(part.vertices[j].x, part.vertices[j].y);
               }
 
-              if (part.vertices[j].isInternal && !showInternalEdges) {
+              if (part.vertices[j].isInternal /* && !showInternalEdges*/) {
                 c.moveTo(part.vertices[(j + 1) % part.vertices.length].x, part.vertices[(j + 1) % part.vertices.length].y);
               }
             }
-
             c.lineTo(part.vertices[0].x, part.vertices[0].y);
             c.closePath();
           }
-
-          if (!options.wireframes) {
+          if (wireframes) {
+            c.lineWidth = 1;
+            c.strokeStyle = '#bbb';
+            c.stroke();
+          }
+          else {
             c.fillStyle = part.fillStyle;
-
             if (part.lineWidth) {
               c.lineWidth = part.lineWidth;
               c.strokeStyle = part.strokeStyle;
               c.stroke();
             }
             c.fill();
-          } else {
-            c.lineWidth = 1;
-            c.strokeStyle = '#bbb';
-            c.stroke();
           }
         }
         c.globalAlpha = globalAlpha;
@@ -914,22 +915,23 @@ export class PuppyRender {
           c.scale(-1, 1);
         }
         if (ticker.caption) {
+          const width = ticker.width || 200;
           c.textAlign = 'left';
-          const width = ticker.width || 100;
-          c.fillText(ticker.caption, - width / 2, 0);
+          c.fillText(ticker.caption, - width / 2, 0, width * 0.45);
           c.textAlign = 'right';
-          c.fillText(text, width / 2, 0);
+          c.fillText(text, width / 2, -5, width * 0.45);
         }
         else {
+          const width = ticker.width || 100;
           c.textAlign = 'center';
-          if (ticker.width === 0) {
-            const m = c.measureText(text);
-            ticker.width = m.width;
-            body.translate2(m.width / 2, 0);
-            //body.bounds.update2(cx, cy, m.width, 30);
-            body.bounds.dump('text-size');
-          }
-          c.fillText(text, 0, 0);
+          // if (ticker.width === 0) {
+          //   const m = c.measureText(text);
+          //   ticker.width = m.width;
+          //   body.translate2(m.width / 2, 0);
+          //   //body.bounds.update2(cx, cy, m.width, 30);
+          //   body.bounds.dump('text-size');
+          // }
+          c.fillText(text, 0, 0, width);
         }
         //c.rotate(-Math.PI);
         //c.translate(-cx, -cy);

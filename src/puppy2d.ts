@@ -4,25 +4,21 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { LibPython } from './lang/libpython';
 import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
-import { optionalCallExpression } from '@babel/types';
-
 
 export class PuppyWorld extends ShapeWorld {
-  base: PuppyVM;
   public timestamp = 0;
   public colors: string[];
   public darkmode = false;
   public background = '#F7F6EB';
-  public vars: any = {};
-  public lib: LibPython;
+  public wireframes = false;
+  public tangible = false;
+  public gyroscope = false;
 
-  public constructor(base: PuppyVM, options: any = {}) {
-    super(Object.assign(options, { id: 0 }));
-    this.base = base;
+  public constructor(vm: PuppyVM, options: any = {}) {
+    super(vm, Object.assign(options, { id: 0 }));
     this.width = options.width || 1000;
     this.height = options.height || this.width;
     if (this.screen) {
@@ -32,26 +28,37 @@ export class PuppyWorld extends ShapeWorld {
       this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
     }
     this.colors = chooseColorScheme(options.colorScheme);
-    //console.log(`brightness ${brightness(this.colors)}`);
-    //this.darkmode = options.darkmode || brightness(this.colors) > 0.5;
-    this.background = options.background || (this.darkmode ? '#F7F6EB' : 'black');
-    this.lib = new LibPython(base);
-    this.vars['__keyup__'] = (key: string, time: number) => {
-      console.log(`keyup '${key}' time=${time}`);
-    }
+    this.background = options.background || '#F7F6EB';
   }
 
-
   public World(options: any = {}) {
-    if (options.width && options.height) {
+    if (options.screen) {
+      this.screen = options.screen;
+    }
+    if (options.width || options.height) {
       this.width = options.width;
-      this.height = options.height;
+      this.height = options.height || this.width;
+      if (this.screen) {
+        this.bounds = new Bounds(0, 0, this.width, this.height);
+      }
+      else {
+        this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
+      }
     }
     if (typeof options.background === 'string') {
       this.background = options.background;
+      if (this.vm.render !== null) {
+        this.vm.render.applyBackground(options.background);
+      }
     }
     if (options.gravity instanceof Vector) {
       this.gravity = options.gravity;
+    }
+    if (options.wireframes) {
+      this.wireframes = options.wireframes;
+    }
+    if (options.wireframes) {
+      this.wireframes = options.wireframes;
     }
   }
 
@@ -65,17 +72,17 @@ export class PuppyWorld extends ShapeWorld {
     }
   }
 
+  public setGravity(x: number, y: number) {
+    this.gravity = new Vector(x, y);
+  }
+
   public setViewport(x1: number, y1: number, x2: number, y2: number) {
-    if (this.base.render !== null) {
-      this.base.render.setViewport(x1, y1, x2, y2);
+    if (this.vm.render !== null) {
+      this.vm.render.setViewport(x1, y1, x2, y2);
     }
   }
 
   // from puppy vm
-
-  public setGravity(x: number, y: number) {
-    this.gravity = new Vector(x, y);
-  }
 
   public paint(x: number, y: number, radius = 5) {
     const options = {
@@ -87,39 +94,9 @@ export class PuppyWorld extends ShapeWorld {
     this.timeToLive(this.newObject(options), 5000);
   }
 
-  public print(text: string = '', options: any = {}) {
-    const world = this;
-    const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
-    const x = bounds.max.x;
-    const y = bounds.randomY(50);
-    options = Object.assign({
-      textRef: (body: Body) => `${text}`,
-      position: new Vector(x, y),
-      shape: 'label',
-      zindex: Infinity,
-      fontColor: Common.choose(this.colors, 1),
-    }, options);
-    return this.newObject(options).addMotion((body: Body) => {
-      body.translate2(-2, 0);
-      if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
-        this.removeBody(body);
-        return false;
-      }
-      return true;
-    });
-  }
 
   public input(text: string = '') {
-    return this.base.syscall('input', { text });
-  }
-
-  public fsync(name: string) {
-    if (name === '__keydown__') {
-      (this as any).keydown = this.vars[name];
-    }
-    if (name === '__keyup__') {
-      (this as any).keyup = this.vars[name];
-    }
+    return this.vm.syscall('input', { text });
   }
 
   public fficall(name: string, ...params: any[]) {
@@ -135,42 +112,42 @@ export class PuppyWorld extends ShapeWorld {
   }
 
   public line(linenum: number) {
-    this.base.trigger('line', {
+    this.vm.trigger('line', {
       status: 'executed',
       linenum: linenum
     });
   }
 
-  private token(tkid: number, event: any) {
-    return event;
-  }
+  // private token(tkid: number, event: any) {
+  //   return event;
+  // }
 
-  public v(value: any, tkid: number) {
-    this.base.trigger('variable', this.token(tkid, {
-      value: value,
-    }));
-    return this.v;
-  }
+  // public v(value: any, tkid: number) {
+  //   this.vm.trigger('variable', this.token(tkid, {
+  //     value: value,
+  //   }));
+  //   return this.v;
+  // }
 
-  public ckint(value: any, tkid: number) {
-    if (typeof value !== 'number') {
-      this.base.trigger('error', {
-        status: 'runtime',
-        value: value,
-      });
-    }
-    return this.v;
-  }
+  // public ckint(value: any, tkid: number) {
+  //   if (typeof value !== 'number') {
+  //     this.vm.trigger('error', {
+  //       status: 'runtime',
+  //       value: value,
+  //     });
+  //   }
+  //   return this.v;
+  // }
 
-  public ckstr(value: any, tkid: number) {
-    if (typeof value !== 'string') {
-      this.base.trigger('error', {
-        status: 'runtime',
-        value: value,
-      });
-    }
-    return this.v;
-  }
+  // public ckstr(value: any, tkid: number) {
+  //   if (typeof value !== 'string') {
+  //     this.vm.trigger('error', {
+  //       status: 'runtime',
+  //       value: value,
+  //     });
+  //   }
+  //   return this.v;
+  // }
 
   public trace(log: any) {
     console.log(log);
@@ -199,7 +176,6 @@ export class PuppyWorld extends ShapeWorld {
       target.setPosition(position);
     })
   }
-
 }
 
 const DefaultPuppyCode: PuppyCode = {
@@ -215,23 +191,29 @@ const DefaultPuppyCode: PuppyCode = {
     // world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
     // world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
     world.setGravity(0, -1.0);
-    world.newObject({
-      shape: 'newtonsCradle',
-      position: new Vector(0, 0),
-      margin: 10,
-      columns: 3,
-      //part: { shape: 'rectangle' },
-    });
     // world.newObject({
-    //   shape: 'array',
+    //   shape: 'newtonsCradle',
     //   position: new Vector(0, 0),
     //   margin: 10,
-    //   part: { shape: 'circle', restitution: 1.0 },
+    //   columns: 3,
+    //   //part: { shape: 'rectangle' },
     // });
+    world.newObject({
+      shape: 'array',
+      position: new Vector(0, 0),
+      margin: 10,
+      part: { shape: 'circle', restitution: 1.0 },
+    });
+    const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
+    sensor.moveover = (bodyA: Body, bodyB: Body) => {
+      console.log(bodyA);
+      console.log(bodyB);
+    }
     world.Variable('TIME', 320, -400, { width: 260 });
     world.Variable('MOUSE', 320, -440, { width: 260 });
     for (var i = 0; i < 40; i++) {
-      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      //world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      world.print(`count=${i}`);
       yield 200;
     }
     return 0;

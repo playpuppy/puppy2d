@@ -585,9 +585,6 @@ class Transpiler {
     if (!funcData['hasReturn']) {
       types[0].accept(Types.Void, true);
     }
-    if (symbol.isGlobal() && name.length > 2 && name[0] === '_' && name[1] === '_' && name[name.length - 1] === '_') {
-      out.push(`;puppy.fsync('${name}');`);
-    }
     //console.log(`DEFINED ${name} :: ${funcType}`)
     return Types.Void;
   }
@@ -683,11 +680,6 @@ class Transpiler {
       }
     }
     return this.conv(env, this.asSetter(left, t['right']), out);
-    // t['left'].tag = `Set${t['left'].tag}`;
-    // const ty = this.conv(env, t['left'], out);
-    // out.push(' = ');
-    // this.check(ty, env, t['right'], out)
-    // return Types.Void;
   }
 
   private asSetter(t: ParseTree, right: ParseTree) {
@@ -893,8 +885,10 @@ class Transpiler {
     }
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
+    const fmts = field.getter.split('$');
+    out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
-    out.push(`.${field.getter}`);
+    out.push(fmts[1]);
     return field.ty;
   }
 
@@ -907,11 +901,12 @@ class Transpiler {
     t.tag = 'GetExpr'; // see SelfAssign
     const name = t.tokenize('name');
     const field = getField(env, name, t['name']);
-    out.push(field.setter);
+    const fmts = field.setter.split('$');
+    out.push(fmts[0]);
     this.check(field.base, env, t['recv'], out);
-    out.push(',');
+    out.push(fmts[1]);
     this.check(field.ty, env, t['right'], out);
-    out.push(')');
+    out.push(fmts[2]);
     return Types.Void;
   }
 
@@ -948,11 +943,13 @@ class Transpiler {
 
   public NLPSymbol(env: Env, t: ParseTree | any, out: string[]) {
     env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
 
   public NLKeyValue(env: Env, t: ParseTree | any, out: string[]) {
     env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
 
@@ -1124,6 +1121,8 @@ ${jscode}
     code = (new Function(main))();
   }
   catch (e) {
+    console.log(main);
+    console.log(e);
     env.perror(t, {
       type: 'error',
       key: 'CompileError',
@@ -1157,33 +1156,12 @@ export const utest = (s: string) => {
   return '';
 }
 
-// console.log(transpile(`
-// '''
-// This is a apple.
-// I'm from Chiba.
-// '''
-// `));
+//console.log(1)
 
 // console.log(transpile(`
-// from matterjs import *
-// def Ball(x,y):
-//   Circle(x,y)
-// Ball(1,1)
+// from puppy2d import *
+// for n in range(10):
+//   print(n)
 // `));
 
 
-// console.log(transpile(`
-// for x in range(1,2):
-//   for y in range(x,2):
-//     x+y
-// `));
-
-// console.log(transpile(`
-// def f(x,y):
-//   return x*y;
-// `));
-
-// console.log(transpile(`
-// def f(x,y):
-//   return x//y;
-// `));

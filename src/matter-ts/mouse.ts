@@ -50,7 +50,7 @@ export class Mouse {
    * @return {mouse} A new mouse
    */
 
-  public constructor(element: HTMLElement, options: any) {
+  public constructor(element: HTMLElement) {
     this.element = element;
     if (element) {
       this.pixelRatio = element.getAttribute('data-pixel-ratio') ?

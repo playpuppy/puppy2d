@@ -1,6 +1,7 @@
 import { Common, chooseColorScheme } from './matter-ts/commons';
 import { Vector, Vertices, Bounds } from './matter-ts/geometry';
 import { Body, Constraint, Composite, World } from './matter-ts/body';
+import { LibPython } from './lang/libpython';
 
 // shape setting
 
@@ -99,18 +100,17 @@ const _Circle = (world: any, options: any, radius?: number) => {
   return _Polygon(world, options, sides, radius);
 }
 
-const _Label = (world: any, options: any) => {
-  const width = (!options.width) ? 100 : options.width;
-  const height = (!options.height) ? 30 : options.height;
+const _Label = (world: ShapeWorld, options: any) => {
+  const width = (!options.width) ? (world.width / 4) : options.width;
+  const height = (!options.height) ? 40 : options.height;
   initVertices(options, [0, 0, width, 0, width, height, 0, height]);
   if (!options.fillStyle) {
-    options.fillStyle = '#000000';
+    options.fillStyle = 'rgba(0,0,0,0)';
     options.opacity = 0;
   }
-  if (!options.fontStyle) {
-    options.fontStyle = chooseColorScheme(world.colors);
+  if (!options.fontColor) {
+    options.fontColor = world.colors[0];
   }
-  options.shape = 'label';
   return options;
 }
 
@@ -127,13 +127,15 @@ export const PuppyShapeMap: { [key: string]: (world: any, options: any) => any }
   'variable': (world: any, options: any) => {
     const name = options.name;
     options.caption = options.caption || name;
+    if (options.caption === '') {
+      delete options.caption;
+    }
     options.textRef = (body: Body) => {
       return `${world.vars[name]}`;
     }
     return _Label(world, options);
   },
 }
-
 
 /* composite */
 
@@ -206,9 +208,22 @@ export const PuppyObjects: { [key: string]: (world: any, options: any) => any } 
 }
 
 export class ShapeWorld extends World {
+  public vm: any;
+  public lib: LibPython;
+  public vars: any = {};
+  public colors: string[] = ['#000000', '#ff0000', '#00ff00', '#0000ff'];
+  public frictionAir = 0.1;
+  public font = 'bold 36pt sans-serif';
+  public fontName = 'sans-serif';
+  public fontColor = '#111111';
+  public fontSize = 36;
+  public fontScale = 0.9;
 
-  public constructor(options: any) {
+  public constructor(vm: any, options: any) {
     super(options);
+    this.vm = vm;
+    this.lib = new LibPython(vm);
+    this.font = this.boldFont(this.fontSize);
   }
 
   public newVec(ux?: number, uy?: number) {
@@ -225,7 +240,6 @@ export class ShapeWorld extends World {
     const shape: string = options.shape in PuppyShapeMap ? options.shape : 'rectangle';
     options = PuppyShapeMap[shape](this, options);
     const body = new Body(common(this, options));
-    //console.log(`${body.zindex}`);
     this.addBody(body);
     return body;
   }
@@ -290,6 +304,10 @@ export class ShapeWorld extends World {
     return this.newBody(options);
   }
 
+  public boldFont(fontSize: number) {
+    return `bold ${(fontSize - 4) | 0}px ${this.fontName}`;
+  }
+
   public Variable(name: string, x: number, y: number, options: any = {}) {
     options = Object.assign(options, {
       shape: 'variable',
@@ -298,9 +316,59 @@ export class ShapeWorld extends World {
       zindex: Infinity,
     });
     const width = this.width * 0.4;
-    initSize(this, options, width, 50);
+    initSize(this, options, width, this.fontSize + 4);
     return this.newBody(options);
   }
+
+  public print(text: string = '', options: any = {}) {
+    this.vm.trigger('stdout', { text: text + (options.end || '\n') });
+    const world = this;
+    const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
+    const x = bounds.max.x;
+    const y = bounds.randomY(50);
+    options = Object.assign({
+      textRef: (body: Body) => text,
+      position: new Vector(x, y),
+      shape: 'label',
+      zindex: Infinity,
+      fontColor: Common.choose(this.colors, 1),
+    }, options);
+    return this.newObject(options).addMotion((body: Body) => {
+      body.translate2(-2, 0);
+      if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {
+        this.removeBody(body);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  public print1(v1: any, options: any = {}) {
+    const text = v1 === undefined ? '' : `${this.lib.str(v1)}`;
+    this.print(text, options);
+  }
+
+  public print2(v1: any, v2: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}`;
+    this.print(text, options);
+  }
+
+  public print3(v1: any, v2: any, v3: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}${sep}${str(v3)}`;
+    this.print(text, options);
+  }
+
+  public print4(v1: any, v2: any, v3: any, v4: any, options: any = {}) {
+    const sep = options.sep || ' ';
+    const str = this.lib.str;
+    const text = `${str(v1)}${sep}${str(v2)}${sep}${str(v3)}${sep}${str(v4)}`;
+    this.print(text, options);
+  }
+
 
   public timeToLive(body: Body, time = 5000) {
     var tick = 0;

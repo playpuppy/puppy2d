@@ -3,7 +3,19 @@ import { utest } from '../src/lang/puppy';
 test('HelloWorld', () => {
 	expect(utest(`
 print("hello,world")
-`)).toBe('puppy.print("hello,world")');
+`)).toBe('puppy.print1("hello,world")');
+});
+
+test('print(1,2)', () => {
+	expect(utest(`
+print(1,2)
+`)).toBe('puppy.print2(1,2)');
+});
+
+test('print()', () => {
+	expect(utest(`
+print()
+`)).toBe('puppy.print1()');
 });
 
 // test('None', () => {
@@ -70,21 +82,21 @@ Circle(10, 10)
 test('Circle(10,10,50)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10,50)
+Circle(10,10,50)
 `)).toBe("puppy.Circle(10,10,50)");
 });
 
-test('Circle(10,10, 50, mass=100)', () => {
+test('Circle(10,10,55, mass=100)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10, 50, mass=100)
-`)).toBe("puppy.Circle(10,10,50,{'mass': 100,})");
+Circle(10, 10, 55, mass=100)
+`)).toBe("puppy.Circle(10,10,55,{'mass': 100,})");
 });
 
-test('Circle(10,10, 50, よく弾む)', () => {
+test('Circle(10,10,60, よく弾む)', () => {
 	expect(utest(`
 from puppy2d import *
-Circle(10, 10, 50, よく弾む)
+Circle(10, 10, 60, よく弾む)
 `)).toBe("NLKeyValues");
 });
 
@@ -112,7 +124,7 @@ test('c.width+=1', () => {
 from puppy2d import *
 c = Circle(10, 10, 0)
 c.width += 1
-`)).toBe("puppy.setwidth(vars['c'],(vars['c'].bounds.getWidth() + 1))");
+`)).toBe("vars['c'].setWidth((vars['c'].getWidth() + 1))");
 });
 
 test('c[0]+=1', () => {
@@ -219,7 +231,7 @@ test('keyup', () => {
 	expect(utest(`
 def __keyup__(key, time):
 	print(key)
-`)).toBe('}');
+`)).toBe('puppy.print1(key)');
 })
 
 
