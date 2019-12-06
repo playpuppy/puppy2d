@@ -343,7 +343,7 @@ export class PuppyVM extends PuppyEventHandler {
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
-      var hasError = false, hasWarning = false, hasInfos = false;
+      var hasError = false;
       const errors: ErrorLog[] = [], warnings: ErrorLog[] = [], infos: ErrorLog[] = [];
       const compiled = PuppyCompile({ source });
       for (const error of compiled.errors) {
@@ -352,22 +352,16 @@ export class PuppyVM extends PuppyEventHandler {
           errors.push(error);
         }
         else if (error.type === 'warning') {
-          hasWarning = true;
           warnings.push(error);
         }
         else {
-          hasInfos = true;
           infos.push(error);
         }
       }
-      if (hasInfos) {
-        this.trigger('info', infos);
-      }
-      if (hasWarning) {
-        this.trigger('warning', warnings);
-      }
+      this.trigger('info', infos);
+      this.trigger('warning', warnings);
+      this.trigger('error', errors);
       if (hasError) {
-        this.trigger('error', errors);
         return false;
       }
       if (!autorun) {

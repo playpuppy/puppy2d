@@ -1,11 +1,11 @@
 {
   "name": "@playpuppy/puppy2d",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Puppy for 2D",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
-    "prepare": "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "jest"
   },
   "keywords": [
