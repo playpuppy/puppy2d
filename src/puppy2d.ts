@@ -7,6 +7,7 @@ import { Engine, Runner } from './matter-ts/core';
 import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
+import { basename } from 'path';
 
 export class PuppyWorld extends ShapeWorld {
   public timestamp = 0;
@@ -19,16 +20,17 @@ export class PuppyWorld extends ShapeWorld {
 
   public constructor(vm: PuppyVM, options: any = {}) {
     super(vm, Object.assign(options, { id: 0 }));
-    this.width = options.width || 1000;
-    this.height = options.height || this.width;
-    if (this.screen) {
-      this.bounds = new Bounds(0, 0, this.width, this.height);
-    }
-    else {
-      this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
-    }
+    this.World(options);
+    // this.width = options.width || 1000;
+    // this.height = options.height || this.width;
+    // if (this.screen) {
+    //   this.bounds = new Bounds(0, 0, this.width, this.height);
+    // }
+    // else {
+    //   this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
+    // }
     this.colors = chooseColorScheme(options.colorScheme);
-    this.background = options.background || '#F7F6EB';
+    // this.background = options.background || '#F7F6EB';
   }
 
   public World(options: any = {}) {
@@ -38,12 +40,12 @@ export class PuppyWorld extends ShapeWorld {
     if (options.width || options.height) {
       this.width = options.width;
       this.height = options.height || this.width;
-      if (this.screen) {
-        this.bounds = new Bounds(0, 0, this.width, this.height);
-      }
-      else {
-        this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
-      }
+    }
+    if (this.screen) {
+      this.bounds = new Bounds(0, 0, this.width, this.height);
+    }
+    else {
+      this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
     }
     if (typeof options.background === 'string') {
       this.background = options.background;
@@ -94,8 +96,10 @@ export class PuppyWorld extends ShapeWorld {
     this.timeToLive(this.newObject(options), 5000);
   }
 
-
   public input(text: string = '') {
+    // if(bufferをみる) {
+    //   return buffer;
+    // }
     return this.vm.syscall('input', { text });
   }
 
@@ -116,6 +120,15 @@ export class PuppyWorld extends ShapeWorld {
       status: 'executed',
       linenum: linenum
     });
+  }
+
+  public getindex(list: any, index: number, tkid: number) {
+    if (Array.isArray(list) || typeof list === 'string') {
+      if (0 <= index && index < list.length) {
+        return list[index];
+      }
+      throw Error
+    }
   }
 
   // private token(tkid: number, event: any) {
@@ -178,6 +191,8 @@ export class PuppyWorld extends ShapeWorld {
   }
 }
 
+
+
 const DefaultPuppyCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
@@ -211,9 +226,15 @@ const DefaultPuppyCode: PuppyCode = {
     }
     world.Variable('TIME', 320, -400, { width: 260 });
     world.Variable('MOUSE', 320, -440, { width: 260 });
+    for (var i = 0; i < 20; i++) {
+      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      //world.print(`${i}`);
+      yield 200;
+    }
+    world.World({ wireframes: true });
     for (var i = 0; i < 40; i++) {
-      //world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-      world.print(`count=${i}`);
+      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      //world.print(`${i}`);
       yield 200;
     }
     return 0;

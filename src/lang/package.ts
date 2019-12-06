@@ -197,6 +197,10 @@ const tFuncShape3 = ts.func(ts.Matter, ts.Int, ts.Int, ts.Int, ts.Option);
 const tFuncShape4 = ts.func(ts.Matter, ts.Int, ts.Int, ts.Int, ts.Int, ts.Option);
 const tFuncShape5 = ts.func(ts.Matter, ts.String, ts.Int, ts.Int, ts.Int, ts.Int, ts.Option);
 
+const tFuncBody = ts.func(ts.Void, ts.Matter);
+const tFuncBodyInt = ts.func(ts.Void, ts.Matter, ts.Int);
+const tFuncBodyBody = ts.func(ts.Void, ts.Matter, ts.Matter);
+
 const import_puppy2d: { [key: string]: Symbol } = {
   // # クラス
   'World': sym('puppy.World', tFuncShape),
@@ -211,19 +215,25 @@ const import_puppy2d: { [key: string]: Symbol } = {
   'Polygon': sym('puppy.Polygon', tFuncShape3, Visual),
   'Variable': sym('puppy.Variable', tFuncShape5),
   'Constraint': sym('puppy.Constraint', tFuncShape),
+  // world
   'setGravity': sym('puppy.setGravity', ts.func(ts.Void, ts.Int, ts.Int)),
+  'setViewport': sym('puppy.setViewport', ts.func(ts.Void, ts.Int, ts.Int, ts.Int, ts.Int)),
+  'paint': sym('puppy.paint', ts.func(ts.Void, ts.Int, ts.Int, ts.Option)),
+  'plot': sym('puppy.plot', ts.func(ts.Void, ts.Int, ts.Int, ts.Option)),
 
   // # 物体メソッド
-  '.setPosition': sym('lib.setPosition', ts.func(ts.Void, ts.Matter, ts.Int, ts.Int)),
-  '.applyForce': sym('lib.applyForce', ts.func(ts.Void, ts.Matter, ts.Int, ts.Int, ts.Int, ts.Int)),
-  '.rotate': sym('lib.rotate', ts.func(ts.Void, ts.Matter, ts.Int)),
-  '.scale': sym('lib.scale', ts.func(ts.Void, ts.Matter, ts.Int, ts.Int)),
+  '.setPosition': sym('lib.setPosition', ts.func(ts.Matter, ts.Matter, ts.Int, ts.Int)),
+  '.applyForce': sym('lib.applyForce', ts.func(ts.Matter, ts.Matter, ts.Int, ts.Int)),
+  '.rotate': sym('lib.rotate', ts.func(ts.Matter, ts.Matter, ts.Int)),
+  '.scale': sym('lib.scale', ts.func(ts.Matter, ts.Matter, ts.Int, ts.Int)),
+  '.addMotion': sym('lib.addMotion', ts.func(ts.Matter, ts.Matter, tFuncBody)),
+  '.removeMotion': sym('lib.removeMotion', ts.func(ts.Matter, ts.Matter, tFuncBody)),
   '.setAngle': sym('lib.setAngle', ts.func(ts.Void, ts.Matter, ts.Int)),
-  '.setAngularVelocity': sym('lib.setAngularVelocity', ts.func(ts.Void, ts.Matter, ts.Int)),
-  '.setDensity': sym('lib.setDensity', ts.func(ts.Void, ts.Matter, ts.Int)),
-  '.setMass': sym('lib.setMass', ts.func(ts.Void, ts.Matter, ts.Int)),
-  '.setStatic': sym('lib.setStatic', ts.func(ts.Void, ts.Matter, ts.Bool)),
-  '.setVelocity': sym('lib.setVelocity', ts.func(ts.Void, ts.Matter, ts.Int)),
+  // '.setAngularVelocity': sym('lib.setAngularVelocity', ts.func(ts.Void, ts.Matter, ts.Int)),
+  // '.setDensity': sym('lib.setDensity', ts.func(ts.Void, ts.Matter, ts.Int)),
+  // '.setMass': sym('lib.setMass', ts.func(ts.Void, ts.Matter, ts.Int)),
+  // '.setStatic': sym('lib.setStatic', ts.func(ts.Void, ts.Matter, ts.Bool)),
+  // '.setVelocity': sym('lib.setVelocity', ts.func(ts.Void, ts.Matter, ts.Int)),
 };
 
 export const PuppyModules: { [key: string]: { [key: string]: Symbol | undefined } } = {
@@ -261,6 +271,8 @@ const _field_ = (base: Type, getter: string, setter: string, ty: Type) => {
   return { base, getter, setter, ty } as Field;
 }
 
+
+
 const FIELDS: { [key: string]: Field } = {
   'x': _field_(ts.Vec, 'x', 'puppy.set("x",', ts.Int),
   'y': _field_(ts.Vec, 'y', 'puppy.set("y",', ts.Int),
@@ -270,6 +282,10 @@ const FIELDS: { [key: string]: Field } = {
   'mass': _field_(ts.Object, '$.mass', '$.setMass($)', ts.Int),
   'density': _field_(ts.Object, '$.density', '$.setDensity($)', ts.Int),
   'fillStyle': _field_(ts.Object, 'fillStyle', "$.set('fillStyle',$)", ts.String),
+  'clicked': _field_(ts.Object, 'clicked', "$.set('clicked',$)", tFuncBodyInt),
+  'in': _field_(ts.Object, 'movein', "$.set('movein',$)", tFuncBodyBody),
+  'out': _field_(ts.Object, 'moveout', "$.set('moveout',$)", tFuncBodyBody),
+  'over': _field_(ts.Object, 'moveover', "$.set('moveover',$)", tFuncBodyBody),
 }
 
 export const getField = (env: any, name: any, tree: any): Field => {

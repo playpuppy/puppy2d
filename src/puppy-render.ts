@@ -837,10 +837,6 @@ export class PuppyRender {
         if (part.opacity !== 1) {
           c.globalAlpha *= part.opacity;
         }
-        if (c.globalAlpha < 0.1) {
-          console.log(`globalAlpha=${c.globalAlpha}`);
-        }
-
         if (part.texture && !wireframes) {
           // part sprite
           const texture = _getTexture(part.texture);
