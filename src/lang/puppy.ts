@@ -1,7 +1,7 @@
 import { generate, ParseTree } from './puppy-parser';
 import { Type, BaseType, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
-
+import { SyntaxError, SourceError } from './errors';
 const INDENT = '\t';
 
 type Token = {
@@ -161,6 +161,30 @@ class Env {
     }
     return undefined;
   }
+
+  // public perror(t: ParseTree, key: string, params?: any[]) {
+  //   const e = SourceError(t, key, params);
+  //   const logs = this.root.vars['@logs'];
+  //   logs.push(e);
+  //   return e;
+  // }
+
+  // public pwarn(t: ParseTree, key: string, params?: any[]) {
+  //   const e = SourceError(t, key, params);
+  //   const logs = this.root.vars['@logs'];
+  //   logs.push(e);
+  //   e.type = 'warning';
+  //   return e;
+  // }
+
+  // public pinfo(t: ParseTree, key: string, params?: any[]) {
+  //   const e = SourceError(t, key, params);
+  //   const logs = this.root.vars['@logs'];
+  //   logs.push(e);
+  //   e.type = 'info';
+  //   return e;
+  // }
+
 
   public perror(t: ParseTree, elog: ErrorOption) {
     const logs = this.root.vars['@logs'];

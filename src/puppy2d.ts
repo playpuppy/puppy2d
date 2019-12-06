@@ -5,9 +5,9 @@ import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
 import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
+import { PuppyStatus, ConsoleLog } from './events';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
-import { basename } from 'path';
 
 export class PuppyWorld extends ShapeWorld {
   public timestamp = 0;
@@ -21,16 +21,7 @@ export class PuppyWorld extends ShapeWorld {
   public constructor(vm: PuppyVM, options: any = {}) {
     super(vm, Object.assign(options, { id: 0 }));
     this.World(options);
-    // this.width = options.width || 1000;
-    // this.height = options.height || this.width;
-    // if (this.screen) {
-    //   this.bounds = new Bounds(0, 0, this.width, this.height);
-    // }
-    // else {
-    //   this.bounds = new Bounds(-this.width / 2, this.height / 2, this.width / 2, -this.height / 2);
-    // }
     this.colors = chooseColorScheme(options.colorScheme);
-    // this.background = options.background || '#F7F6EB';
   }
 
   public World(options: any = {}) {
@@ -55,9 +46,6 @@ export class PuppyWorld extends ShapeWorld {
     }
     if (options.gravity instanceof Vector) {
       this.gravity = options.gravity;
-    }
-    if (options.wireframes) {
-      this.wireframes = options.wireframes;
     }
     if (options.wireframes) {
       this.wireframes = options.wireframes;
@@ -115,19 +103,11 @@ export class PuppyWorld extends ShapeWorld {
     }
   }
 
-  public line(linenum: number) {
-    this.vm.trigger('line', {
-      status: 'executed',
-      linenum: linenum
-    });
-  }
-
   public getindex(list: any, index: number, tkid: number) {
     if (Array.isArray(list) || typeof list === 'string') {
       if (0 <= index && index < list.length) {
         return list[index];
       }
-      throw Error
     }
   }
 
@@ -201,10 +181,6 @@ const DefaultPuppyCode: PuppyCode = {
     world.Rectangle(500, 0, 100, 1000, { isStatic: true });
     world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
 
-    // world.Rectangle(200, 200, 60, 60, { frictionAir: 0.001, move: trail });
-    // world.Rectangle(200, -200, 60, 60, { frictionAir: 0.01, move: trail });
-    // world.Rectangle(-200, 200, 60, 60, { frictionAir: 0.1, move: trail });
-    // world.Rectangle(-200, -200, 60, 60, { frictionAir: 1, move: trail });
     world.setGravity(0, -1.0);
     // world.newObject({
     //   shape: 'newtonsCradle',
@@ -213,25 +189,25 @@ const DefaultPuppyCode: PuppyCode = {
     //   columns: 3,
     //   //part: { shape: 'rectangle' },
     // });
-    // world.newObject({
-    //   shape: 'array',
-    //   position: new Vector(0, 0),
-    //   margin: 10,
-    //   part: { shape: 'circle', restitution: 1.0 },
-    // });
-    // const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
-    // sensor.moveover = (bodyA: Body, bodyB: Body) => {
-    //   console.log(bodyA);
-    //   console.log(bodyB);
-    // }
-    // world.Variable('TIME', 320, -400, { width: 260 });
-    // world.Variable('MOUSE', 320, -440, { width: 260 });
-    // for (var i = 0; i < 20; i++) {
-    //   world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-    //   //world.print(`${i}`);
-    //   yield 200;
-    // }
-    world.World({ wireframes: true });
+    world.newObject({
+      shape: 'array',
+      position: new Vector(0, 0),
+      margin: 10,
+      part: { shape: 'circle', restitution: 1.0 },
+    });
+    const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
+    sensor.moveover = (bodyA: Body, bodyB: Body) => {
+      console.log(bodyA);
+      console.log(bodyB);
+    }
+    world.Variable('TIME', 320, -400, { width: 260 });
+    world.Variable('MOUSE', 320, -440, { width: 260 });
+    for (var i = 0; i < 20; i++) {
+      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+      //world.print(`${i}`);
+      yield 200;
+    }
+    // world.World({ wireframes: true });
     for (var i = 0; i < 40; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
       //world.print(`${i}`);
@@ -294,6 +270,13 @@ class PuppyEventHandler {
     }
     console.log(event); // for debugging
   }
+
+  public verbose(text: string) {
+    this.trigger('verbose', {
+      text: text
+    });
+  }
+
 }
 
 export class PuppyVM extends PuppyEventHandler {
@@ -344,7 +327,9 @@ export class PuppyVM extends PuppyEventHandler {
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
       var hasError = false;
-      const errors: ErrorLog[] = [], warnings: ErrorLog[] = [], infos: ErrorLog[] = [];
+      const errors: ErrorLog[] = [],
+        warnings: ErrorLog[] = [],
+        infos: ErrorLog[] = [];
       const compiled = PuppyCompile({ source });
       for (const error of compiled.errors) {
         if (error.type === 'error') {
@@ -367,19 +352,106 @@ export class PuppyVM extends PuppyEventHandler {
       if (!autorun) {
         return true;
       }
-      console.log(compiled.code);
+      this.verbose(compiled.code);
       this.code = compiled;
     }
-    const world = new PuppyWorld(this, this.code);
-    if (this.engine !== null) {
-      this.unload();
-    }
-    this.engine = new Engine(world);
-    this.render = new PuppyRender(this.engine, this.element);
-    this.runner = new Runner();
-    this.runtime = this.code.main(world);
+    this.start();
     return true;
   }
+
+  //private running = false;
+  private paused = false;
+
+  public start() {
+    this.stop();
+    if (this.engine === null) {
+      const world = new PuppyWorld(this, this.code);
+      this.engine = new Engine(world);
+      this.render = new PuppyRender(this.engine, this.element);
+      this.runner = new Runner();
+      this.runtime = this.code.main(world);
+      /* start */
+      this.paused = false;
+      this.render!.start('▶︎');  // FIXME
+      Runner.run(this.runner, this.engine);
+      this.step(this.runtime);
+    }
+  }
+
+  public stop() {
+    if (this.engine !== null) {
+      this.runtime = null;
+      if (this.render !== null) {
+        this.render.stop();
+        this.render.clear();
+        this.render = null;
+      }
+      if (this.runner !== null) {
+        Runner.stop(this.runner);
+        this.runner = null;
+      }
+      this.engine.clear();
+      this.engine = null;
+    }
+  }
+
+  private nextExec(runtime: IterableIterator<number>) {
+    var time = 0;
+    while (time === 0) {
+      var res = runtime.next();
+      if (res.done) return -1;
+      time = res.value % 1000;
+    }
+    return res!.value / 1000;
+  }
+
+  private step(runtime: IterableIterator<number>) {
+    if (runtime === this.runtime && runtime !== null) {
+      if (this.paused) {
+        setTimeout(() => { this.step(runtime) }, 100);
+        return;
+      }
+      const interval = this.nextExec(runtime);
+      if (interval === -1) {
+        const engine = this.engine;
+        if (engine !== null) {
+          const world: any = engine.world;
+          world.isStillActive = false;
+          setTimeout(() => {
+            if (world.isStillActive) {
+              this.step(runtime);
+            }
+            else {
+              this.pause();
+            }
+          }, 5000);
+        }
+        return;
+      }
+      setTimeout(() => { this.step(runtime) }, interval);
+    }
+  }
+
+  public pause(message = '▶︎') {
+    if (this.engine !== null) {
+      this.paused = true;
+      this.render!.stop(message); // FIXME
+      Runner.stop(this.runner!);
+    }
+  }
+
+  public restart(message = '‖') {
+    if (this.engine !== null) {
+      this.render!.start(message);
+      this.paused = false;
+      Runner.start(this.runner!, this.engine);
+    }
+    else {
+      this.start();
+    }
+  }
+
+  // eval
 
   public eval(source: string, variable?: string) {
     const compiled = PuppyCompile({ source });
@@ -395,63 +467,7 @@ export class PuppyVM extends PuppyEventHandler {
     return variable === undefined ? world.vars : world.vars[variable];
   }
 
-  private unload() {
-    this.pause();
-    if (this.render !== null) {
-      this.render.clear();
-      this.render = null;
-    }
-    if (this.engine !== null) {
-      this.engine.clear();
-      this.engine = null;
-    }
-  }
 
-  //private running = false;
-  private pausing = false;
-
-  public start() {
-    if (this.runner !== null && this.runtime != null) {
-      this.pausing = false;
-      this.render!.start('▶︎');  // FIXME
-      Runner.run(this.runner, this.engine!);
-      this.execAll(this.runtime);
-    }
-  }
-
-  execAll(runtime: IterableIterator<number>) {
-    if (this.pausing) {
-      setTimeout(() => { this.execAll(runtime) }, 100);
-    }
-    else {
-      const res = runtime.next();
-      if (res.done) {
-        setTimeout(() => {
-          this.pause();
-        }, 5000);
-        return;
-      }
-      setTimeout(() => { this.execAll(runtime) }, res.value);
-    }
-  }
-
-  public restart() {
-    if (this.render !== null && this.runner !== null) {
-      //this.running = true; // still runing
-      this.pausing = false;
-      this.render.start();
-      Runner.start(this.runner, this.engine!);
-    }
-  }
-
-  public pause(message: string = '||') {
-    if (this.render !== null && this.runner !== null) {
-      //this.running = true; // still runing
-      this.pausing = true;
-      this.render.stop(message); // FIXME
-      Runner.stop(this.runner);
-    }
-  }
 
   async syscall(name: string, data: any) {
     const world = this.engine!.world as PuppyWorld;
@@ -470,6 +486,7 @@ export class PuppyVM extends PuppyEventHandler {
   private async wait(msec = 100) {
     await new Promise(resolve => setTimeout(resolve, msec));
   }
+
 }
 
 
@@ -488,9 +505,6 @@ export class PuppyOS extends PuppyEventHandler {
   public newPuppyVM(element: HTMLElement) {
     return new PuppyVM(element, this);
   }
-
-
-
 
 
   private filePath(fileName = 'settings.json') {

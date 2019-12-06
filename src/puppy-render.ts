@@ -224,14 +224,17 @@ export class PuppyRender {
         prevKey = keyName;
         startTime = this.engine.timing.timestamp;
       }
+      this.engine.world.isStillActive = true;
       this.engine.world.fficall('__keydown__', keyName);
     }
 
     this.keyUp = (event: KeyboardEvent) => {
       var keyName = event.key;
       const endTime = this.engine.timing.timestamp;
+      this.engine.world.isStillActive = true;
       this.engine.world.fficall('__keyup__', keyName, Math.max(0, endTime - startTime) | 0);
       prevKey = '';
+
     }
 
     this.mouseMove = (event: any) => {
@@ -246,6 +249,7 @@ export class PuppyRender {
       mouse.position.x = mouse.absolute.x * this.scale.x + this.offset.x;
       mouse.position.y = mouse.absolute.y * this.scale.y + this.offset.y;
       mouse.sourceEvents.mousemove = event;
+      this.engine.world.isStillActive = true;
       this.engine.world.fficall('__mousemove__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
     };
 
@@ -263,6 +267,7 @@ export class PuppyRender {
       mouse.mousedownPosition.x = mouse.position.x;
       mouse.mousedownPosition.y = mouse.position.y;
       mouse.sourceEvents.mousedown = event;
+      this.engine.world.isStillActive = true;
       this.engine.world.fficall('__mousedown__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
     };
 
@@ -280,6 +285,7 @@ export class PuppyRender {
       mouse.mouseupPosition.x = mouse.position.x;
       mouse.mouseupPosition.y = mouse.position.y;
       mouse.sourceEvents.mouseup = event;
+      this.engine.world.isStillActive = true;
       this.engine.world.fficall('__mouseup__', mouse.position.x | 0, mouse.position.y | 0, mouse.button);
     }
 
