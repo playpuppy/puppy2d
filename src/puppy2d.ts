@@ -314,9 +314,11 @@ class PuppyEventHandler {
   }
 }
 
-export class PuppyRuntimeError {
+export class PuppyRuntimeError extends Error {
   event: SourceEvent;
-  constructor(event: SourceEvent) {
+  public constructor(event: SourceEvent) {
+    super(`${event.key}`);
+    this.name = 'PuppyRuntimeError';
     this.event = event;
   }
 }
