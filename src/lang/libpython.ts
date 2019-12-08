@@ -95,8 +95,11 @@ export class LibPython {
   }
 
   public len(x: any) {
-    if (typeof x === 'string' || Array.isArray(x.length)) {
+    if (typeof x === 'string' || Array.isArray(x)) {
       return x.length;
+    }
+    if (x.size) {
+      return x.size();
     }
     return 0;
   }
@@ -108,7 +111,6 @@ export class LibPython {
     }
     return es;
   }
-
 
   public max1(iterable: number[]) {
     return Math.max(...iterable);
@@ -258,16 +260,6 @@ export class LibPython {
 
     }
     return v;
-  }
-
-  public index(a: any, index: number, puppy?: any) {
-    if (typeof a === 'string') {
-      return a.charAt((index + a.length) % a.length);
-    }
-    if (Array.isArray(a)) {
-      return a[(index + a.length) % a.length];
-    }
-    return undefined;
   }
 
   public slice(a: any, x: number, y?: number) {

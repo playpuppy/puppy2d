@@ -103,3 +103,4 @@ test(`2<=1+1`, () => {
 test(`2>=1+1`, () => {
   expect(puppy.eval(`x = 2>=1+1`, 'x')).toBe(true);
 });
+

@@ -4,7 +4,7 @@
 import { PuppyVM, PuppyOS } from './puppy2d';
 
 export { PuppyVM, PuppyOS } from './puppy2d';
-export { ErrorLog } from './lang/puppy';
+export { SourceEvent as ErrorLog } from './lang/code';
 
 const puppyOS = new PuppyOS();
 const puppy = puppyOS.newPuppyVM(document.body);

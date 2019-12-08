@@ -51,13 +51,13 @@ test('int("A")', () => {
 //   expect(lib.get({}, "x", 1)).toBe(1);
 // });
 
-test('s[0]', () => {
-  expect(lib.index("123", 0)).toBe("1");
-});
+// test('s[0]', () => {
+//   expect(lib.index("123", 0)).toBe("1");
+// });
 
-test('a[0]', () => {
-  expect(lib.index([1, 2, 3], 0)).toBe(1);
-});
+// test('a[0]', () => {
+//   expect(lib.index([1, 2, 3], 0)).toBe(1);
+// });
 
 test('s[:]', () => {
   expect(lib.slice("123", 0, undefined)).toBe("123");

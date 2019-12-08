@@ -113,7 +113,7 @@ class Env {
 
   public perror(t: ParseTree, key: string, params?: any[]) {
     const e = SourceError(t, key, params);
-    const logs = this.getroot('@errors');
+    const logs = this.vars['@errors'];
     logs.push(e);
     return e;
   }
@@ -136,7 +136,6 @@ class Env {
 
   public tkid(t: ParseTree) {
     const tokens: ParseTree[] = this.getroot('@tokens');
-    const pos = t.begin()
     for (var i = 0; i < tokens.length; i++) {
       if (tokens[i] === t) {
         return i;
@@ -840,11 +839,11 @@ class Transpiler {
   }
 
   public IndexExpr(env: Env, t: ParseTree | any, out: string[]) {
-    out.push('puppy.index(');
+    out.push('puppy.getindex(');
     const ty = this.check(Types.union(Types.list(env.varType(t)), Types.String), env, t['recv'], out);
     out.push(',');
     this.check(Types.Int, env, t['index'], out);
-    out.push(`,${env.tkid(t['index'])})`);
+    out.push(`,codemap,${env.tkid(t['index'])})`);
     return Types.isListType(ty) ? ty.ptype(0) : ty;
   }
 
@@ -854,9 +853,9 @@ class Transpiler {
     const ty = this.check(Types.list(env.varType(t)), env, t['recv'], out);
     out.push(',')
     this.check(Types.Int, env, t['index'], out)
-    out.push(`,${env.tkid(t['index'])},`);
+    out.push(',');
     this.check(ty.ptype(0), env, t['right'], out)
-    out.push(')');
+    out.push(`,codemap,${env.tkid(t['index'])})`);
     return Types.Void;
   }
 
@@ -1015,7 +1014,6 @@ export type Source = {
   lang?: string;
 };
 
-
 export const compile = (s: Source): PuppyCode => {
   //const start = performance.now();
   const t = parser(s.source);
@@ -1024,10 +1022,11 @@ export const compile = (s: Source): PuppyCode => {
   const ts = new Transpiler();
   const out: string[] = [];
   ts.conv(env, t, out);
+
   const jscode = out.join('');
   const main = `
 return {
-  main: function*(puppy) {
+  main: function*(puppy, codemap) {
 \tconst lib = puppy.lib;
 \tconst vars = puppy.vars;
 ${jscode}
@@ -1046,13 +1045,12 @@ ${jscode}
   }
   //const end = performance.now();
   code['world'] = {};
-  code['tree'] = t; // 
   code['code'] = jscode;
-  code['errors'] = env.get('@errors');
-  code['warnings'] = env.get('@warnings');
-  code['notices'] = env.get('@notices');
-  code['tokens'] = env.get('@tokens');
-  code['symbols'] = env.get('@symbols');
+  code['errors'] = env.getroot('@errors');
+  code['warnings'] = env.getroot('@warnings');
+  code['notices'] = env.getroot('@notices');
+  code['codemap'] = env.getroot('@tokens');
+  code['symbols'] = env.getroot('@symbols');
   //code['time'] = end - start;
   return code as PuppyCode;
 }

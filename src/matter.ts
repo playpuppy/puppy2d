@@ -100,7 +100,7 @@ const _Circle = (world: any, options: any, radius?: number) => {
   return _Polygon(world, options, sides, radius);
 }
 
-const _Label = (world: ShapeWorld, options: any) => {
+const _Label = (world: MatterWorld, options: any) => {
   const width = (!options.width) ? (world.width / 4) : options.width;
   const height = (!options.height) ? 40 : options.height;
   initVertices(options, [0, 0, width, 0, width, height, 0, height]);
@@ -207,7 +207,7 @@ export const PuppyObjects: { [key: string]: (world: any, options: any) => any } 
   'newtonsCradle': newtonsCradle,
 }
 
-export class ShapeWorld extends World {
+export class MatterWorld extends World {
   public vm: any;
   public lib: LibPython;
   public vars: any = {};
@@ -304,7 +304,7 @@ export class ShapeWorld extends World {
     return this.newBody(options);
   }
 
-  public boldFont(fontSize: number) {
+  private boldFont(fontSize: number) {
     return `bold ${(fontSize - 4) | 0}px ${this.fontName}`;
   }
 
@@ -321,7 +321,7 @@ export class ShapeWorld extends World {
   }
 
   public print(text: string = '', options: any = {}) {
-    this.vm.trigger('stdout', { text: text + (options.end || '\n') });
+    this.vm.syslog('stdout', text + (options.end || '\n'));
     const world = this;
     const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
     const x = bounds.max.x;
@@ -437,19 +437,5 @@ export class ShapeWorld extends World {
     }
     this.timeToLive(this.newBody(options), 3000);
   }
-
-  // public static Move(this: any, body: Body, x) {
-  //   var tick = 0;
-  //   (body as any).move = (body: Body) => {
-  //     tick += 16;
-  //     console.log(tick);
-  //     if (tick > time) {
-  //       this.removeBody(body);
-  //       delete (body as any).move;
-  //     }
-  //     body.opacity = 0.7 * (1.0 - tick / time)
-  //   }
-  //   return body;
-  // }
 
 }

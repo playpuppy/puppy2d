@@ -34,11 +34,11 @@ export const SourceError = (t: ParseTree, key: string, params?: any[]) => {
 
 export type PuppyCode = {
   world: any;
-  main: (puppy: any) => IterableIterator<number>;
+  main: (puppy: any, codemap: any[]) => IterableIterator<number>;
   errors: SourceEvent[];
   warnings: SourceEvent[];
   notices: SourceEvent[];
-  tokens: any[];
+  codemap: any[];
   symbols: any;
   code: string;
 };

@@ -4,14 +4,15 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { PuppyCode, SourceEvent } from './lang/code';
-import { compile as PuppyCompile } from './lang/puppy';
+import { PuppyCode, SourceEvent, SourceError } from './lang/code';
+import { compile as PuppyCompile } from './lang/compiler';
 import { LineEvent, OutputEvent, ActionEvent, newEventId } from './events';
 import { chooseColorScheme } from './color';
-import { ShapeWorld } from './shape';
+import { MatterWorld } from './matter';
 import { assignmentExpression } from '@babel/types';
+import { readFileSync } from 'fs';
 
-export class PuppyWorld extends ShapeWorld {
+export class PuppyWorld extends MatterWorld {
   public timestamp = 0;
   public colors: string[];
   public darkmode = false;
@@ -54,16 +55,6 @@ export class PuppyWorld extends ShapeWorld {
     }
   }
 
-  public setDarkMode(flag: boolean) {
-    this.darkmode = flag;
-    if (flag) {
-
-    }
-    else {
-
-    }
-  }
-
   public setGravity(x: number, y: number) {
     this.gravity = new Vector(x, y);
   }
@@ -93,6 +84,48 @@ export class PuppyWorld extends ShapeWorld {
     return this.vm.syscall('input', { text });
   }
 
+  public raise(codemap: any, key: string, params?: any[]) {
+    this.vm.raise(codemap, key, params);
+  }
+
+  public getindex(list: any, index: number, codemap: any[], tkid: number) {
+    if (Array.isArray(list) || typeof list === 'string') {
+      if (0 <= index && index < list.length) {
+        return list[index];
+      }
+      this.raise(codemap[tkid], 'OutofArrayIndex', ['@index', index, '@length', list.length]);
+    }
+    if (list.getindex && list.size) {
+      if (0 <= index && index < list.size()) {
+        return list.getindex(index);
+      }
+      this.raise(codemap[tkid], 'OutofArrayIndex', ['@index', index, '@length', list.size()]);
+    }
+    this.raise(codemap[tkid], 'TypeError/NotArray', ['@given', (typeof list)]);
+  }
+
+  public setindex(list: any, index: number, value: any, codemap: any[], tkid: number) {
+    if (Array.isArray(list)) {
+      if (0 <= index && index < list.length) {
+        list[index] = value;
+        return;
+      }
+      this.raise(codemap[tkid], 'OutofArrayIndex', ['@index', index, '@length', list.length]);
+    }
+    else if (list.setindex && list.size) {
+      if (0 <= index && index < list.size()) {
+        list.setindex(index, value);
+        return;
+      }
+      this.raise(codemap[tkid], 'OutofArrayIndex', ['@index', index, '@length', list.size()]);
+    }
+    else {
+      this.raise(codemap[tkid], 'TypeError/NotArray', ['@given', (typeof list)]);
+    }
+  }
+
+
+
   public fficall(name: string, ...params: any[]) {
     const callback = this.vars[name];
     if (callback !== undefined) {
@@ -105,13 +138,6 @@ export class PuppyWorld extends ShapeWorld {
     }
   }
 
-  public getindex(list: any, index: number, tkid: number) {
-    if (Array.isArray(list) || typeof list === 'string') {
-      if (0 <= index && index < list.length) {
-        return list[index];
-      }
-    }
-  }
 
   // private token(tkid: number, event: any) {
   //   return event;
@@ -173,8 +199,6 @@ export class PuppyWorld extends ShapeWorld {
   }
 }
 
-
-
 const DefaultPuppyCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
@@ -221,7 +245,7 @@ const DefaultPuppyCode: PuppyCode = {
   errors: [],
   warnings: [],
   notices: [],
-  tokens: [],
+  codemap: [],
   code: '',
 }
 
@@ -286,9 +310,17 @@ class PuppyEventHandler {
       }
       this.trigger(channel, event);
     }
+    console.log(`${channel} ${text}`);
   }
-
 }
+
+export class PuppyRuntimeError {
+  event: SourceEvent;
+  constructor(event: SourceEvent) {
+    this.event = event;
+  }
+}
+
 
 export class PuppyVM extends PuppyEventHandler {
   element: HTMLElement;
@@ -334,15 +366,31 @@ export class PuppyVM extends PuppyEventHandler {
   }
 
   //
+  public raise(tokenmap: any, key: string, params?: any[]) {
+    if (this.code !== null) {
+      const event: SourceEvent = SourceError(tokenmap, key, params);
+      throw new PuppyRuntimeError(event);
+    }
+    else {
+      console.log(`unthrown ${key}`);
+    }
+  }
+
+  //
+
+  private compile(source: string) {
+    const compiled = PuppyCompile({ source });
+    const event: ActionEvent = { id: newEventId(), action: 'end', type: 'compile' };
+    this.trigger('action', event);
+    this.trigger('info', compiled.notices);
+    this.trigger('warning', compiled.warnings);
+    this.trigger('error', compiled.errors);
+    return compiled;
+  }
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
-      const compiled = PuppyCompile({ source });
-      const event: ActionEvent = { id: newEventId(), action: 'end', type: 'compile' };
-      this.trigger('action', event);
-      this.trigger('info', compiled.notices);
-      this.trigger('warning', compiled.warnings);
-      this.trigger('error', compiled.errors);
+      const compiled = this.compile(source);
       if (compiled.errors.length > 0) {
         return false;
       }
@@ -355,6 +403,21 @@ export class PuppyVM extends PuppyEventHandler {
     return true;
   }
 
+  public eval(source: string, variable?: string) {
+    const compiled = this.compile(source);
+    const world = this.engine === null
+      ? new PuppyWorld(this, compiled) : this.engine.world as PuppyWorld;
+    const runtime = compiled.main(world, compiled.codemap);
+    for (var i = 0; i < 100; i += 1) {
+      const res = runtime.next();
+      if (res.done) {
+        break;
+      }
+    }
+    return variable === undefined ? world.vars : world.vars[variable];
+  }
+
+
   private paused = false;
 
   public start() {
@@ -364,7 +427,7 @@ export class PuppyVM extends PuppyEventHandler {
       this.engine = new Engine(world);
       this.render = new PuppyRender(this.engine, this.element);
       this.runner = new Runner();
-      this.runtime = this.code.main(world);
+      this.runtime = this.code.main(world, this.code.codemap);
       const event: ActionEvent = { id: newEventId(), action: 'start', type: 'run' };
       this.trigger('start', event);
       this.trigger('action', event);
@@ -397,17 +460,28 @@ export class PuppyVM extends PuppyEventHandler {
   }
 
   private execNext(runtime: IterableIterator<number>) {
-    var time = 0;
-    while (time === 0) {
-      var res = runtime.next();
-      if (res.done) return -1;
-      time = res.value % 1000;
-      if (time !== 0) {
-        const event: LineEvent = { id: newEventId(), type: 'executed', row: res.value / 1000 };
-        this.trigger('line', event);
+    try {
+      var time = 0;
+      while (time === 0) {
+        var res = runtime.next();
+        if (res.done) return -1;
+        time = res.value % 1000;
+        if (time !== 0) {
+          const event: LineEvent = { id: newEventId(), type: 'executed', row: res.value / 1000 };
+          this.trigger('line', event);
+        }
+      }
+      return time;
+    }
+    catch (e) {
+      if (e instanceof PuppyRuntimeError) {
+        e.event.time = this.engine!.timing.timestamp;
+        this.trigger('errors', e.event);
+      }
+      else {
+        this.syslog('debug', e);
       }
     }
-    return time;
   }
 
   private execEach(runtime: IterableIterator<number>) {
@@ -496,19 +570,6 @@ export class PuppyVM extends PuppyEventHandler {
 
   // eval
 
-  public eval(source: string, variable?: string) {
-    const compiled = PuppyCompile({ source });
-    const world = (this.engine === null) ?
-      new PuppyWorld(this, compiled) : this.engine.world as PuppyWorld;
-    const runtime = compiled.main(world);
-    for (var i = 0; i < 100; i += 1) {
-      const res = runtime.next();
-      if (res.done) {
-        break;
-      }
-    }
-    return variable === undefined ? world.vars : world.vars[variable];
-  }
 
 
 

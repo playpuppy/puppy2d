@@ -1,4 +1,4 @@
-import { utest } from '../src/lang/puppy';
+import { utest } from '../src/lang/compiler';
 
 test('HelloWorld', () => {
 	expect(utest(`
@@ -131,7 +131,7 @@ test('c[0]+=1', () => {
 	expect(utest(`
 c = [1,2]
 c[0] += 1
-`)).toBe("puppy.setindex(vars['c'],0,0,(puppy.index(vars['c'],0,0) + 1))");
+`)).toBe("puppy.setindex(vars['c'],0,(puppy.getindex(vars['c'],0,codemap,0) + 1),codemap,0)");
 });
 
 test('c.width', () => {
