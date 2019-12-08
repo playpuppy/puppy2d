@@ -1,32 +1,28 @@
 
 
-export type PuppyStatus = {
-  status: "loaded" | "running" | "resume";
+var eventId = 0;
+
+export const newEventId = () => {
+  return eventId++;
 }
 
-export type ConsoleLog = {
-  status: "stdout" | "stderr" | "verbose";
-  text: string;
+// action, start, end
+export type ActionEvent = {
+  id: number;
+  action: 'start' | 'end' | 'pause' | 'restart';
+  type: 'run' | 'compile' | string;
 }
 
-export interface SourceError {
-  key: string;
-  line: number;
-  token: string;
-  pos: number;
-  column: number;
-  row: number;
-  length: number;
+// stdout, stderr, verbose, debug
+export type OutputEvent = {
+  id: number;
+  type: 'stdout' | 'stderr' | 'verbose' | 'debug';
+  text: string;   // 改行が含まれた文字列
 }
 
-export class OutOfArrayIndex /* implements SourceError */ {
-  public key: string;
-  public index: number;
-  public length: number;
-
-  public constructor(index: number, length: number, tkid: any) {
-    this.key = 'OutOfArrayIndex';
-    this.index = index;
-    this.length = length;
-  }
+// line
+export type LineEvent = {
+  id: number;
+  type: 'next' | 'executed';
+  row: number;  // linenum = row + 1
 }

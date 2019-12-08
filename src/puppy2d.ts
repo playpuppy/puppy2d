@@ -4,10 +4,12 @@ import { Body, World, Composite, Constraint } from './matter-ts/body'
 import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
-import { compile as PuppyCompile, PuppyCode, ErrorLog } from './lang/puppy';
-import { PuppyStatus, ConsoleLog } from './events';
+import { PuppyCode, SourceEvent } from './lang/code';
+import { compile as PuppyCompile } from './lang/puppy';
+import { LineEvent, OutputEvent, ActionEvent, newEventId } from './events';
 import { chooseColorScheme } from './color';
 import { ShapeWorld } from './shape';
+import { assignmentExpression } from '@babel/types';
 
 export class PuppyWorld extends ShapeWorld {
   public timestamp = 0;
@@ -215,7 +217,11 @@ const DefaultPuppyCode: PuppyCode = {
     }
     return 0;
   },
+  symbols: {},
   errors: [],
+  warnings: [],
+  notices: [],
+  tokens: [],
   code: '',
 }
 
@@ -268,13 +274,18 @@ class PuppyEventHandler {
         callback(event);
       }
     }
-    console.log(event); // for debugging
+    //console.log(event); // for debugging
   }
 
-  public verbose(text: string) {
-    this.trigger('verbose', {
-      text: text
-    });
+  public syslog(channel: 'stdout' | 'stderr' | 'verbose' | 'debug', text: any) {
+    if (channel in this.eventMap) {
+      const event: OutputEvent = {
+        id: newEventId(),
+        type: channel,
+        text: `${text}`,
+      }
+      this.trigger(channel, event);
+    }
   }
 
 }
@@ -326,40 +337,24 @@ export class PuppyVM extends PuppyEventHandler {
 
   public load(source?: string, autorun = true) {
     if (source !== undefined) {
-      var hasError = false;
-      const errors: ErrorLog[] = [],
-        warnings: ErrorLog[] = [],
-        infos: ErrorLog[] = [];
       const compiled = PuppyCompile({ source });
-      for (const error of compiled.errors) {
-        if (error.type === 'error') {
-          hasError = true;
-          errors.push(error);
-        }
-        else if (error.type === 'warning') {
-          warnings.push(error);
-        }
-        else {
-          infos.push(error);
-        }
-      }
-      this.trigger('info', infos);
-      this.trigger('warning', warnings);
-      this.trigger('error', errors);
-      if (hasError) {
+      const event: ActionEvent = { id: newEventId(), action: 'end', type: 'compile' };
+      this.trigger('action', event);
+      this.trigger('info', compiled.notices);
+      this.trigger('warning', compiled.warnings);
+      this.trigger('error', compiled.errors);
+      if (compiled.errors.length > 0) {
         return false;
       }
-      if (!autorun) {
-        return true;
-      }
-      this.verbose(compiled.code);
+      this.syslog('verbose', compiled.code);
       this.code = compiled;
+      if (autorun) {
+        this.start();
+      }
     }
-    this.start();
     return true;
   }
 
-  //private running = false;
   private paused = false;
 
   public start() {
@@ -370,11 +365,15 @@ export class PuppyVM extends PuppyEventHandler {
       this.render = new PuppyRender(this.engine, this.element);
       this.runner = new Runner();
       this.runtime = this.code.main(world);
+      const event: ActionEvent = { id: newEventId(), action: 'start', type: 'run' };
+      this.trigger('start', event);
+      this.trigger('action', event);
+
       /* start */
       this.paused = false;
-      this.render!.start('▶︎');  // FIXME
+      this.render!.start();  // FIXME
       Runner.run(this.runner, this.engine);
-      this.step(this.runtime);
+      this.execEach(this.runtime);
     }
   }
 
@@ -392,26 +391,32 @@ export class PuppyVM extends PuppyEventHandler {
       }
       this.engine.clear();
       this.engine = null;
+      const event: ActionEvent = { id: newEventId(), type: 'dispose', action: 'end' };
+      this.trigger('action', event);
     }
   }
 
-  private nextExec(runtime: IterableIterator<number>) {
+  private execNext(runtime: IterableIterator<number>) {
     var time = 0;
     while (time === 0) {
       var res = runtime.next();
       if (res.done) return -1;
       time = res.value % 1000;
+      if (time !== 0) {
+        const event: LineEvent = { id: newEventId(), type: 'executed', row: res.value / 1000 };
+        this.trigger('line', event);
+      }
     }
-    return res!.value / 1000;
+    return time;
   }
 
-  private step(runtime: IterableIterator<number>) {
+  private execEach(runtime: IterableIterator<number>) {
     if (runtime === this.runtime && runtime !== null) {
       if (this.paused) {
-        setTimeout(() => { this.step(runtime) }, 100);
+        setTimeout(() => { this.execEach(runtime) }, 100);
         return;
       }
-      const interval = this.nextExec(runtime);
+      const interval = this.execNext(runtime);
       if (interval === -1) {
         const engine = this.engine;
         if (engine !== null) {
@@ -419,16 +424,19 @@ export class PuppyVM extends PuppyEventHandler {
           world.isStillActive = false;
           setTimeout(() => {
             if (world.isStillActive) {
-              this.step(runtime);
+              this.execEach(runtime);
             }
             else {
               this.pause();
+              const event: ActionEvent = { id: newEventId(), action: 'end', type: 'run' };
+              this.trigger('end', event);
+              this.trigger('action', event);
             }
           }, 5000);
         }
         return;
       }
-      setTimeout(() => { this.step(runtime) }, interval);
+      setTimeout(() => { this.execEach(runtime) }, interval);
     }
   }
 
@@ -437,6 +445,9 @@ export class PuppyVM extends PuppyEventHandler {
       this.paused = true;
       this.render!.stop(message); // FIXME
       Runner.stop(this.runner!);
+      const event: ActionEvent = { id: newEventId(), action: 'pause', type: 'run' };
+      //this.trigger('end', event);
+      this.trigger('action', event);
     }
   }
 
@@ -445,9 +456,41 @@ export class PuppyVM extends PuppyEventHandler {
       this.render!.start(message);
       this.paused = false;
       Runner.start(this.runner!, this.engine);
+      const event: ActionEvent = { id: newEventId(), action: 'restart', type: 'run' };
+      //this.trigger('start', event);
+      this.trigger('action', event);
     }
     else {
       this.start();
+    }
+  }
+
+  public step() {
+    if (this.engine === null) {
+      this.start();
+      this.pause();
+    }
+    if (this.engine !== null && this.runtime !== null) {
+      this.render!.start();
+      // this.paused = false;
+      // Runner.start(this.runner!, this.engine);
+      var time = 1;
+      var row = 0;
+      while (time !== 0) {
+        var res = this.runtime.next();
+        if (res.done) {
+          this.stop();
+          return;
+        }
+        time = res.value % 1000;
+        for (var delta = 0; delta >= time; delta += 1000 / 60) {
+          this.engine.update();
+        }
+        row = res.value / 1000;
+      }
+      const event: LineEvent = { id: newEventId(), type: 'next', row: row }
+      this.trigger('line', event);
+      this.pause();
     }
   }
 
@@ -458,7 +501,7 @@ export class PuppyVM extends PuppyEventHandler {
     const world = (this.engine === null) ?
       new PuppyWorld(this, compiled) : this.engine.world as PuppyWorld;
     const runtime = compiled.main(world);
-    for (var i = 0; i < 2; i += 1) {
+    for (var i = 0; i < 100; i += 1) {
       const res = runtime.next();
       if (res.done) {
         break;

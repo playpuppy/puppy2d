@@ -1,61 +1,8 @@
 import { generate, ParseTree } from './puppy-parser';
 import { Type, BaseType, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
-import { SyntaxError, SourceError } from './errors';
+import { SourceError, PuppyCode } from './code';
 const INDENT = '\t';
-
-type Token = {
-  tree: ParseTree;
-  pos: number;
-  row: number;
-  col: number;
-  len: number;
-}
-
-export type ErrorLog = {
-  type: 'error' | 'warning' | 'info';
-  key: string;
-  time: number;
-  tree: ParseTree;
-  pos: number;
-  row: number;
-  col: number;
-  len: number;
-  subject?: string;
-  fix?: string;
-  // code?: string;
-  // request?: Type;
-  // given?: Type;
-};
-
-type ErrorOption = {
-  key: string;
-  time?: number;
-  type?: string;
-  pos?: number;
-  row?: number;
-  col?: number;
-  len?: number;
-  subject?: string;
-  fix?: string;
-}
-
-const setpos = (s: string, pos: number, elog: ErrorLog) => {
-  const max = Math.min(pos + 1, s.length);
-  var r = 1;
-  var c = 0;
-  for (var i = 0; i < max; i += 1) {
-    if (s.charCodeAt(i) == 10) {
-      r += 1;
-      c = 0;
-    }
-    c += 1;
-  }
-  elog.pos = pos;
-  elog.row = r;
-  elog.col = c;
-  return elog;
-}
 
 class ModuleType extends BaseType {
   constructor(name: string, value: any) {
@@ -74,7 +21,9 @@ class Env {
       this.root = this;
       this.parent = null;
       this.vars['@varmap'] = [];
-      this.vars['@logs'] = [];
+      this.vars['@errors'] = [];
+      this.vars['@warnings'] = [];
+      this.vars['@notices'] = [];
       this.vars['@tokens'] = [];
       this.vars['@names'] = {};
       this.vars['@fields'] = {};
@@ -162,66 +111,39 @@ class Env {
     return undefined;
   }
 
-  // public perror(t: ParseTree, key: string, params?: any[]) {
-  //   const e = SourceError(t, key, params);
-  //   const logs = this.root.vars['@logs'];
-  //   logs.push(e);
-  //   return e;
-  // }
+  public perror(t: ParseTree, key: string, params?: any[]) {
+    const e = SourceError(t, key, params);
+    const logs = this.getroot('@errors');
+    logs.push(e);
+    return e;
+  }
 
-  // public pwarn(t: ParseTree, key: string, params?: any[]) {
-  //   const e = SourceError(t, key, params);
-  //   const logs = this.root.vars['@logs'];
-  //   logs.push(e);
-  //   e.type = 'warning';
-  //   return e;
-  // }
+  public pwarn(t: ParseTree, key: string, params?: any[]) {
+    const e = SourceError(t, key, params);
+    const logs = this.getroot('@warnings');
+    logs.push(e);
+    e.type = 'warning';
+    return e;
+  }
 
-  // public pinfo(t: ParseTree, key: string, params?: any[]) {
-  //   const e = SourceError(t, key, params);
-  //   const logs = this.root.vars['@logs'];
-  //   logs.push(e);
-  //   e.type = 'info';
-  //   return e;
-  // }
-
-
-  public perror(t: ParseTree, elog: ErrorOption) {
-    const logs = this.root.vars['@logs'];
-    if (elog.type === undefined) {
-      elog.type = 'error';
-    }
-    elog.time = 0;
-    (elog as ErrorLog).tree = t;
-    if (elog.pos === undefined) {
-      const pos = t.begin();
-      elog.pos = pos[0];
-      elog.row = pos[1];
-      elog.col = pos[2];
-    }
-    if (elog.len === undefined) {
-      elog.len = t.epos - t.spos;
-    }
-    if (elog.subject === undefined) {
-      elog.subject = t.tokenize();
-    }
-    logs.push(elog);
+  public pnotice(t: ParseTree, key: string, params?: any[]) {
+    const e = SourceError(t, key, params);
+    const logs = this.getroot('@notices');
+    logs.push(e);
+    e.type = 'info';
+    return e;
   }
 
   public tkid(t: ParseTree) {
-    const tokens: Token[] = this.getroot('@tokens');
+    const tokens: ParseTree[] = this.getroot('@tokens');
     const pos = t.begin()
     for (var i = 0; i < tokens.length; i++) {
-      if (tokens[i].pos === t.spos && tokens[i].len === t.epos - t.spos) {
+      if (tokens[i] === t) {
         return i;
       }
     }
     const tkid = tokens.length;
-    const token: Token = {
-      tree: t,
-      pos: pos[0], row: pos[1], col: pos[2], len: t.epos - t.spos
-    };
-    tokens.push(token);
+    tokens.push(t);
     return tkid;
   }
 
@@ -251,7 +173,8 @@ class Env {
         data['isMatter'] = true;
       }
       else {
-        this.setroot('@yeild', 200);
+        const row = t.begin()[1] * 1000;
+        this.setroot('@yeild', row + 200);
       }
     }
   }
@@ -290,11 +213,30 @@ class Env {
     return this.set(name, symbol) as Symbol;
   }
 
-  public emitAutoYield(out: string[]) {
-    const yieldparam = this.getroot('@yeild');
-    if (yieldparam !== undefined && !this.inFunc()) {
-      out.push(`; yield ${yieldparam};\n`);
-      this.setroot('@yeild', undefined);
+  private prevRow = -1;
+  public emitYield(t: ParseTree, out: string[]) {
+    if (!this.inFunc()) {
+      const indent = this.get('@indent');
+      const row = t.begin()[1] * 1000;
+      if (this.prevRow !== row) {
+        out.push(`${indent}yield ${row};\n`);
+        this.prevRow = row;
+      }
+    }
+  }
+
+  public emitAutoYield(t: ParseTree, out: string[]) {
+    if (!this.inFunc()) {
+      const yieldparam = this.getroot('@yeild');
+      if (yieldparam !== undefined) {
+        out.push(`; yield ${yieldparam};\n`);
+        this.setroot('@yeild', undefined);
+      }
+      else {
+        // const row = t.end()[1] * 1000;
+        // out.push(`;yield ${row};\n`);
+        out.push('\n');
+      }
     }
     else {
       out.push('\n');
@@ -365,10 +307,7 @@ class Transpiler {
       }
       if ((this as any)[t.tag] === undefined) {
         //console.log(e);
-        env.perror(t, {
-          key: 'UndefinedParseTree',
-          subject: t.tag,
-        })
+        env.perror(t, 'UndefinedParseTree');
         return this.skip(env, t, out);
       }
       throw e;
@@ -377,24 +316,20 @@ class Transpiler {
 
   public skip(env: Env, t: ParseTree, out: string[]): Type {
     throw new PuppyError();
-    out.push('undefined');
-    return Types.Any;
+    // out.push('undefined');
+    // return Types.Any;
   }
 
-  public check(req: Type, env: Env, t: ParseTree, out: string[], elog?: ErrorOption) {
+  public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
     const ty = this.conv(env, t, out);
     if (req !== undefined) {
       if (req.accept(ty, true)) {
         return ty;
       }
-      if (elog === undefined) {
-        elog = {
-          key: 'TypeError',
-          subject: ty.toString(),
-        }
-      }
-      elog.fix = req.toString();
-      env.perror(t, elog);
+      const params = [
+        '@req', req.toString(), '@given', ty.toString,
+      ];
+      env.perror(t, key);
       return this.skip(env, t, out);
     }
     return ty;
@@ -416,11 +351,7 @@ class Transpiler {
         out.push(`lib.anyAdd(${left},${right})`);
         return ty1;
       }
-      env.perror(t, {
-        key: 'BinaryTypeError',
-        subject: op,
-        fix: ty1.toString(),
-      });
+      env.perror(t, 'TypeError', ['@infix', op]);
       return this.skip(env, t, out);
     }
     if (op === '*') {
@@ -448,27 +379,19 @@ class Transpiler {
       }
       return ty1;
     }
-    env.perror(t, {
-      key: 'BinaryTypeError',
-      subject: op,
-      fix: ty1.toString(),
-    });
+    env.perror(t, 'TypeError', ['@infix', op]);
     return this.skip(env, t, out);
   }
 
   public err(env: Env, t: ParseTree, out: string[]) {
-    env.perror(t, {
-      key: 'SyntaxError',
-    });
-    return Types.Void;
+    env.perror(t, 'SyntaxError');
+    return this.skip(env, t, out);
   }
 
   private getModule(env: Env, name: string, t: ParseTree, out: string[]) {
     const pkg = PuppyModules[name];
     if (pkg === undefined) {
-      env.perror(t.get('name'), {
-        key: 'UnknownPackageName',
-      });
+      env.perror(t.get('name'), 'UnknownPackageName');
       return this.skip(env, t, out);
     }
     return pkg;
@@ -493,9 +416,10 @@ class Transpiler {
     for (const subtree of t.subs()) {
       try {
         const out2: string[] = [];
+        env.emitYield(subtree, out2);
         out2.push(env.get('@indent'))
         this.conv(env, subtree, out2);
-        env.emitAutoYield(out2);
+        env.emitAutoYield(subtree, out2);
         out.push(out2.join(''))
       }
       catch (e) {
@@ -508,15 +432,17 @@ class Transpiler {
   }
 
   public Block(penv: Env, t: ParseTree, out: string[]) {
-    const indent = penv.get('@indent')
-    const nested = INDENT + indent
-    const env = new Env(penv)
-    env.set('@indent', nested)
-    out.push('{\n')
+    const indent = penv.get('@indent');
+    const nested = INDENT + indent;
+    const env = new Env(penv);
+    env.set('@indent', nested);
+    out.push('{\n');
+    env.emitYield(t, out);
     for (const subtree of t.subs()) {
-      out.push(env.get('@indent'))
+      env.emitYield(subtree, out);
+      out.push(nested);
       this.conv(env, subtree, out);
-      env.emitAutoYield(out);
+      env.emitAutoYield(subtree, out);
     }
     out.push(indent + '}')
     return Types.Void;
@@ -593,11 +519,13 @@ class Transpiler {
     const defined = env.getSymbol(name);
     if (defined !== undefined) {
       if (!defined.isMutable) {
-        env.perror(t.name, { key: 'RedefinedImmutable' });
+        env.perror(t.name, 'RedefinedImmutable');
         return this.skip(env, t, out);
       }
       if (defined.ty.accept(funcType, true)) {
-        env.perror(t.name, { key: 'TypeError', });
+        env.perror(t.name, 'TypeError', [
+          '@req', `${defined.ty}`, '@given', `${funcType}`,
+        ]);
         return this.skip(env, t, out);
       }
     }
@@ -639,11 +567,7 @@ class Transpiler {
 
   public Return(env: Env, t: ParseTree | any, out: string[]) {
     if (!env.inFunc()) {
-      env.perror(t, {
-        type: 'warning',
-        key: 'OnlyInFunction',
-        subject: 'return',
-      });
+      env.pwarn(t, 'ReturnOnlyInFunction');
       return Types.Void;
     }
     const funcData = env.get('@func');
@@ -660,11 +584,7 @@ class Transpiler {
 
   public Continue(env: Env, t: ParseTree, out: string[]) {
     if (!env.inLoop()) {
-      env.perror(t, {
-        type: 'warning',
-        key: 'OnlyInLoop',
-        subject: 'continue',
-      });
+      env.pwarn(t, 'ContinueOnlyInLoop');
       return Types.Void;
     }
     out.push('continue');
@@ -673,11 +593,7 @@ class Transpiler {
 
   public Break(env: Env, t: ParseTree, out: string[]) {
     if (!env.inLoop()) {
-      env.perror(t, {
-        type: 'warning',
-        key: 'OnlyInLoop',
-        subject: 'break',
-      });
+      env.pwarn(t, 'BreakOnlyInLoop');
       return Types.Void;
     }
     out.push('break');
@@ -716,7 +632,7 @@ class Transpiler {
     const name = t.tokenize();
     const symbol = env.get(name) as Symbol;
     if (symbol === undefined) {
-      env.perror(t, { key: 'UndefinedName', subject: name });
+      env.perror(t, 'UndefinedName');
       return this.skip(env, t, out);
     }
     out.push(symbol.code);
@@ -727,11 +643,11 @@ class Transpiler {
     const name = t.tokenize();
     const symbol = env.get(name) as Symbol;
     if (symbol === undefined) {
-      env.perror(t, { key: 'UndefinedName', subject: name });
+      env.perror(t, 'UndefinedName');
       return this.skip(env, t, out);
     }
     if (!symbol.isMutable) {
-      env.perror(t, { key: 'Immutable', subject: name });
+      env.perror(t, 'Immutable');
       return this.skip(env, t, out);
     }
     t.tag = 'Name';
@@ -765,10 +681,7 @@ class Transpiler {
   public Infix(env: Env, t: ParseTree | any, out: string[]) {
     const op = operator(t.tokenize('name'));
     if (op === undefined) {
-      env.perror(t.get('name'), {
-        key: 'UndefinedOperator',
-        subject: t.tokenize('name'),
-      });
+      env.perror(t.get('name'), 'UndefinedOperator');
       return this.skip(env, t, out);
     }
     const out1: string[] = [];
@@ -801,12 +714,10 @@ class Transpiler {
       const pkgname = PackageSymbolMap[name];
       if (pkgname !== undefined) {
         env.from_import(PuppyModules[pkgname]);
-        env.perror(t['name'], {
-          type: 'info',
-          key: 'InferredPackage',
-          subject: pkgname,
-          //code: `from ${pkgname} import *`,
-        });
+        env.pnotice(t['name'], 'InferredPackage', [
+          '@inferred', pkgname,
+          '@fixme', `from ${pkgname} import *`,
+        ]);
         return this.ApplySymbolExpr(env, t, name, env.get(name) as Symbol, undefined, out); // Again
       }
     }
@@ -815,10 +726,7 @@ class Transpiler {
 
   private ApplySymbolExpr(env: Env, t: ParseTree | any, name: string, symbol: Symbol, recv: ParseTree | undefined, out: string[]): Type {
     if (symbol === undefined) {
-      env.perror(t['name'], {
-        key: 'UnknownName',
-        subject: name,
-      });
+      env.perror(t['name'], 'UndefinedFunctionName');
       return this.skip(env, t, out);
     }
     const args = t['params'].subs() as ParseTree[];
@@ -828,11 +736,9 @@ class Transpiler {
     symbol = this.refineWithParamSize(env, symbol, name, args);
     var funcType = symbol.ty;
     if (!Types.isFuncType(funcType)) {
-      env.perror(t['name'], {
-        type: 'error',
-        key: 'NotFunction',
-        subject: t['name'].tokenize(),
-      });
+      env.perror(t['name'], 'TypeError', [
+        '@req', '@function', '@given', `${funcType}`
+      ]);
       return this.skip(env, t, out);
     }
     out.push(symbol.code)
@@ -843,11 +749,7 @@ class Transpiler {
 
     for (var i = 0; i < args.length; i += 1) {
       if (!(i < funcType.psize())) {
-        env.perror(args[i], {
-          type: 'warning',
-          key: 'TooManyArguments',
-          subject: args[i].toString(),
-        });
+        env.pwarn(args[i], 'TooManyArguments');
         break;
       }
       if (i > 0) {
@@ -858,7 +760,10 @@ class Transpiler {
     }
     if (args.length < funcType.psize()) {
       if (!funcType.ptype(args.length)) {
-        env.perror(t['name'], { key: 'RequiredArguments' });
+        env.perror(t['name'], 'RequiredArguments',
+          ['@req', `${funcType}`]
+        );
+        return this.skip(env, t, out);
       }
     }
     out.push(')');
@@ -919,7 +824,7 @@ class Transpiler {
   public SetGetExpr(env: Env, t: ParseTree | any, out: string[]) {
     const recv = t.tokenize('recv');
     if (env.isModule(recv)) {
-      env.perror(t, { key: 'Immutable' });
+      env.perror(t, 'Immutable');
       return this.skip(env, t, out);
     }
     t.tag = 'GetExpr'; // see SelfAssign
@@ -966,13 +871,13 @@ class Transpiler {
   }
 
   public NLPSymbol(env: Env, t: ParseTree | any, out: string[]) {
-    env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    env.perror(t, 'NLKeyValues');
     out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
 
   public NLKeyValue(env: Env, t: ParseTree | any, out: string[]) {
-    env.perror(t, { key: 'NLKeyValues', type: 'info' });
+    env.perror(t, 'NLKeyValues');
     out.push(`unknown: '${t.tokenize()}'`);
     return Types.Void;
   }
@@ -982,7 +887,7 @@ class Transpiler {
     out.push(`'${name}': `)
     const ty = (KEYTYPES as any)[name];
     if (ty === undefined) {
-      env.perror(t['name'], { type: 'warning', key: 'UnknownName' });
+      env.pwarn(t['name'], 'UnknownName');
       this.conv(env, t['value'], out)
     }
     else {
@@ -994,10 +899,7 @@ class Transpiler {
   public Tuple(env: Env, t: ParseTree, out: string[]) {
     const subs = t.subs()
     if (subs.length > 2) {
-      env.perror(t, {
-        type: 'warning',
-        key: 'ListSyntaxError', //リストは[ ]で囲みましょう
-      });
+      env.pwarn(t, 'ListSyntaxError'); //リストは[ ]で囲みましょう
       return this.List(env, t, out);
     }
     if (subs.length == 1) {
@@ -1018,10 +920,7 @@ class Transpiler {
     var ty = env.varType(t);
     out.push('[')
     for (const sub of t.subs()) {
-      ty = this.check(ty, env, sub, out, {
-        type: 'error',
-        key: 'AllTypeAsSame', //全ての要素を同じ型に揃えてください
-      });
+      ty = this.check(ty, env, sub, out, 'MustSameType');
       out.push(',')
     }
     out.push(']')
@@ -1107,7 +1006,7 @@ const transpile = (s: string) => {
   ts.conv(env, t, out);
   //console.log('DEBUG: ERROR LOGS')
   //console.log(JSON.stringify(env.get('@logs')));
-  console.log(env.get('@logs'));
+  //console.log(env.get('@logs'));
   return out.join('')
 }
 
@@ -1116,12 +1015,6 @@ export type Source = {
   lang?: string;
 };
 
-export type PuppyCode = {
-  world: any;
-  main: (puppy: any) => IterableIterator<number>;
-  errors: ErrorLog[];
-  code: string;
-};
 
 export const compile = (s: Source): PuppyCode => {
   //const start = performance.now();
@@ -1147,17 +1040,19 @@ ${jscode}
   catch (e) {
     console.log(main);
     console.log(e);
-    env.perror(t, {
-      type: 'error',
-      key: 'CompileError',
-      subject: e.toString(),
-    })
+    env.perror(t, 'CompileError', [
+      '@log', e.toString(),
+    ])
   }
   //const end = performance.now();
   code['world'] = {};
   code['tree'] = t; // 
   code['code'] = jscode;
-  code['errors'] = env.get('@logs');
+  code['errors'] = env.get('@errors');
+  code['warnings'] = env.get('@warnings');
+  code['notices'] = env.get('@notices');
+  code['tokens'] = env.get('@tokens');
+  code['symbols'] = env.get('@symbols');
   //code['time'] = end - start;
   return code as PuppyCode;
 }
@@ -1166,12 +1061,12 @@ export const utest = (s: string) => {
   const src = { source: s };
   const code = compile(src);
   if (code.errors.length > 0) {
-    //    return `${code.errors[0].key}/${code.errors[0].subject}`;
     return code.errors[0].key;
   }
+  console.log(code.code);
   const ss = code.code.split('\n');
   for (var i = ss.length - 1; i >= 0; i--) {
-    const s = ss[i].trim();
+    var s = ss[i].trim();
     if (s !== '}' && s !== '') {
       const p = s.indexOf(';');
       return p !== -1 ? s.substring(0, p) : s;
