@@ -113,7 +113,7 @@ class Env {
 
   public perror(t: ParseTree, key: string, params?: any[]) {
     const e = SourceError(t, key, params);
-    const logs = this.vars['@errors'];
+    const logs = this.getroot('@errors');
     logs.push(e);
     return e;
   }
