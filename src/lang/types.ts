@@ -473,6 +473,7 @@ export class Types {
   public static ListA = new ListType(Types.A);
   public static ListB = new ListType(Types.B);
   public static ListInt = new ListType(Types.Int);
+  public static ListString = new ListType(Types.String);
   public static ListAny = new ListType(Types.Any);
   public static Matter = new BaseType('object');
   public static Object = Types.Matter;

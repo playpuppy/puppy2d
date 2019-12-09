@@ -252,6 +252,26 @@ export class LibPython {
     return a.indexOf(x) >= 0;
   }
 
+  public isinstance(x: any, cls: any) {
+    if (cls === this.bool) {
+      return typeof x === 'boolean';
+    }
+    if (cls === this.int) {
+      return typeof x === 'number' && Number.isInteger(x);
+    }
+    if (cls === this.float) {
+      return typeof x === 'number';
+    }
+    if (cls === this.str) {
+      return typeof x === 'string';
+    }
+    if (cls === this.list) {
+      return Array.isArray(x);
+    }
+    return false;
+  }
+
+
   /* string/array (method) */
 
   public get(a: any, name: string, puppy?: any) {
@@ -278,12 +298,71 @@ export class LibPython {
     return undefined;
   }
 
-  public find(s: string, sub: string) {
-    return s.indexOf(sub);
+  /* string */
+
+  public split(s: string, sep: string = ' ') {
+    return s.split(sep);
   }
 
-  public join(s: string, list: [string]) {
+  public startswith(s: string, pat: string) {
+    return s.startsWith(pat);
+  }
+
+  public endswith(s: string, pat: string) {
+    return s.endsWith(pat);
+  }
+
+  public find(s: string, pat: string) {
+    return s.indexOf(pat);
+  }
+
+  public rfind(s: string, pat: string) {
+    return s.lastIndexOf(pat);
+  }
+
+  public islower(s: string) {
+    for (var i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c < 97 || c > 122) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public isupper(s: string) {
+    for (var i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c < 65 || c > 90) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public upper(s: string): string {
+    return s.toUpperCase();
+  }
+
+  public lower(s: string): string {
+    return s.toLowerCase();
+  }
+
+  public replace(s: string, old: string, ne: string): string {
+    return s.replace(old, ne);
+  }
+
+  public join(s: string, list: string[]) {
     return list.join(s);
+  }
+
+  public list(s: string, list: string[]) {
+    const ss: string[] = [];
+    for (var i = 0; i < s.length; i++) {
+      const c = s[i];
+      ss.push(c);
+    }
+    return ss;
   }
 
   /* list */

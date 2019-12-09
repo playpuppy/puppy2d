@@ -202,12 +202,12 @@ export class PuppyWorld extends MatterWorld {
 const DefaultPuppyCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
-    world.Rectangle(0, 500, 1000, 100, { isStatic: true });
-    world.Rectangle(0, -500, 1000, 100, { isStatic: true });
-    world.Rectangle(500, 0, 100, 1000, { isStatic: true });
-    world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
+    // world.Rectangle(0, 500, 1000, 100, { isStatic: true });
+    // world.Rectangle(0, -500, 1000, 100, { isStatic: true });
+    // world.Rectangle(500, 0, 100, 1000, { isStatic: true });
+    // world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
 
-    world.setGravity(0, -1.0);
+    // world.setGravity(0, -1.0);
     // world.newObject({
     //   shape: 'newtonsCradle',
     //   position: new Vector(0, 0),
@@ -215,30 +215,30 @@ const DefaultPuppyCode: PuppyCode = {
     //   columns: 3,
     //   //part: { shape: 'rectangle' },
     // });
-    world.newObject({
-      shape: 'array',
-      position: new Vector(0, 0),
-      margin: 10,
-      part: { shape: 'circle', restitution: 1.0 },
-    });
-    const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
-    sensor.moveover = (bodyA: Body, bodyB: Body) => {
-      console.log(bodyA);
-      console.log(bodyB);
-    }
-    world.Variable('TIME', 320, -400, { width: 260 });
-    world.Variable('MOUSE', 320, -440, { width: 260 });
-    for (var i = 0; i < 20; i++) {
+    // world.newObject({
+    //   shape: 'array',
+    //   position: new Vector(0, 0),
+    //   margin: 10,
+    //   part: { shape: 'circle', restitution: 1.0 },
+    // });
+    // const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
+    // sensor.moveover = (bodyA: Body, bodyB: Body) => {
+    //   console.log(bodyA);
+    //   console.log(bodyB);
+    // }
+    // world.Variable('TIME', 320, -400, { width: 260 });
+    // world.Variable('MOUSE', 320, -440, { width: 260 });
+    for (var i = 0; i < 6; i++) {
       world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
       //world.print(`${i}`);
       yield 200;
     }
-    // world.World({ wireframes: true });
-    for (var i = 0; i < 40; i++) {
-      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-      //world.print(`${i}`);
-      yield 200;
-    }
+    // // world.World({ wireframes: true });
+    // for (var i = 0; i < 40; i++) {
+    //   world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
+    //   //world.print(`${i}`);
+    //   yield 200;
+    // }
     return 0;
   },
   symbols: {},

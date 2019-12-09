@@ -136,12 +136,12 @@ const import_python: { [key: string]: Symbol | undefined } = {
   'input@0': sym('puppy.input', ts.func(ts.String)),
   'input': sym('puppy.input', ts.func(ts.String, ts.String)),
   'int': sym('lib.int', ts.func(ts.Int, ts.union(ts.Bool, ts.String, ts.Int))),
-  'int@2': sym('puppy.int', ts.func(ts.Int, ts.String, ts.Int)),
-  'isinstance': undefined,
+  'int@2': sym('lib.int', ts.func(ts.Int, ts.String, ts.Int)),
+  'isinstance': sym('lib.isinstance', ts.func(ts.Bool, ts.Any, ts.Any)),
   'issubclass': undefined,
   'iter': undefined,
   'len': sym('lib.len', ts.func(ts.Int, ts.union(ts.String, ts.ListAny))),
-  'list': undefined,
+  'list': sym('lib.list', ts.func(ts.ListString, ts.String)),
   'locals': undefined,
   'map': sym('lib.map', ts.func(ts.ListB, ts.func(ts.B, ts.A), ts.ListA)),
   'max@1': sym('lib.max1', tFuncFloatListFloat),
@@ -170,7 +170,7 @@ const import_python: { [key: string]: Symbol | undefined } = {
   'reserved': sym('lib.reserved', ts.func(ts.ListA, ts.ListA)),
   'round': sym('Math.round', tFuncIntInt),
   'set': undefined,
-  'setattr': sym('Math.round', ts.func(ts.Void, ts.Object, ts.String, ts.Any)),
+  'setattr': sym('lib.setattr', ts.func(ts.Void, ts.Object, ts.String, ts.Any)),
   //
   'slice': undefined,
   'sorted': sym('lib.sorted', ts.func(ts.ListA, ts.ListA)),
@@ -184,6 +184,18 @@ const import_python: { [key: string]: Symbol | undefined } = {
 
   //append
   '.append': sym('lib.append', ts.func(ts.Void, ts.ListA, ts.A)),
+  // string
+  '.find': sym('lib.find', ts.func(ts.Int, ts.String, ts.String)),
+  '.rfind': sym('lib.rfind', ts.func(ts.Int, ts.String, ts.String)),
+  '.startswith': sym('lib.startswith', ts.func(ts.Bool, ts.String, ts.String)),
+  '.endswith': sym('lib.startswith', ts.func(ts.Bool, ts.String, ts.String)),
+  '.isupper': sym('lib.isupper', ts.func(ts.Bool, ts.String)),
+  '.islower': sym('lib.islower', ts.func(ts.Bool, ts.String)),
+  '.lower': sym('lib.lower', ts.func(ts.String, ts.String)),
+  '.upper': sym('lib.upper', ts.func(ts.String, ts.String)),
+  '.join': sym('lib.join', ts.func(ts.String, ts.String, ts.ListString)),
+  '.split': sym('lib.split', ts.func(ts.ListString, ts.String, ts.String)),
+  '.replace': sym('lib.replace', ts.func(ts.String, ts.String, ts.String, ts.String)),
 
 }
 
