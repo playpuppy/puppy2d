@@ -371,6 +371,10 @@ export class LibPython {
     xs.push(x);
   }
 
+  public insert(xs: any[], index: number, x: any) {
+    xs.splice(x);
+  }
+
   /* Matter.Body */
 
 }

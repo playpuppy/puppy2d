@@ -582,7 +582,8 @@ export class PuppyRender {
    * @param {render} this
    */
 
-  private globalAlpha = 0.9;
+  //private globalAlpha = 0.9;
+  private ticks = 0;
 
   public draw() {
     const engine = this.engine;
@@ -665,6 +666,8 @@ export class PuppyRender {
     this.bodies(bodiesZ, context);
 
     this.endViewTransform();
+    this.ticks += 1;
+    (this.world as any).fficall('__anime__', this.ticks % 60);
 
     if (this.showingMessage !== null) {
       context.font = 'bold 80px sans-serif';
@@ -833,7 +836,7 @@ export class PuppyRender {
     const options = this.world as any;
     //const showInternalEdges = options.showInternalEdges || !options.wireframes;
     const wireframes = options.wireframes;
-    const globalAlpha = this.globalAlpha;
+    const globalAlpha = options.globalAlpha || 0.95;
     const defaultFont = options.font || "36px Arial";
     const defaultFontColor = options.fontColor || 'gray';
 
