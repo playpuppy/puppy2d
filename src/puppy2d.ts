@@ -229,8 +229,8 @@ const DefaultPuppyCode: PuppyCode = {
     // world.Variable('TIME', 320, -400, { width: 260 });
     // world.Variable('MOUSE', 320, -440, { width: 260 });
     for (var i = 0; i < 6; i++) {
-      world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-      //world.print(`${i}`);
+      world.paint(Math.sin(i) * 80, Math.cos(i) * 100, 20);
+      //world.print(`hoge hoge hoge hoge ${i}`);
       yield 200;
     }
     // // world.World({ wireframes: true });

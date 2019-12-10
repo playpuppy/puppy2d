@@ -230,6 +230,7 @@ class Env {
       if (yieldparam !== undefined) {
         out.push(`; yield ${yieldparam};\n`);
         this.setroot('@yeild', undefined);
+        return yieldparam;
       }
       else {
         // const row = t.end()[1] * 1000;
@@ -240,6 +241,7 @@ class Env {
     else {
       out.push('\n');
     }
+    return 0;
   }
 }
 
@@ -600,6 +602,7 @@ class Transpiler {
   }
 
   public Pass(env: Env, t: ParseTree, out: string[]) {
+    env.setroot('@yield', 200);
     return Types.Void;
   }
 

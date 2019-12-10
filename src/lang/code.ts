@@ -50,9 +50,19 @@ const JMessage: { [key: string]: string } = {
   '@given': '実際に与えられた種類：',
   'UnknownPackageName': 'PuppyはPythonの全てのライブラリが使えるわけではありません',
 
+  'UndefinedName': '変数は使用する前に値を設定しましょう',
+  'UndefinedFunctionName': '関数の定義を探すことができませんでした',
+
+  'UnknownName': 'この名前はタイプミスかも知れません',
+
+  'InferredPackage': 'ライブラリを自動インポートしました',
+  '@inferred': '推論されたもの',
+  '@fixme': 'コード',
+
   'OutofArrayIndexError': '配列の大きさを超えてアクセスしました',
   '@index': 'あなたが与えた位置：',
   '@length': '配列の大きさ 0 〜',
+
 }
 
 export const messagefy = (s: SourceEvent, lang = 'en') => {

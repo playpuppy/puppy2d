@@ -101,7 +101,14 @@ const _Circle = (world: any, options: any, radius?: number) => {
 }
 
 const _Label = (world: MatterWorld, options: any) => {
-  const width = (!options.width) ? (world.width / 4) : options.width;
+  if (!options.width) {
+    var text = `_${options.textRef()}_`;
+    if (options.caption) {
+      text = `${options.caption}_${text}`;
+    }
+    options.width = world.fontWidth(text, options.font);
+  }
+  const width = options.width;
   const height = (!options.height) ? 40 : options.height;
   initVertices(options, [0, 0, width, 0, width, height, 0, height]);
   if (!options.fillStyle) {
@@ -308,6 +315,10 @@ export class MatterWorld extends World {
     return `bold ${(fontSize - 4) | 0}px ${this.fontName}`;
   }
 
+  fontWidth(text: string, font?: string) {
+    return this.vm.render.measureWidth(text, font || this.font);
+  }
+
   public Variable(name: string, x: number, y: number, options: any = {}) {
     options = Object.assign(options, {
       shape: 'variable',
@@ -331,7 +342,7 @@ export class MatterWorld extends World {
       position: new Vector(x, y),
       shape: 'label',
       zindex: Infinity,
-      fontColor: Common.choose(this.colors, 1),
+      //fontColor: Common.choose(this.colors, 1),
     }, options);
     return this.newObject(options).addMotion((body: Body) => {
       body.translate2(-2, 0);

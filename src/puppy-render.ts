@@ -461,6 +461,20 @@ export class PuppyRender {
     // render.options.height = h;
   }
 
+  public measureWidth(text: string, font?: string) {
+    if (font) {
+      const defaultFont = this.context.font;
+      this.context.font = font;
+      const m = this.context.measureText(text);
+      this.context.font = defaultFont;
+      return m.width;
+    }
+    else {
+      const m = this.context.measureText(text);
+      return m.width;
+    }
+  }
+
 
   showingMessage: string | null = null;
 
