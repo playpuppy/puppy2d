@@ -123,8 +123,8 @@ const _Label = (world: MatterWorld, options: any) => {
 
 export const PuppyShapeMap: { [key: string]: (world: any, options: any) => any } = {
   'rectangle': (world: any, options: any) => {
-    const width = options.width || 100;
-    const height = options.height || 100;
+    const width = options.width = options.width || 100;
+    const height = options.height = options.height || 100;
     initVertices(options, [0, 0, width, 0, width, height, 0, height]);
     return options;
   },

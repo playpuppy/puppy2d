@@ -73,14 +73,15 @@ const textures: any = {
 
 };
 
-const _getTexture = (imagePath: string) => {
+const _getTexture = (imagePath: string, base = '') => {
   const image = textures[imagePath];
-  if (image) {
+  if (image !== undefined) {
     return image;
   }
   const image2 = textures[imagePath] = new Image();
   image2.addEventListener("error", (event: ErrorEvent) => {
-    image2.src = NoImage;
+    console.log(`no image`);
+    image2.src = 'https://hakuhin.jp/graphic/title.png';
   });
   if (
     imagePath.startsWith('http://') ||
@@ -90,7 +91,7 @@ const _getTexture = (imagePath: string) => {
   ) {
     image2.src = imagePath;
   } else {
-    image2.src = `/image/${imagePath}`;
+    image2.src = `${base}/${imagePath}`;
   }
   return image;
 }
@@ -839,6 +840,7 @@ export class PuppyRender {
     const globalAlpha = options.globalAlpha || 0.95;
     const defaultFont = options.font || "36px Arial";
     const defaultFontColor = options.fontColor || 'gray';
+    const basePath = options.base || 'https://playpuppy.github.io/LIVE2019/image';
 
     for (var i = 0; i < bodies.length; i++) {
       const body = bodies[i];
@@ -848,7 +850,7 @@ export class PuppyRender {
 
       // handle compound parts
       for (var k = body.parts.length > 1 ? 1 : 0; k < body.parts.length; k++) {
-        var part = body.parts[k];
+        var part: any = body.parts[k];
 
         if (!part.visible)
           continue;
@@ -861,21 +863,36 @@ export class PuppyRender {
           c.globalAlpha *= part.opacity;
         }
         if (part.texture && !wireframes) {
-          // part sprite
-          const texture = _getTexture(part.texture);
+          const texture = _getTexture(part.texture, basePath);
 
           c.translate(part.position.x, part.position.y);
-          c.rotate(part.angle);
+          if (this.scale.y < 0) {
+            c.rotate(Math.PI + part.angle);
+            //c.scale(-1, 1);
+          }
+          else {
+            c.rotate(part.angle);
+          }
+          try {
+            c.drawImage(
+              texture,
+              part.width * -part.xOffset * part.xScale,
+              part.height * -part.yOffset * part.yScale,
+              part.width * part.xScale,
+              part.height * part.yScale
+            );
+          }
+          catch (e) {
 
-          c.drawImage(
-            texture,
-            texture.width * -part.xOffset * part.xScale,
-            texture.height * -part.yOffset * part.yScale,
-            texture.width * part.xScale,
-            texture.height * part.yScale
-          );
+          }
           // revert translation, hopefully faster than save / restore
-          c.rotate(-part.angle);
+          if (this.scale.y < 0) {
+            c.rotate(-Math.PI - part.angle);
+            //c.scale(1, 1);
+          }
+          else {
+            c.rotate(part.angle);
+          }
           c.translate(-part.position.x, -part.position.y);
         } else {
           // part polygon

@@ -226,11 +226,13 @@ const DefaultPuppyCode: PuppyCode = {
     //   console.log(bodyA);
     //   console.log(bodyB);
     // }
-    // world.Variable('TIME', 320, -400, { width: 260 });
-    // world.Variable('MOUSE', 320, -440, { width: 260 });
-    // world.vars['__anime__'] = (t: number) => {
-    //   world.print(`${t}`);
-    // }
+    world.Variable('TIME', 320, -400, { width: 260 });
+    world.Variable('MOUSE', 320, -440, { width: 260 });
+    world.vars['__anime__'] = (t: number) => {
+      if (t === 0)
+        world.print(`${t}`);
+    }
+    world.Rectangle(0, 0, 100, 100, { texture: 'bird.png' })
     for (var i = 0; i < 6; i++) {
       world.paint(Math.sin(i) * 80, Math.cos(i) * 100, 20);
       //world.print(`hoge hoge hoge hoge ${i}`);
@@ -326,7 +328,6 @@ export class PuppyRuntimeError extends Error {
     this.event = event;
   }
 }
-
 
 export class PuppyVM extends PuppyEventHandler {
   element: HTMLElement;
