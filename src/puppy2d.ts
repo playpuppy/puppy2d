@@ -9,8 +9,6 @@ import { compile as PuppyCompile } from './lang/compiler';
 import { LineEvent, OutputEvent, ActionEvent, newEventId } from './events';
 import { chooseColorScheme } from './color';
 import { MatterWorld } from './matter';
-import { assignmentExpression } from '@babel/types';
-import { readFileSync } from 'fs';
 
 export class PuppyWorld extends MatterWorld {
   public timestamp = 0;
@@ -67,21 +65,11 @@ export class PuppyWorld extends MatterWorld {
 
   // from puppy vm
 
-  public paint(x: number, y: number, radius = 5) {
-    const options = {
-      position: new Vector(x, y),
-      shape: 'circle',
-      width: radius * 2,
-      zindex: 0,
-    }
-    this.timeToLive(this.newObject(options), 5000);
-  }
-
   public input(text: string = '') {
     // if(bufferをみる) {
     //   return buffer;
     // }
-    return this.vm.syscall('input', { text });
+    return this.vm.syscall('input', { text: text });
   }
 
   public raise(codemap: any, key: string, params?: any[]) {
@@ -124,8 +112,6 @@ export class PuppyWorld extends MatterWorld {
     }
   }
 
-
-
   public fficall(name: string, ...params: any[]) {
     const callback = this.vars[name];
     if (callback !== undefined) {
@@ -137,7 +123,6 @@ export class PuppyWorld extends MatterWorld {
       }
     }
   }
-
 
   // private token(tkid: number, event: any) {
   //   return event;
@@ -169,11 +154,6 @@ export class PuppyWorld extends MatterWorld {
   //   }
   //   return this.v;
   // }
-
-  public trace(log: any) {
-    console.log(log);
-    // this.settings.trace(log);
-  }
 
   // lazy updates
 
@@ -226,25 +206,22 @@ const DefaultPuppyCode: PuppyCode = {
     //   console.log(bodyA);
     //   console.log(bodyB);
     // }
-    world.Variable('TIME', 320, -400, { width: 260 });
-    world.Variable('MOUSE', 320, -440, { width: 260 });
-    world.vars['__anime__'] = (t: number) => {
-      if (t === 0)
-        world.print(`${t}`);
-    }
-    world.Rectangle(0, 0, 100, 100, { texture: 'bird.png' })
+    // world.Variable('TIME', 320, -400, { width: 260 });
+    // world.Variable('MOUSE', 320, -440, { width: 260 });
+    // world.vars['__anime__'] = (t: number) => {
+    //   if (t === 0)
+    //     world.print(`${t}`);
+    // }
+    //world.Rectangle(0, 0, 100, 100, { texture: 'bird.png' })
     for (var i = 0; i < 6; i++) {
-      world.paint(Math.sin(i) * 80, Math.cos(i) * 100, 20);
+      world.plot(Math.sin(i) * 80, Math.cos(i) * 80, {
+        ttl: 5000, fillStyle: world.colors[0]
+      });
       //world.print(`hoge hoge hoge hoge ${i}`);
       yield 200;
     }
-    // // world.World({ wireframes: true });
-    // for (var i = 0; i < 40; i++) {
-    //   world.paint(Math.sin(i) * 100, Math.cos(i) * 100, 20);
-    //   //world.print(`${i}`);
-    //   yield 200;
-    // }
-
+    // world.print(world.input('hoge'));
+    // world.print(world.input('hogo'));
     return 0;
   },
   symbols: {},
@@ -258,28 +235,31 @@ const DefaultPuppyCode: PuppyCode = {
 const initSyscalls = (element: HTMLElement, options: any) => {
   const syscalls: { [key: string]: any } = {}
 
-  const defaultInput = (msg: string = '', callback: (res: any) => void) => {
+  const defaultInput = (options: any, callback: (res: any) => void) => {
     //vars['_'] = (); yield -1; x = vars['']
     const form = document.createElement('form');
+    form.style.position = 'absolute';
+    form.style.top = '10px';
     form.onsubmit = () => {
       const value = input.value;
       form.style.display = 'none';
-      element.removeChild(form);
+      console.log(`input ${value}`);
       callback(value);
+      element.removeChild(form);
       return false;
     }
     const caption = form.appendChild(document.createElement('div'));
-    caption.innerText = msg;
+    caption.innerText = options.text || '';
     const input = form.appendChild(document.createElement('input'));
     input.placeholder = '';
-    const submit = form.appendChild(document.createElement('button'));
-    submit.type = 'submit';
-    submit.onclick = () => {
-      const value = input.value;
-      form.style.display = 'none';
-      element.removeChild(form);
-      callback(value);
-    }
+    // const submit = form.appendChild(document.createElement('button'));
+    // submit.type = 'submit';
+    // submit.onclick = () => {
+    //   const value = input.value;
+    //   form.style.display = 'none';
+    //   element.removeChild(form);
+    //   callback(value);
+    // }
     element.appendChild(form);
   }
   syscalls['input'] = options.input || defaultInput;
@@ -577,22 +557,24 @@ export class PuppyVM extends PuppyEventHandler {
 
   // eval
 
-
-
-
-  async syscall(name: string, data: any) {
+  public syscall(name: string, data: any) {
     const world = this.engine!.world as PuppyWorld;
-    this.pause('');
     world.vars['_'] = null;
-    this.syscalls[name](data, (res: any) => {
+    this.pause('');
+    return this.syscall_(world, name, data);
+  }
+
+  async syscall_(world: PuppyWorld, name: string, data: any) {
+    await this.syscalls[name](data, (res: any) => {
       world.vars['_'] = res;
       this.restart();
     })
     while (world.vars['_'] === null) {
       await this.wait();
     }
-    return world.vars['_'];
+    return await world.vars['_'];
   }
+
 
   private async wait(msec = 100) {
     await new Promise(resolve => setTimeout(resolve, msec));

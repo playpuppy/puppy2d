@@ -837,7 +837,7 @@ export class PuppyRender {
     const options = this.world as any;
     //const showInternalEdges = options.showInternalEdges || !options.wireframes;
     const wireframes = options.wireframes;
-    const globalAlpha = options.globalAlpha || 0.95;
+    const globalAlpha = options.opacity || 1;
     const defaultFont = options.font || "36px Arial";
     const defaultFontColor = options.fontColor || 'gray';
     const basePath = options.base || 'https://playpuppy.github.io/LIVE2019/image';

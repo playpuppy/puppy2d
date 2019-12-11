@@ -380,6 +380,31 @@ export class MatterWorld extends World {
     this.print(text, options);
   }
 
+  // public paint(x: number, y: number, radius = 5) {
+  //   const options = {
+  //     position: new Vector(x, y),
+  //     shape: 'circle',
+  //     width: radius * 2,
+  //     zindex: 0,
+  //   }
+  //   this.timeToLive(this.newObject(options), 5000);
+  // }
+
+  public plot(x: number, y: number, options?: any) {
+    options = options || {};
+    options.position = new Vector(x, y);
+    options.zindex = 0;
+    if (!options.shape) {
+      options.shape = 'circle';
+    }
+    if (!options.width) {
+      options.width = 20;
+    }
+    const point = this.newObject(options);
+    if (options.ttl) {
+      this.timeToLive(point, options.ttl);
+    }
+  }
 
   public timeToLive(body: Body, time = 5000) {
     var tick = 0;
