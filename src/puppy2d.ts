@@ -1,6 +1,6 @@
 import { Common } from './matter-ts/commons'
-import { Vector, Vertices, Bounds } from './matter-ts/geometry'
-import { Body, World, Composite, Constraint } from './matter-ts/body'
+import { Vector, Bounds } from './matter-ts/geometry'
+//import { Body } from './matter-ts/body'
 import { PuppyRender } from './puppy-render';
 import { Engine, Runner } from './matter-ts/core';
 
@@ -172,11 +172,6 @@ export class PuppyWorld extends MatterWorld {
     this.lazyUpdates = [];
   }
 
-  public setpos(target: Body, position: Vector) {
-    this.lazyUpdates.push(() => {
-      target.setPosition(position);
-    })
-  }
 }
 
 const DefaultPuppyCode: PuppyCode = {
@@ -363,8 +358,6 @@ export class PuppyVM extends PuppyEventHandler {
     }
   }
 
-  //
-
   private compile(source: string) {
     const compiled = PuppyCompile({ source });
     const event: ActionEvent = { id: newEventId(), action: 'end', type: 'compile' };
@@ -403,7 +396,6 @@ export class PuppyVM extends PuppyEventHandler {
     }
     return variable === undefined ? world.vars : world.vars[variable];
   }
-
 
   private paused = false;
 
@@ -586,6 +578,7 @@ export class PuppyVM extends PuppyEventHandler {
 export class PuppyOS extends PuppyEventHandler {
   private uid: string;
   private env: { [key: string]: any }
+  private vm: PuppyVM | null = null;
 
   public constructor(uid = 'guest') {
     super();
@@ -596,9 +589,9 @@ export class PuppyOS extends PuppyEventHandler {
   }
 
   public newPuppyVM(element: HTMLElement) {
-    return new PuppyVM(element, this);
+    this.vm = new PuppyVM(element, this);
+    return this.vm;
   }
-
 
   private filePath(fileName = 'settings.json') {
     return `/puppy/${this.uid}/${fileName}`;
@@ -638,21 +631,33 @@ export class PuppyOS extends PuppyEventHandler {
         const pair = this.parseKeyValue(args[0]);
         this.setenv(pair[0], pair[1]);
         return;
-      case 'submit':
-        this.submit(args[0], args[1]);
-        return;
+      // case 'submit':
+      //   this.submit(args[0], args[1]);
+      //   return;
       default:
         this.trigger('undefined', { cmd, args })
     }
   }
 
-  public shell(command: string) {
-    const args = command.split(' ');
+  public shell(cmd: string) {
+    if (cmd.startsWith('eval ') && this.vm !== null) {
+      const source = cmd.substring(5);
+      this.vm.eval(source);
+    }
+    const splited = cmd.split(' ');
+    if (splited.length > 1) {
+      const command = splited[0];
+      const args = splited.slice(1);
+      this.exec(command, args);
+    }
+    else {
+      if (cmd.indexOf('=') !== 0) {
+        this.exec('set', [cmd]);
+      }
+      else {
+        this.exec(cmd, []);
+      }
+    }
   }
-
-  public submit(url: string, text: string) {
-
-  }
-
 
 }
