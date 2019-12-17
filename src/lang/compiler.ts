@@ -146,6 +146,10 @@ class Env {
     return tkid;
   }
 
+  public codemap(t: ParseTree) {
+    return `,codemap[${this.tkid(t)}]`;
+  }
+
   public setInLoop() {
     var nested = this.get('@inloop') || 0;
     this.set('@inloop', nested + 1);
@@ -171,10 +175,10 @@ class Env {
       if (data !== undefined) {
         data['isMatter'] = true;
       }
-      else {
-        const row = t.begin()[1] * 1000;
-        this.setroot('@yeild', row + 200);
-      }
+      // else {
+      //   const row = t.begin()[1] * 1000;
+      //   this.setroot('@yeild', row + 200);
+      // }
     }
   }
 
@@ -213,10 +217,11 @@ class Env {
   }
 
   private prevRow = -1;
+
   public emitYield(t: ParseTree, out: string[]) {
     if (!this.inFunc()) {
       const indent = this.get('@indent');
-      const row = t.begin()[1] * 1000;
+      const row = t.begin()[1] * 1000 + 100;
       if (this.prevRow !== row) {
         out.push(`${indent}yield ${row};\n`);
         this.prevRow = row;
@@ -225,22 +230,22 @@ class Env {
   }
 
   public emitAutoYield(t: ParseTree, out: string[]) {
-    if (!this.inFunc()) {
-      const yieldparam = this.getroot('@yeild');
-      if (yieldparam !== undefined) {
-        out.push(`; yield ${yieldparam};\n`);
-        this.setroot('@yeild', undefined);
-        return yieldparam;
-      }
-      else {
-        // const row = t.end()[1] * 1000;
-        // out.push(`;yield ${row};\n`);
-        out.push('\n');
-      }
-    }
-    else {
-      out.push('\n');
-    }
+    // if (!this.inFunc()) {
+    //   const yieldparam = this.getroot('@yeild');
+    //   if (yieldparam !== undefined) {
+    //     out.push(`; yield ${yieldparam};\n`);
+    //     this.setroot('@yeild', undefined);
+    //     return yieldparam;
+    //   }
+    //   else {
+    //     // const row = t.end()[1] * 1000;
+    //     // out.push(`;yield ${row};\n`);
+    //     out.push('\n');
+    //   }
+    // }
+    // else {
+    out.push('\n');
+    // }
     return 0;
   }
 }
@@ -433,19 +438,18 @@ class Transpiler {
   }
 
   public Block(penv: Env, t: ParseTree, out: string[]) {
-    const indent = penv.get('@indent');
-    const nested = INDENT + indent;
+    const indent = INDENT + penv.get('@indent');
     const env = new Env(penv);
-    env.set('@indent', nested);
+    env.set('@indent', indent);
     out.push('{\n');
     env.emitYield(t, out);
     for (const subtree of t.subs()) {
       env.emitYield(subtree, out);
-      out.push(nested);
+      out.push(indent);
       this.conv(env, subtree, out);
       env.emitAutoYield(subtree, out);
     }
-    out.push(indent + '}')
+    out.push(penv.get('@indent') + '}')
     return Types.Void;
   }
 
@@ -495,8 +499,18 @@ class Transpiler {
     lenv.setInLoop();
     lenv.declVar(name, ty);
     this.conv(lenv, t['body'], out);
+    env.emitYield(t, out);
     return Types.Void
   }
+
+  public WhileStmt(env: Env, t: ParseTree | any, out: string[]) {
+    out.push('while (');
+    this.check(Types.Bool, env, t['cond'], out);
+    out.push(') ');
+    this.conv(env, t['body'], out);
+    return Types.Void
+  }
+
 
   public FuncDecl(env: Env, t: ParseTree | any, out: string[]) {
     const name = t.tokenize('name');
@@ -602,7 +616,6 @@ class Transpiler {
   }
 
   public Pass(env: Env, t: ParseTree, out: string[]) {
-    env.setroot('@yield', 200);
     return Types.Void;
   }
 
@@ -842,23 +855,23 @@ class Transpiler {
   }
 
   public IndexExpr(env: Env, t: ParseTree | any, out: string[]) {
-    out.push('puppy.getindex(');
+    out.push('lib.getindex(');
     const ty = this.check(Types.union(Types.list(env.varType(t)), Types.String), env, t['recv'], out);
     out.push(',');
     this.check(Types.Int, env, t['index'], out);
-    out.push(`,codemap,${env.tkid(t['index'])})`);
+    out.push(`${env.codemap(t)})`);
     return Types.isListType(ty) ? ty.ptype(0) : ty;
   }
 
   public SetIndexExpr(env: Env, t: ParseTree | any, out: string[]) {
     t.tag = 'IndexExpr';  // see SelfAssign
-    out.push('puppy.setindex(');
+    out.push('lib.setindex(');
     const ty = this.check(Types.list(env.varType(t)), env, t['recv'], out);
     out.push(',')
     this.check(Types.Int, env, t['index'], out)
     out.push(',');
     this.check(ty.ptype(0), env, t['right'], out)
-    out.push(`,codemap,${env.tkid(t['index'])})`);
+    out.push(`${env.codemap(t)})`);
     return Types.Void;
   }
 
@@ -901,7 +914,7 @@ class Transpiler {
   public Tuple(env: Env, t: ParseTree, out: string[]) {
     const subs = t.subs()
     if (subs.length > 2) {
-      env.pwarn(t, 'ListSyntaxError'); //リストは[ ]で囲みましょう
+      env.pwarn(t, 'SyntaxError/List'); //リストは[ ]で囲みましょう
       return this.List(env, t, out);
     }
     if (subs.length == 1) {
@@ -910,7 +923,7 @@ class Transpiler {
       out.push(')')
       return ty;
     }
-    out.push('puppy.vec(')
+    out.push('puppy.newVec(')
     this.check(Types.Int, env, subs[0], out);
     out.push(',')
     this.check(Types.Int, env, subs[1], out);
@@ -1075,13 +1088,4 @@ export const utest = (s: string) => {
   }
   return '';
 }
-
-//console.log(1)
-
-// console.log(transpile(`
-// from puppy2d import *
-// for n in range(10):
-//   print(n)
-// `));
-
 

@@ -131,7 +131,7 @@ test('c[0]+=1', () => {
 	expect(utest(`
 c = [1,2]
 c[0] += 1
-`)).toBe("puppy.setindex(vars['c'],0,(puppy.getindex(vars['c'],0,codemap,0) + 1),codemap,0)");
+`)).toBe("lib.setindex(vars['c'],0,(lib.getindex(vars['c'],0,codemap[0]) + 1),codemap[0])");
 });
 
 test('c.width', () => {
@@ -224,7 +224,14 @@ test('(1)', () => {
 });
 
 test('(1,2)', () => {
-	expect(utest(`(1,2)`)).toBe("puppy.vec(1,2)");
+	expect(utest(`(1,2)`)).toBe("puppy.newVec(1,2)");
+});
+
+test('while', () => {
+	expect(utest(`
+while True:
+	1
+`)).toBe("1");
 });
 
 test('keyup', () => {

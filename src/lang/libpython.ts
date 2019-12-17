@@ -1,3 +1,5 @@
+import { ParseTree } from './puppy-parser';
+
 export class LibPython {
   world: any;
 
@@ -78,7 +80,6 @@ export class LibPython {
   public hasattr(x: any, key: string): any {
     return x[key] !== undefined;
   }
-
 
   public int(x: any, base = 10): number {
     if (typeof x === 'number') {
@@ -365,7 +366,51 @@ export class LibPython {
     return ss;
   }
 
+  public raise(key: string, params: any[], cm: ParseTree | any) {
+
+  }
+
   /* list */
+
+  public getindex(list: any, index: number, cm: ParseTree | any) {
+    if (Array.isArray(list) || typeof list === 'string') {
+      if (0 <= index && index < list.length) {
+        return list[index];
+      }
+      this.raise('OutofArrayIndex',
+        ['@index', index, '@length', list.length], cm.index);
+    }
+    if (list.getindex && list.size) {
+      if (0 <= index && index < list.size()) {
+        return list.getindex(index);
+      }
+      this.raise('OutofArrayIndex',
+        ['@index', index, '@length', list.size()], cm.index);
+    }
+    this.raise('TypeError/NotArray',
+      ['@given', (typeof list)], cm.recv);
+  }
+
+  public setindex(list: any, index: number, value: any, cm: ParseTree | any) {
+    if (Array.isArray(list)) {
+      if (0 <= index && index < list.length) {
+        list[index] = value;
+        return;
+      }
+      this.raise('OutofArrayIndex', ['@index', index, '@length', list.length], cm.index);
+    }
+    else if (list.setindex && list.size) {
+      if (0 <= index && index < list.size()) {
+        list.setindex(index, value);
+        return;
+      }
+      this.raise('OutofArrayIndex', ['@index', index, '@length', list.size()], cm.index);
+    }
+    else {
+      this.raise('TypeError/NotArray', ['@given', (typeof list)], cm.recv);
+    }
+  }
+
 
   public append(xs: any[], x: any) {
     xs.push(x);

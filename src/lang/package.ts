@@ -1,5 +1,4 @@
 import { Type, Types as ts } from './types';
-import { type } from 'os';
 
 export class Symbol {
   public code: string;
