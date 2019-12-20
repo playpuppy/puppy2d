@@ -1,13 +1,11 @@
 
 //import { Common } from './core';
 
-import { PuppyVM, PuppyOS } from './puppy2d';
-
-export { PuppyVM, PuppyOS } from './puppy2d';
+export { PuppyOS, PuppyVM } from './puppyvm/vm';
 export { SourceEvent as ErrorLog } from './lang/code';
 
-const puppyOS = new PuppyOS();
-const puppy = puppyOS.newPuppyVM(document.body);
+//const os = new PuppyOS();
+//const puppy = new PuppyVM(document.body, { os });
 
 // puppy.load(`
 // print('Hello, World')
