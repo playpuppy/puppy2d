@@ -250,8 +250,9 @@ class Env {
   }
 }
 
-class PuppyError {
-  public constructor() {
+class CompileCancelationError {
+  constructor() {
+    //uper();
   }
 }
 
@@ -303,27 +304,15 @@ class Transpiler {
   }
 
   public conv(env: Env, t: ParseTree, out: string[]) {
-    //console.log(t.toString());
-    try {
+    if ((this as any)[t.tag] !== undefined) {
       return (this as any)[t.tag](env, t, out);
     }
-    catch (e) {
-      if (e instanceof PuppyError) {
-        throw e;
-      }
-      if ((this as any)[t.tag] === undefined) {
-        //console.log(e);
-        env.perror(t, 'UndefinedParseTree');
-        return this.skip(env, t, out);
-      }
-      throw e;
-    }
+    env.perror(t, 'UndefinedParseTree');
+    return this.skip(env, t, out);
   }
 
   public skip(env: Env, t: ParseTree, out: string[]): Type {
-    throw new PuppyError();
-    // out.push('undefined');
-    // return Types.Any;
+    throw new CompileCancelationError();
   }
 
   public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
@@ -429,7 +418,7 @@ class Transpiler {
         out.push(out2.join(''))
       }
       catch (e) {
-        if (!(e instanceof PuppyError)) {
+        if (!(e instanceof CompileCancelationError)) {
           throw e;
         }
       }
@@ -1012,18 +1001,25 @@ class Transpiler {
 
 const parser = generate('Source');
 
-const transpile = (s: string) => {
-  const t = parser(s);
-  const env = new Env();
-  env.from_import(PuppyModules['python']);
-  const ts = new Transpiler();
-  const out: string[] = [];
-  ts.conv(env, t, out);
-  //console.log('DEBUG: ERROR LOGS')
-  //console.log(JSON.stringify(env.get('@logs')));
-  //console.log(env.get('@logs'));
-  return out.join('')
-}
+// const transpile = (s: string) => {
+//   const t = parser(s);
+//   const env = new Env();
+//   env.from_import(PuppyModules['python']);
+//   const ts = new Transpiler();
+//   const out: string[] = [];
+//   try {
+//     ts.conv(env, t, out);
+//   }
+//   catch (e) {
+//     if (!(e instanceof PuppyError)) {
+//       throw e;
+//     }
+//   }
+//   //console.log('DEBUG: ERROR LOGS')
+//   //console.log(JSON.stringify(env.get('@logs')));
+//   //console.log(env.get('@logs'));
+//   return out.join('')
+// }
 
 export type Source = {
   source: string;
@@ -1037,7 +1033,14 @@ export const compile = (s: Source): PuppyCode => {
   env.from_import(PuppyModules['']);
   const ts = new Transpiler();
   const out: string[] = [];
-  ts.conv(env, t, out);
+  try {
+    ts.conv(env, t, out);
+  }
+  catch (e) {
+    if (!(e instanceof CompileCancelationError)) {
+      throw e;
+    }
+  }
 
   const jscode = out.join('');
   const main = `
@@ -1077,7 +1080,7 @@ export const utest = (s: string) => {
   if (code.errors.length > 0) {
     return code.errors[0].key;
   }
-  console.log(code.code);
+  //console.log(code.code);
   const ss = code.code.split('\n');
   for (var i = ss.length - 1; i >= 0; i--) {
     var s = ss[i].trim();
