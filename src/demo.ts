@@ -1,6 +1,7 @@
 import { PuppyVM, PuppyCode, PuppyWorld } from './puppyvm/vm';
+//import { PuppyEditor } from './playground/editor';
 
-const DefaultPuppyCode: PuppyCode = {
+const SampleCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
     // world.Rectangle(0, 500, 1000, 100, { isStatic: true });
@@ -39,10 +40,8 @@ const DefaultPuppyCode: PuppyCode = {
         ttl: 5000, fillStyle: world.colors[0]
       });
       //world.print(`hoge hoge hoge hoge ${i}`);
-      yield 200;
+      yield 100;
     }
-    // world.print(world.input('hoge'));
-    // world.print(world.input('hogo'));
     return 0;
   },
   symbols: {},
@@ -53,7 +52,27 @@ const DefaultPuppyCode: PuppyCode = {
   code: '',
 }
 
-const puppy = new PuppyVM(document.body);
+
+const puppy = new PuppyVM(
+  document.getElementById('canvas')!,
+  { code: SampleCode });
+
+const editor = document.getElementById('editor')! as HTMLTextAreaElement;
+
+const playdomino = document.getElementById('playdomino')!;
+playdomino.addEventListener('click', (e) => {
+  console.log(`run ${editor.innerText}`);
+  puppy.load(editor.value);
+}
+// const editor = new PuppyEditor(document.body);
+// editor.setModel(`
+// print('Hello, World')
+// def __keyup__(key, time):
+//   print(key)
+//   print(time)
+// `, "python");
+// editor.addLineHighLight(2, 2);
+// //editor.addLineHighLight(4, 4, 'zenkaku');
 
 // puppy.load(`
 // print('Hello, World')

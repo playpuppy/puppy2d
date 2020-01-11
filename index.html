@@ -1,12 +1,56 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 
 <head>
-  <!-- index.tsの読み込み -->
+  <title>Puppy: A Simple Python for Kids!!</title>
+  <link rel="stylesheet" href="css/normalize.css" />
+  <link rel="stylesheet" href="css/sakura.css" />
   <script src="src/demo.ts" defer></script>
 </head>
 
-<body style="width: 600px; height: 600px">
+<body>
+  <h1>Puppy</h1>
+  <p>
+    <b>Puppy</b> is a programming language designed for first programming courses.
+  </p>
+
+  <p>
+    At a glance, Puppy is:
+    <ul>
+      <li><b>Simple</b>: Puppy is a restricted subset of Python 3,
+        which can easily be run on a Web browser.</li>
+      <li><b>Familiar</b>: Puppy programs can be executed directly in a Python (3.6+).
+        It can also be edited using standard Python editors.</li>
+      <li><b>Fun</b>:
+        Puppy program runs with Physics simulation (using puppy2d).
+        Even small code enables interesting behaviors.
+      </li>
+    </ul>
+  </p>
+
+  <h2 id="contact">Try Puppy</h2>
+  <p>
+    <button id='playdomino'>Domino</button>
+  </p>
+  <textarea id='editor' class="example" style="width: 600px; height: 200px">
+from puppy2d import *
+print('Hello')
+</textarea>
+  <div id='canvas' style="width: 600px; height: 600px"></div>
+
+  <h2 id="contact">Contact for Instructors</h2>
+
+  <!--
+  A paper on Puppy was presented at the 2019 ACM SIGPLAN SPLASH-E symposium in Athens, Greece.
+  -->
+  <p>
+    Puppy has been designed by Kimio Kuramitsu,
+    with substantial contributions from Taku Tada, Makoto Sakane, and Yuka Akinobu.
+  </p>
+
+  <p>Want to use Puppy to run your own programming course?
+    Send an email to <a href="mailto:instructors@playpuppy.org">instructors@playpuppy.org</a>.</p>
+
 </body>
 
 </html>

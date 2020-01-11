@@ -291,7 +291,7 @@ export class PuppyRender {
 
     this.mouseWheel = (event: any) => {
       mouse.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
-      event.preventDefault();
+      //      event.preventDefault();
     };
 
     // var updateGravity = function (event) {
@@ -326,7 +326,7 @@ export class PuppyRender {
       element.addEventListener('mousedown', this.mouseDown);
       element.addEventListener('mouseup', this.mouseUp);
 
-      element.addEventListener('mousewheel', this.mouseWheel);
+      //element.addEventListener('mousewheel', this.mouseWheel);
       // element.addEventListener('DOMMouseScroll', this.mouseWheel);
 
       element.addEventListener('touchmove', this.mouseMove);
@@ -345,7 +345,7 @@ export class PuppyRender {
       element.removeEventListener('mousedown', this.mouseDown);
       element.removeEventListener('mouseup', this.mouseUp);
 
-      element.removeEventListener('mousewheel', this.mouseWheel);
+      // element.removeEventListener('mousewheel', this.mouseWheel);
       // element.addEventListener('DOMMouseScroll', this.mouseWheel);
 
       element.removeEventListener('touchmove', this.mouseMove);

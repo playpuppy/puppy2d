@@ -34,7 +34,7 @@ export const SourceError = (t: ParseTree, key: string, params?: any[]) => {
 
 export type PuppyCode = {
   world: any;
-  main: (puppy: any, codemap: any[]) => IterableIterator<number>;
+  main: (puppy: any, codemap: any[]) => IterableIterator<any>;
   errors: SourceEvent[];
   warnings: SourceEvent[];
   notices: SourceEvent[];

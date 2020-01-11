@@ -6,6 +6,7 @@ import { compile as PuppyCompile } from '../lang/compiler';
 import { LineEvent, OutputEvent, ActionEvent, newEventId } from '../puppyos/events';
 import { PuppyOS, PuppyEventHandler } from '../puppyos/os';
 import { PuppyWorld } from './world';
+import { PuppyStopify } from './stopify';
 
 export { PuppyOS } from '../puppyos/os';
 export { PuppyWorld } from './world';
@@ -14,37 +15,6 @@ export { PuppyCode } from '../lang/code';
 const DefaultPuppyCode: PuppyCode = {
   world: {},
   main: function* (world: PuppyWorld) {
-    // world.Rectangle(0, 500, 1000, 100, { isStatic: true });
-    // world.Rectangle(0, -500, 1000, 100, { isStatic: true });
-    // world.Rectangle(500, 0, 100, 1000, { isStatic: true });
-    // world.Rectangle(-500, 0, 100, 1000, { isStatic: true });
-
-    // world.setGravity(0, -1.0);
-    // world.newObject({
-    //   shape: 'newtonsCradle',
-    //   position: new Vector(0, 0),
-    //   margin: 10,
-    //   columns: 3,
-    //   //part: { shape: 'rectangle' },
-    // });
-    // world.newObject({
-    //   shape: 'array',
-    //   position: new Vector(0, 0),
-    //   margin: 10,
-    //   part: { shape: 'circle', restitution: 1.0 },
-    // });
-    // const sensor: any = world.Rectangle(-200, 200, 260, 260, { frictionAir: 1, isSensor: true, isStatic: true });
-    // sensor.moveover = (bodyA: Body, bodyB: Body) => {
-    //   console.log(bodyA);
-    //   console.log(bodyB);
-    // }
-    // world.Variable('TIME', 320, -400, { width: 260 });
-    // world.Variable('MOUSE', 320, -440, { width: 260 });
-    // world.vars['__anime__'] = (t: number) => {
-    //   if (t === 0)
-    //     world.print(`${t}`);
-    // }
-    //world.Rectangle(0, 0, 100, 100, { texture: 'bird.png' })
     for (var i = 0; i < 6; i++) {
       world.plot(Math.sin(i) * 80, Math.cos(i) * 80, {
         ttl: 5000, fillStyle: world.colors[0]
@@ -52,8 +22,18 @@ const DefaultPuppyCode: PuppyCode = {
       //world.print(`hoge hoge hoge hoge ${i}`);
       yield 200;
     }
-    // world.print(world.input('hoge'));
-    // world.print(world.input('hogo'));
+    world.vars['f'] = function* (a: number) {
+      for (var i = a; i < 6; i++) {
+        yield (yield () => world.vars['g'](0)) + i * 10;
+      }
+      return 'Hi';
+    }
+    world.vars['g'] = function* (a: number) {
+      yield 50;
+      yield 50;
+      return 100;
+    }
+    console.log(yield () => world.vars['f'](1));
     return 0;
   },
   symbols: {},
@@ -108,14 +88,16 @@ export class PuppyRuntimeError extends Error {
   }
 }
 
+
 export class PuppyVM extends PuppyEventHandler {
   element: HTMLElement;
   os: PuppyOS;
   code: PuppyCode;
+  world: PuppyWorld | null = null;
   engine: Engine | null = null;
   render: PuppyRender | null = null;
   runner: Runner | null = null;
-  runtime: IterableIterator<number> | null = null;
+  runtime: PuppyStopify | null = null;
   private syscalls: any;
 
   public constructor(element: HTMLElement, options: any = {}) {
@@ -189,41 +171,16 @@ export class PuppyVM extends PuppyEventHandler {
 
   public eval(source: string, variable?: string) {
     const compiled = this.compile(source);
-    const world = this.engine === null
-      ? new PuppyWorld(this, compiled) : this.engine.world as PuppyWorld;
-    const runtime = compiled.main(world, compiled.codemap);
-    for (var i = 0; i < 100; i += 1) {
-      const res = runtime.next();
-      if (res.done) {
-        break;
-      }
-    }
+    const world = this.world === null
+      ? new PuppyWorld(this, compiled) : this.world as PuppyWorld;
+    const stopify = new PuppyStopify(false);
+    stopify.start(compiled.main(this.world, compiled.codemap));
     return variable === undefined ? world.vars : world.vars[variable];
   }
 
-  private paused = false;
+  // control machine 
 
-  public start() {
-    this.stop();
-    if (this.engine === null) {
-      const world = new PuppyWorld(this, this.code);
-      this.engine = new Engine(world);
-      this.render = new PuppyRender(this.engine, this.element);
-      this.runner = new Runner();
-      this.runtime = this.code.main(world, this.code.codemap);
-      const event: ActionEvent = { id: newEventId(), action: 'start', type: 'run' };
-      this.trigger('start', event);
-      this.trigger('action', event);
-
-      /* start */
-      this.paused = false;
-      this.render!.start();  // FIXME
-      Runner.run(this.runner, this.engine);
-      this.execEach(this.runtime);
-    }
-  }
-
-  public stop() {
+  public reset() {
     if (this.engine !== null) {
       this.runtime = null;
       if (this.render !== null) {
@@ -242,64 +199,47 @@ export class PuppyVM extends PuppyEventHandler {
     }
   }
 
-  private execNext(runtime: IterableIterator<number>) {
-    try {
-      var time = 0;
-      while (time === 0) {
-        var res = runtime.next();
-        if (res.done) return -1;
-        time = res.value % 1000;
-        if (time !== 0) {
-          const event: LineEvent = { id: newEventId(), type: 'executed', row: res.value / 1000 };
-          this.trigger('line', event);
-        }
-      }
-      return time;
-    }
-    catch (e) {
-      if (e instanceof PuppyRuntimeError) {
-        e.event.time = this.engine!.timing.timestamp;
-        this.trigger('errors', e.event);
-      }
-      else {
-        this.syslog('debug', e);
-      }
-    }
-  }
+  public start() {
+    this.reset();
+    if (this.engine === null) {
+      this.world = new PuppyWorld(this, this.code);
+      this.engine = new Engine(this.world);
+      this.render = new PuppyRender(this.engine, this.element);
+      this.runner = new Runner();
+      this.runtime = new PuppyStopify();
 
-  private execEach(runtime: IterableIterator<number>) {
-    if (runtime === this.runtime && runtime !== null) {
-      if (this.paused) {
-        setTimeout(() => { this.execEach(runtime) }, 100);
-        return;
-      }
-      const interval = this.execNext(runtime);
-      if (interval === -1) {
+      /* start */
+      this.render!.start();  // FIXME
+      Runner.run(this.runner, this.engine);
+      const ending = () => {
         const engine = this.engine;
         if (engine !== null) {
           const world: any = engine.world;
           world.isStillActive = false;
           setTimeout(() => {
             if (world.isStillActive) {
-              this.execEach(runtime);
+              ending();
             }
             else {
               this.pause();
-              const event: ActionEvent = { id: newEventId(), action: 'end', type: 'run' };
-              this.trigger('end', event);
-              this.trigger('action', event);
             }
           }, 5000);
         }
-        return;
       }
-      setTimeout(() => { this.execEach(runtime) }, interval);
+      this.runtime.start(
+        this.code.main(this.world, this.code.codemap),
+        ending);
+      // this.runtime = this.code.main(world, this.code.codemap);
+      // const event: ActionEvent = { id: newEventId(), action: 'start', type: 'run' };
+      // this.trigger('start', event);
+      // this.trigger('action', event);
+      // this.execEach(this.runtime);
     }
   }
 
   public pause(message = '▶︎') {
     if (this.engine !== null) {
-      this.paused = true;
+      this.runtime?.pause();
       this.render!.stop(message); // FIXME
       Runner.stop(this.runner!);
       const event: ActionEvent = { id: newEventId(), action: 'pause', type: 'run' };
@@ -311,8 +251,8 @@ export class PuppyVM extends PuppyEventHandler {
   public restart(message = '‖') {
     if (this.engine !== null) {
       this.render!.start(message);
-      this.paused = false;
       Runner.start(this.runner!, this.engine);
+      this.runtime?.run();
       const event: ActionEvent = { id: newEventId(), action: 'restart', type: 'run' };
       //this.trigger('start', event);
       this.trigger('action', event);
@@ -322,58 +262,103 @@ export class PuppyVM extends PuppyEventHandler {
     }
   }
 
-  public step() {
-    if (this.engine === null) {
-      this.start();
-      this.pause();
-    }
-    if (this.engine !== null && this.runtime !== null) {
-      this.render!.start();
-      // this.paused = false;
-      // Runner.start(this.runner!, this.engine);
-      var time = 1;
-      var row = 0;
-      while (time !== 0) {
-        var res = this.runtime.next();
-        if (res.done) {
-          this.stop();
-          return;
-        }
-        time = res.value % 1000;
-        for (var delta = 0; delta >= time; delta += 1000 / 60) {
-          this.engine.update();
-        }
-        row = res.value / 1000;
-      }
-      const event: LineEvent = { id: newEventId(), type: 'next', row: row }
-      this.trigger('line', event);
-      this.pause();
-    }
-  }
-
-  // eval
-
-  public syscall(name: string, data: any) {
-    const world = this.engine!.world as PuppyWorld;
-    world.vars['_'] = null;
-    this.pause('');
-    return this.syscall_(world, name, data);
-  }
-
-  async syscall_(world: PuppyWorld, name: string, data: any) {
-    await this.syscalls[name](data, (res: any) => {
-      world.vars['_'] = res;
+  public syscall(data: any) {
+    this.pause();
+    var executed = false;
+    var retval: any = undefined;
+    this.syscalls[name](data, (res: any) => {
+      retval = res;
+      executed = true;
       this.restart();
-    })
-    while (world.vars['_'] === null) {
-      await this.wait();
+    });
+    const sync = function* () {
+      while (!executed) {
+        yield 300;
+      }
+      return retval;
     }
-    return await world.vars['_'];
+    return sync();
   }
 
-  private async wait(msec = 100) {
-    await new Promise(resolve => setTimeout(resolve, msec));
-  }
+  // private execNext(runtime: IterableIterator<number>) {
+  //   try {
+  //     var time = 0;
+  //     while (time === 0) {
+  //       var res = runtime.next();
+  //       if (res.done) return -1;
+  //       time = res.value % 1000;
+  //       if (time !== 0) {
+  //         const event: LineEvent = { id: newEventId(), type: 'executed', row: res.value / 1000 };
+  //         this.trigger('line', event);
+  //       }
+  //     }
+  //     return time;
+  //   }
+  //   catch (e) {
+  //     if (e instanceof PuppyRuntimeError) {
+  //       e.event.time = this.engine!.timing.timestamp;
+  //       this.trigger('errors', e.event);
+  //     }
+  //     else {
+  //       this.syslog('debug', e);
+  //     }
+  //   }
+  // }
+
+  // private execEach(runtime: IterableIterator<number>) {
+  //   if (runtime === this.runtime && runtime !== null) {
+  //     if (this.paused) {
+  //       setTimeout(() => { this.execEach(runtime) }, 100);
+  //       return;
+  //     }
+  //     const interval = this.execNext(runtime);
+  //     if (interval === -1) {
+  //       const engine = this.engine;
+  //       if (engine !== null) {
+  //         const world: any = engine.world;
+  //         world.isStillActive = false;
+  //         setTimeout(() => {
+  //           if (world.isStillActive) {
+  //             this.execEach(runtime);
+  //           }
+  //           else {
+  //             this.pause();
+  //             const event: ActionEvent = { id: newEventId(), action: 'end', type: 'run' };
+  //             this.trigger('end', event);
+  //             this.trigger('action', event);
+  //           }
+  //         }, 5000);
+  //       }
+  //       return;
+  //     }
+  //     setTimeout(() => { this.execEach(runtime) }, interval);
+  //   }
+  // }
+
+
+  // // eval
+
+  // public syscall(name: string, data: any) {
+  //   const world = this.engine!.world as PuppyWorld;
+  //   world.vars['_'] = null;
+  //   this.pause('');
+  //   return this.syscall_(world, name, data);
+  // }
+
+  // async syscall_(world: PuppyWorld, name: string, data: any) {
+  //   await this.syscalls[name](data, (res: any) => {
+  //     world.vars['_'] = res;
+  //     this.restart();
+  //   })
+  //   while (world.vars['_'] === null) {
+  //     await this.wait();
+  //   }
+  //   return await world.vars['_'];
+  // }
+
+  // private async wait(msec = 100) {
+  //   await new Promise(resolve => setTimeout(resolve, msec));
+  // }
 
 }
 
