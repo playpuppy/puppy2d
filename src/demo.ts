@@ -63,7 +63,7 @@ const playdomino = document.getElementById('playdomino')!;
 playdomino.addEventListener('click', (e) => {
   console.log(`run ${editor.innerText}`);
   puppy.load(editor.value);
-}
+});
 // const editor = new PuppyEditor(document.body);
 // editor.setModel(`
 // print('Hello, World')
