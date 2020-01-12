@@ -169,6 +169,22 @@ class Env {
     return this.get('@func') !== undefined;
   }
 
+  public isSync() {
+    const funcData = this.get('@func');
+    if (funcData) {
+      return funcData.isSync;
+    }
+    return true;
+  }
+
+  public setSync() {
+    const funcData = this.get('@func');
+    if (funcData) {
+      funcData.isSync = true;
+    }
+    return true;
+  }
+
   public foundFunc(t: ParseTree, symbol: Symbol) {
     if (symbol.isMatter) {
       const data = this.get('@func');
@@ -218,15 +234,21 @@ class Env {
 
   private prevRow = -1;
 
-  public emitYield(t: ParseTree, out: string[]) {
+  emitYield(t: ParseTree, out: string[]) {
     if (!this.inFunc()) {
       const indent = this.get('@indent');
-      const row = t.begin()[1] * 1000 + 100;
+      const row = t.begin()[1] * 1000 + 200;
       if (this.prevRow !== row) {
         out.push(`${indent}yield ${row};\n`);
         this.prevRow = row;
       }
     }
+  }
+
+  emitSyncYield(t: ParseTree, out: string[]) {
+    const indent = this.get('@indent');
+    const row = t.begin()[1] * 1000 + 0;
+    out.push(`${indent}if(puppy.pc++ % 16 === 0) yield ${row};\n`);
   }
 
   public emitAutoYield(t: ParseTree, out: string[]) {
@@ -414,7 +436,8 @@ class Transpiler {
         env.emitYield(subtree, out2);
         out2.push(env.get('@indent'))
         this.conv(env, subtree, out2);
-        env.emitAutoYield(subtree, out2);
+        out2.push(`\n`);
+        //env.emitAutoYield(subtree, out2);
         out.push(out2.join(''))
       }
       catch (e) {
@@ -426,17 +449,40 @@ class Transpiler {
     return Types.Void;
   }
 
+  private syncYield(cond: ParseTree | any, body: ParseTree | any, ) {
+    body.syncYield = cond;
+  }
+
+  private preYield(cond: ParseTree | any, body: ParseTree | any) {
+    body.preYield = cond;
+  }
+
+  private emitPreYield(env: Env, body: ParseTree | any, out: string[]) {
+    if (body.syncYield) {
+      if (env.inFunc()) {
+        env.emitSyncYield(body.syncYield, out);
+      }
+      else {
+        env.emitYield(body.syncYield, out);
+      }
+    }
+    if (body.preYield) {
+      env.emitYield(body.preYield, out);
+    }
+  }
+
   public Block(penv: Env, t: ParseTree, out: string[]) {
     const indent = INDENT + penv.get('@indent');
     const env = new Env(penv);
     env.set('@indent', indent);
     out.push('{\n');
-    env.emitYield(t, out);
+    this.emitPreYield(env, t, out);
     for (const subtree of t.subs()) {
       env.emitYield(subtree, out);
       out.push(indent);
       this.conv(env, subtree, out);
-      env.emitAutoYield(subtree, out);
+      out.push(`\n`);
+      //env.emitAutoYield(subtree, out);
     }
     out.push(penv.get('@indent') + '}')
     return Types.Void;
@@ -453,18 +499,23 @@ class Transpiler {
     return ty;
   }
 
+
   public IfStmt(env: Env, t: ParseTree | any, out: string[]) {
     out.push('if (');
     this.check(Types.Bool, env, t['cond'], out);
     out.push(') ');
+    var cond = t.cond;
+    this.preYield(cond, t.then);
     this.conv(env, t['then'], out);
     if (t['elif'] !== undefined) {
       for (const stmt of t['elif'].subs()) {
+        cond = stmt.cond;
         this.conv(env, stmt, out);
       }
     }
     if (t['else'] !== undefined) {
       out.push('else ');
+      this.preYield(cond, t.else);
       this.conv(env, t['else'], out);
     }
     return Types.Void;
@@ -474,6 +525,7 @@ class Transpiler {
     out.push('else if (');
     this.check(Types.Bool, env, t['cond'], out);
     out.push(') ');
+    this.preYield(t.cond, t.then);
     this.conv(env, t['then'], out);
     return Types.Void;
   }
@@ -487,18 +539,22 @@ class Transpiler {
     const lenv = new Env(env);
     lenv.setInLoop();
     lenv.declVar(name, ty);
+    this.preYield(t.each, t.body);
     this.conv(lenv, t['body'], out);
-    env.emitYield(t, out);
+    //env.emitYield(t, out);
     return Types.Void
   }
 
   public WhileStmt(env: Env, t: ParseTree | any, out: string[]) {
+    env.setSync();
     out.push('while (');
     this.check(Types.Bool, env, t['cond'], out);
     out.push(') ');
+    this.syncYield(t.cond, t.body);
     this.conv(env, t['body'], out);
     return Types.Void
   }
+
 
 
   public FuncDecl(env: Env, t: ParseTree | any, out: string[]) {
@@ -511,6 +567,7 @@ class Transpiler {
       'return': types[0],
       'hasReturn': false,
       'isMatter': false,
+      'isSync': false,
     });
     for (const p of t['params'].subs()) {
       const pname = p.tokenize('name');
@@ -534,10 +591,16 @@ class Transpiler {
       }
     }
     const symbol = env.declVar(name, funcType);
-    const defun = symbol.isGlobal() ? '' : 'var ';
-    out.push(`${defun}${symbol.code} = (${names.join(', ')}) => `)
-    this.conv(lenv, t['body'], out);
     symbol.isMatter = funcData['isMatter'];
+    symbol.isSync = funcData['isSync'];
+    const defun = symbol.isGlobal() ? '' : 'var ';
+    if (symbol.isSync) {
+      out.push(`${defun}${symbol.code} = function* (${names.join(', ')})`)
+    }
+    else {
+      out.push(`${defun}${symbol.code} = (${names.join(', ')}) => `)
+    }
+    this.conv(lenv, t['body'], out);
     if (!funcData['hasReturn']) {
       types[0].accept(Types.Void, true);
     }
@@ -745,12 +808,15 @@ class Transpiler {
       ]);
       return this.skip(env, t, out);
     }
+    if (symbol.isSync) {
+      env.setSync();
+      out.push('(yield ()=>')
+    }
     out.push(symbol.code)
     out.push('(')
     if (funcType.hasAlpha()) {
       funcType = funcType.toVarType({ env, ref: t });
     }
-
     for (var i = 0; i < args.length; i += 1) {
       if (!(i < funcType.psize())) {
         env.pwarn(args[i], 'TooManyArguments');
@@ -771,6 +837,9 @@ class Transpiler {
       }
     }
     out.push(')');
+    if (symbol.isSync) {
+      out.push(')')
+    }
     env.foundFunc(t, symbol);
     return funcType.rtype();
   }

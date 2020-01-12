@@ -5,6 +5,7 @@ export class Symbol {
   public ty: Type;
   public isMatter: boolean = false;
   public isMutable: boolean = false;
+  public isSync = false;
   public constructor(code: string, ty: Type, options?: any) {
     this.code = code;
     this.ty = ty.realType();
@@ -18,12 +19,23 @@ export class Symbol {
   }
 }
 
-const sym = (code: string, ty: Type, isMatter = false, isMutable = false) => {
-  if (isMutable === true || isMatter === true) {
-    return new Symbol(code, ty, { isMatter, isMutable });
-  }
+const sym = (code: string, ty: Type) => {
   return new Symbol(code, ty);
 }
+
+const sync = (code: string, ty: Type) => {
+  const sym = new Symbol(code, ty);
+  sym.isSync = true;
+  return sym;
+}
+
+const mut = (code: string, ty: Type) => {
+  const sym = new Symbol(code, ty);
+  sym.isMutable = true;
+  return sym;
+}
+
+
 const tFuncIntInt = ts.func(ts.Int, ts.Int);
 const tFuncIntIntInt = ts.func(ts.Int, ts.Int, ts.Int);
 const tFuncFloatFloat = ts.func(ts.Float, ts.Float);
@@ -132,8 +144,8 @@ const import_python: { [key: string]: Symbol | undefined } = {
   'help': undefined,
   'hex': undefined,
   'id': undefined,
-  'input@0': sym('puppy.input', ts.func(ts.String)),
-  'input': sym('puppy.input', ts.func(ts.String, ts.String)),
+  'input@0': sync('puppy.input', ts.func(ts.String)),
+  'input': sync('puppy.input', ts.func(ts.String, ts.String)),
   'int': sym('lib.int', ts.func(ts.Int, ts.union(ts.Bool, ts.String, ts.Int))),
   'int@2': sym('lib.int', ts.func(ts.Int, ts.String, ts.Int)),
   'isinstance': sym('lib.isinstance', ts.func(ts.Bool, ts.Any, ts.Any)),
@@ -155,11 +167,11 @@ const import_python: { [key: string]: Symbol | undefined } = {
   'ord': undefined,
   'pow': sym('Math.pow', tFuncFloatFloatFloat),
 
-  'print@0': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option), Visual),
-  'print': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option), Visual),
-  'print@2': sym('puppy.print2', ts.func(ts.Void, ts.Any, ts.Any, ts.Option), Visual),
-  'print@3': sym('puppy.print3', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Option), Visual),
-  'print@4': sym('puppy.print4', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Any, ts.Option), Visual),
+  'print@0': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option)),
+  'print': sym('puppy.print1', ts.func(ts.Void, ts.Any, ts.Option)),
+  'print@2': sym('puppy.print2', ts.func(ts.Void, ts.Any, ts.Any, ts.Option)),
+  'print@3': sym('puppy.print3', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Option)),
+  'print@4': sym('puppy.print4', ts.func(ts.Void, ts.Any, ts.Any, ts.Any, ts.Any, ts.Option)),
   'property': undefined,
   //
   'range@1': sym('lib.range1', ts.func(ts.ListInt, ts.Int)),
@@ -215,15 +227,15 @@ const tFuncBodyBody = ts.func(ts.Void, ts.Matter, ts.Matter);
 const import_puppy2d: { [key: string]: Symbol } = {
   // # クラス
   'World': sym('puppy.World', tFuncShape),
-  'Object': sym('puppy.Object', tFuncShape, Visual),
-  'Rectangle': sym('puppy.Rectangle', tFuncShape4, Visual),
-  'Rectangle@3': sym('puppy.Rectangle3', tFuncShape3, Visual),
-  'Rectangle@2': sym('puppy.Rectangle2', tFuncShape2, Visual),
-  'Rectangle@0': sym('puppy.Rectangle0', tFuncShape, Visual),
-  'Circle': sym('puppy.Circle', tFuncShape3, Visual),
-  'Circle@2': sym('puppy.Circle2', tFuncShape2, Visual),
-  'Circle@0': sym('puppy.Circle0', tFuncShape, Visual),
-  'Body': sym('puppy.Body', tFuncShape, Visual),
+  'Object': sym('puppy.Object', tFuncShape),
+  'Rectangle': sym('puppy.Rectangle', tFuncShape4),
+  'Rectangle@3': sym('puppy.Rectangle3', tFuncShape3),
+  'Rectangle@2': sym('puppy.Rectangle2', tFuncShape2),
+  'Rectangle@0': sym('puppy.Rectangle0', tFuncShape),
+  'Circle': sym('puppy.Circle', tFuncShape3),
+  'Circle@2': sym('puppy.Circle2', tFuncShape2),
+  'Circle@0': sym('puppy.Circle0', tFuncShape),
+  'Body': sym('puppy.Body', tFuncShape),
   'Variable': sym('puppy.Variable', tFuncShape5),
   'Constraint': sym('puppy.Constraint', tFuncShape),
   // world

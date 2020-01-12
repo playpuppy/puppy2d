@@ -217,6 +217,7 @@ const PuppyObjects: { [key: string]: (world: PuppyWorld, options: any) => any } 
 export class PuppyWorld extends World {
   public vm: any;
   public lib: LibPython;
+  public pc = 0;  // used in if(puppy.pc++ % 16===0) yield 0;
   public vars: any = {};
   public colors: string[] = ['#000000', '#ff0000', '#00ff00', '#0000ff'];
   public frictionAir = 0.1;
@@ -232,6 +233,7 @@ export class PuppyWorld extends World {
   public wireframes = false;
   public tangible = false;
   public gyroscope = false;
+  public isStillActive = true;
 
   public constructor(vm: any, options: any = {}) {
     super(Object.assign(options, { id: 0 }));
@@ -359,6 +361,7 @@ export class PuppyWorld extends World {
         this.removeBody(body);
         return false;
       }
+      world.isStillActive = true;
       return true;
     });
   }
@@ -523,10 +526,14 @@ export class PuppyWorld extends World {
 
   // from puppy vm
 
+  buffers: string[] = [];
+  buffer_index = 0;
+
   public input(text: string = '') {
-    // if(bufferをみる) {
-    //   return buffer;
-    // }
+    if (this.buffer_index < this.buffers.length) {
+      const line = this.buffers[this.buffer_index];
+      return (function* () { return line })();
+    }
     return this.vm.syscall('input', { text: text });
   }
 
