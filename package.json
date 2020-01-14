@@ -1,6 +1,6 @@
 {
   "name": "@playpuppy/puppy2d",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Puppy for 2D",
   "main": "./dist/index.js",
   "scripts": {
