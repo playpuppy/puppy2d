@@ -115,6 +115,7 @@ class Env {
     const e = SourceError(t, key, params);
     const logs = this.getroot('@errors');
     logs.push(e);
+    console.log(e);
     return e;
   }
 
@@ -179,6 +180,7 @@ class Env {
 
   public setSync() {
     const funcData = this.get('@func');
+    console.log(funcData);
     if (funcData) {
       funcData.isSync = true;
     }
@@ -284,9 +286,9 @@ const SupportedOperators: { [key: string]: string } = {
   'and': '&&', 'or': '||', 'not': '!',
   '<': '<', '>': '>', '<=': '<=', '>=': '>=',
   '==': '==', '!=': '!=', 'in': 'in',
-  '+': '+', '-': '-', '*': '*', '//': '//', '/': '/', '**': '**',
+  '+': '+', '-': '-', '*': '*', '//': '//', '/': '/', '%': '%', '**': '**',
   '<<': '<<', '>>': '>>', '|': '|', '&': '&', '^': '^',
-  '+=': '+', '-=': '-', '*=': '*', '//=': '//', '/=': '/',
+  '+=': '+', '-=': '-', '*=': '*', '//=': '//', '/=': '/', '%=': '%',
   '<<=': '<<', '>>=': '>>', '|=': '|', '&=': '&', '^=': '^',
 }
 
@@ -591,20 +593,23 @@ class Transpiler {
       }
     }
     const symbol = env.declVar(name, funcType);
+    const out2: string[] = [];
+    this.conv(lenv, t['body'], out2);
+    console.log(funcData);
     symbol.isMatter = funcData['isMatter'];
     symbol.isSync = funcData['isSync'];
     const defun = symbol.isGlobal() ? '' : 'var ';
     if (symbol.isSync) {
-      out.push(`${defun}${symbol.code} = function* (${names.join(', ')})`)
+      out.push(`${defun}${symbol.code} = function* (${names.join(', ')}) ${out2.join('')}`)
     }
     else {
-      out.push(`${defun}${symbol.code} = (${names.join(', ')}) => `)
+      out.push(`${defun}${symbol.code} = (${names.join(', ')}) => ${out2.join('')}`)
     }
-    this.conv(lenv, t['body'], out);
+    //this.conv(lenv, t['body'], out);
     if (!funcData['hasReturn']) {
       types[0].accept(Types.Void, true);
     }
-    //console.log(`DEFINED ${name} :: ${funcType}`)
+    console.log(`DEFINED ${name} :: ${funcType}`)
     return Types.Void;
   }
 

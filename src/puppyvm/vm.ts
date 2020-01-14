@@ -51,10 +51,10 @@ const initSyscalls = (element: HTMLElement, options: any) => {
     //vars['_'] = (); yield -1; x = vars['']
     console.log(`defaultInput`);
     console.log(element);
-    element.style.position = 'absolute'; // FIXME
+    //element.style.position = 'absolute'; // FIXME
     const form = document.createElement('form');
-    form.style.position = 'absolute';
-    form.style.top = '10px';
+    form.style.position = 'relative';
+    form.style.top = '-50px';
     form.onsubmit = () => {
       const value = input.value;
       form.style.display = 'none';
@@ -185,21 +185,24 @@ export class PuppyVM extends PuppyEventHandler {
   // control machine 
 
   public reset() {
-    if (this.engine !== null) {
+    if (this.runtime !== null) {
+      this.runtime.pause();
       this.runtime = null;
-      if (this.render !== null) {
-        this.render.stop();
-        this.render.clear();
-        this.render = null;
-      }
-      if (this.runner !== null) {
-        Runner.stop(this.runner);
-        this.runner = null;
-      }
+    }
+    if (this.render !== null) {
+      this.render.stop();
+      this.render.clear();
+      this.render = null;
+    }
+    if (this.runner !== null) {
+      Runner.stop(this.runner);
+      this.runner = null;
+    }
+    if (this.engine !== null) {
       this.engine.clear();
       this.engine = null;
-      const event: ActionEvent = { id: newEventId(), type: 'dispose', action: 'end' };
-      this.trigger('action', event);
+      // const event: ActionEvent = { id: newEventId(), type: 'dispose', action: 'end' };
+      // this.trigger('action', event);
     }
   }
 
