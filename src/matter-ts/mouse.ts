@@ -113,7 +113,7 @@ export class Mouse {
 
       this.mousewheel = (event: any) => {
         this.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
-        event.preventDefault();
+        //event.preventDefault();
       };
       this.setElement(this.element);
     }
@@ -132,8 +132,8 @@ export class Mouse {
     element.addEventListener('mousedown', this.mousedown);
     element.addEventListener('mouseup', this.mouseup);
 
-    element.addEventListener('mousewheel', this.mousewheel);
-    element.addEventListener('DOMMouseScroll', this.mousewheel);
+    //element.addEventListener('mousewheel', this.mousewheel);
+    //element.addEventListener('DOMMouseScroll', this.mousewheel);
 
     element.addEventListener('touchmove', this.mousemove);
     element.addEventListener('touchstart', this.mousedown);
