@@ -272,6 +272,13 @@ class Env {
     // }
     return 0;
   }
+
+  checkImmutable(t: ParseTree, symbol: Symbol | null) {
+    if (symbol === null || !symbol.isMutable) {
+      this.perror(t, 'Immutable');
+      throw new CompileCancelationError();
+    }
+  }
 }
 
 class CompileCancelationError {
@@ -581,10 +588,7 @@ class Transpiler {
     const funcType = Types.func(...types);
     const defined = env.getSymbol(name);
     if (defined !== undefined) {
-      if (!defined.isMutable) {
-        env.perror(t.name, 'RedefinedImmutable');
-        return this.skip(env, t, out);
-      }
+      env.checkImmutable(t.name, defined);
       if (defined.ty.accept(funcType, true)) {
         env.perror(t.name, 'TypeError', [
           '@req', `${defined.ty}`, '@given', `${funcType}`,
@@ -677,19 +681,24 @@ class Transpiler {
   }
 
   public VarDecl(env: Env, t: ParseTree | any, out: string[]) {
-    const left = t['left'] as ParseTree;
+    const left = t.left as ParseTree;
     if (left.tag === 'Name') {
       const name = left.tokenize();
-      var symbol = env.get(name) as Symbol;
-      if (symbol === undefined || (env.inFunc() && symbol.isGlobal())) {
+      const symbol = env.getSymbol(name);
+      if (symbol !== undefined) {
+        env.checkImmutable(left, symbol);
+        out.push(`${symbol.code} = `);
+        this.check(symbol.ty, env, t.right, out);
+      }
+      else {
         const ty = env.varType(left);
         const out1: string[] = [];
-        this.check(ty, env, t['right'], out1);
-        symbol = env.declVar(name, ty);
-        const qual = symbol.isGlobal() ? '' : 'var ';
-        out.push(`${qual}${symbol.code} = ${out1.join('')}`);
-        return Types.Void;
+        this.check(ty, env, t.right, out1);
+        const symbol1 = env.declVar(name, ty);
+        const qual = symbol1.isGlobal() ? '' : 'var ';
+        out.push(`${qual}${symbol1.code} = ${out1.join('')}`);
       }
+      return Types.Void;
     }
     return this.conv(env, this.asSetter(left, t['right']), out);
   }
@@ -713,15 +722,12 @@ class Transpiler {
 
   public SetName(env: Env, t: ParseTree, out: string[]) {
     const name = t.tokenize();
-    const symbol = env.get(name) as Symbol;
+    const symbol = env.getSymbol(name);
     if (symbol === undefined) {
       env.perror(t, 'UndefinedName');
       return this.skip(env, t, out);
     }
-    if (!symbol.isMutable) {
-      env.perror(t, 'Immutable');
-      return this.skip(env, t, out);
-    }
+    env.checkImmutable(t, symbol);
     t.tag = 'Name';
     out.push(symbol.code);
     out.push(' = ');
@@ -902,8 +908,7 @@ class Transpiler {
   public SetGetExpr(env: Env, t: ParseTree | any, out: string[]) {
     const recv = t.tokenize('recv');
     if (env.isModule(recv)) {
-      env.perror(t, 'Immutable');
-      return this.skip(env, t, out);
+      env.checkImmutable(t.recv, null);
     }
     t.tag = 'GetExpr'; // see SelfAssign
     const name = t.tokenize('name');

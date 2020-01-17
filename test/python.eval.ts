@@ -104,3 +104,14 @@ test(`2>=1+1`, () => {
   expect(puppy.eval(`x = 2>=1+1`, 'x')).toBe(true);
 });
 
+test(`global scope`, () => {
+  expect(puppy.eval(`
+x = 1
+def f():
+  x = 2
+f()
+`, 'x')).toStrictEqual(2);
+});
+
+
+
