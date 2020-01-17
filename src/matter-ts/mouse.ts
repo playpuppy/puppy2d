@@ -254,7 +254,8 @@ export class MouseConstraint {
       stiffness: 0.1,
       angularStiffness: 1,
       strokeStyle: '#90EE90',
-      lineWidth: 5
+      lineWidth: 5,
+      visible: false,
     });
     this.mouse = mouse;
     this.element = null;
