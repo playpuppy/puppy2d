@@ -6,14 +6,6 @@ import { PuppyVM } from '../src/puppy2d';
 
 const puppy = new PuppyVM(document.body, { jest: true });
 
-test('True', () => {
-  expect(puppy.eval(`x = True`, 'x')).toStrictEqual(true);
-});
-
-test('False', () => {
-  expect(puppy.eval(`x = False`, 'x')).toStrictEqual(false);
-});
-
 test('0xff', () => {
   expect(puppy.eval(`x = 0xff`, 'x')).toStrictEqual(255);
 });
@@ -102,15 +94,6 @@ test(`2<=1+1`, () => {
 
 test(`2>=1+1`, () => {
   expect(puppy.eval(`x = 2>=1+1`, 'x')).toBe(true);
-});
-
-test(`global scope`, () => {
-  expect(puppy.eval(`
-x = 1
-def f():
-  x = 2
-f()
-`, 'x')).toStrictEqual(2);
 });
 
 
