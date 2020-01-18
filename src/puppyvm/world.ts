@@ -71,8 +71,16 @@ const getradius = (options: any, radius = 50): number => {
 const setLabelWidth = (world: PuppyWorld, options: any) => {
   if (options.showing) {
     const key = options.showing;
-    options.textRef = (body: any) => {
-      return body[key];
+    if (key in world.vars) {
+      options.textRef = (body: any) => {
+        return world.vars[key];
+      }
+      options.caption = key;
+    }
+    else {
+      options.textRef = (body: any) => {
+        return body[key];
+      }
     }
     if (!options.fontColor) {
       options.fontColor = '#ffffff';
@@ -113,6 +121,7 @@ const _Polygon = (world: PuppyWorld, options: any, sides?: number, radius?: numb
     path.push(yy);
   }
   initVertices(options, path);
+  setLabelWidth(world, options);
   return options;
 }
 

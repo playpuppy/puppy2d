@@ -416,7 +416,7 @@ class Transpiler {
       while (pos > 0 && inputs.charAt(pos) === '\n') {
         pos--;
       }
-      console.log(`syntax error position: ${t.spos} => ${pos + 1}`)
+      console.log(`TODO: syntax error position: ${t.spos} => ${pos + 1}`)
       t.spos = pos + 1;
     }
     env.perror(t, 'SyntaxError');

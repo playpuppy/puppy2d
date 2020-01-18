@@ -938,18 +938,27 @@ export class PuppyRender {
           c.scale(-1, 1);
         }
         if (ticker.caption) {
-          const width = ticker.width || 200;
-          c.textAlign = 'left';
-          c.fillText(ticker.caption, - width / 2, 0, width * 0.45);
-          c.textAlign = 'right';
-          c.fillText(text, width / 2, -5, width * 0.45);
+          const width = ticker.width;
+          const height = ticker.height;
+          if (height > 80) {
+            c.textAlign = 'left';
+            c.fillText(ticker.caption, - width / 2, -20, width * 0.45);
+            c.textAlign = 'center';
+            c.fillText(text, 0, +20, width * 0.95);
+          }
+          else {
+            c.textAlign = 'left';
+            c.fillText(ticker.caption, - width / 2, 0, width * 0.45);
+            c.textAlign = 'right';
+            c.fillText(text, width / 2, 0, width * 0.50);
+          }
         }
         else {
           const width = ticker.width || 100;
           c.textAlign = ticker.textAlign || 'center';
           // c.fillStyle = '#000000';
           // c.fillText(text, -2, -2, width);
-          c.fillText(text, 0, 0, width);
+          c.fillText(text, 0, 0, width * 0.95);
         }
         //c.rotate(-Math.PI);
         //c.translate(-cx, -cy);
