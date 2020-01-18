@@ -721,7 +721,7 @@ class Transpiler {
         const qual = symbol1.isGlobal() ? '' : 'var ';
         out.push(`${qual}${symbol1.code} = ${out1.join('')}`);
         if (this.autoPuppyMode && symbol1.isGlobal()) {
-          out.push(`;puppy.v('${name}'})`);
+          out.push(`;puppy.v('${name}')`);
         }
       }
       return Types.Void;
