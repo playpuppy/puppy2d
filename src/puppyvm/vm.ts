@@ -103,6 +103,7 @@ export class PuppyVM extends PuppyEventHandler {
   runner: Runner | null = null;
   runtime: PuppyStopify | null = null;
   private syscalls: any;
+  endingCPS: NodeJS.Timeout | null = null;
 
   public constructor(element: HTMLElement, options: any = {}) {
     super();
@@ -185,6 +186,11 @@ export class PuppyVM extends PuppyEventHandler {
   // control machine 
 
   public reset() {
+    if (this.endingCPS !== null) {
+      console.log('TODO: ending CPS');
+      clearTimeout(this.endingCPS);
+      this.endingCPS = null;
+    }
     if (this.runtime !== null) {
       this.runtime.pause();
       this.runtime = null;
@@ -223,7 +229,7 @@ export class PuppyVM extends PuppyEventHandler {
         if (engine !== null) {
           const world: any = engine.world;
           world.isStillActive = false;
-          setTimeout(() => {
+          this.endingCPS = setTimeout(() => {
             if (world.isStillActive) {
               ending();
             }
