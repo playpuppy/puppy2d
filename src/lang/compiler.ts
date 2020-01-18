@@ -333,7 +333,10 @@ const getRightHandType = (op: string, ty: Type) => {
 
 class Transpiler {
 
+  public autoPuppyMode = true;
+
   public constructor() {
+
   }
 
   public conv(env: Env, t: ParseTree, out: string[]) {
@@ -438,6 +441,9 @@ class Transpiler {
     const name = t.tokenize('name');
     const pkg = this.getModule(env, name, t, out);
     env.from_import(pkg); // FIXME
+    if (name === 'puppy2d') {
+      this.autoPuppyMode = false;
+    }
     return Types.Void;
   }
 
@@ -446,6 +452,9 @@ class Transpiler {
     const alias = t.tokenize('alias', name);
     const pkg = this.getModule(env, name, t, out);
     env.setModule(alias, pkg);
+    if (name === 'puppy2d') {
+      this.autoPuppyMode = false;
+    }
     return Types.Void;
   }
 
@@ -711,9 +720,9 @@ class Transpiler {
         const symbol1 = env.declVar(name, ty);
         const qual = symbol1.isGlobal() ? '' : 'var ';
         out.push(`${qual}${symbol1.code} = ${out1.join('')}`);
-        // if (symbol1.isGlobal()) {
-        //   out.push(`;Circle(showing='${name}')`);
-        // }
+        if (this.autoPuppyMode && symbol1.isGlobal()) {
+          out.push(`;puppy.v('${name}'})`);
+        }
       }
       return Types.Void;
     }
@@ -815,7 +824,7 @@ class Transpiler {
 
   public ApplyExpr(env: Env, t: ParseTree | any, out: string[]): Type {
     const name = t.tokenize('name');
-    const symbol = env.get(name) as Symbol;
+    const symbol = env.getSymbol(name);
     if (symbol === undefined) {
       const pkgname = PackageSymbolMap[name];
       if (pkgname !== undefined) {
@@ -824,6 +833,9 @@ class Transpiler {
           '@inferred', pkgname,
           '@fixme', `from ${pkgname} import *`,
         ]);
+        if (pkgname === 'puppy2d') {
+          this.autoPuppyMode = false;
+        }
         return this.ApplySymbolExpr(env, t, name, env.get(name) as Symbol, undefined, out); // Again
       }
     }

@@ -30,6 +30,15 @@ x = add('A','a')
 `, 'x')).toStrictEqual('Aa');
 });
 
+test(`sum(3)`, () => {
+  expect(puppy.eval(`
+def sum0(n):
+  if n <= 1: return n
+  return n + sum0(n-1)
+x = sum0(3)
+`, 'x')).toStrictEqual(6);
+});
+
 test(`global scope`, () => {
   expect(puppy.eval(`
 x = 1

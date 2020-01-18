@@ -940,11 +940,13 @@ export class PuppyRender {
         if (ticker.caption) {
           const width = ticker.width;
           const height = ticker.height;
-          if (height > 80) {
-            c.textAlign = 'left';
-            c.fillText(ticker.caption, - width / 2, -20, width * 0.45);
+          if (height > 79) {
             c.textAlign = 'center';
-            c.fillText(text, 0, +20, width * 0.95);
+            //c.fillStyle = '#666666';
+            c.fillText(ticker.caption, 0, -20, width * 0.45);
+            //c.fillStyle = ticker.fontColor || defaultFontColor;
+            c.textAlign = 'center';
+            c.fillText(text, 0, +20, width * 0.90);
           }
           else {
             c.textAlign = 'left';

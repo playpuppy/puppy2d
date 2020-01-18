@@ -337,6 +337,7 @@ export class PuppyWorld extends World {
 
   Circle0(options: any = {}) {
     options.shape = 'circle';
+    initSize(this, options, 100, 100);
     return this.newBody(options);
   }
 
@@ -370,6 +371,17 @@ export class PuppyWorld extends World {
       options.position = this.newVec(options.width / 2 - 480, this.variableY);
     }
     return this.newBody(options);
+  }
+
+  public v(name: string) {
+    const val = this.vars[name];
+    if (typeof val === 'number' || typeof val === 'boolean') {
+      return this.Circle0({ showing: name, width: 100 });
+    }
+    if (typeof val === 'string') {
+      return this.Rectangle0({ showing: name, width: 100 });
+    }
+    return val;
   }
 
   public print(text: string = '', options: any = {}) {
