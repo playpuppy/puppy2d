@@ -410,6 +410,15 @@ class Transpiler {
   }
 
   public err(env: Env, t: ParseTree, out: string[]) {
+    const inputs = t.inputs;
+    var pos = t.spos - 1;
+    if (pos > 0 && inputs.charAt(pos) === '\n') {
+      while (pos > 0 && inputs.charAt(pos) === '\n') {
+        pos--;
+      }
+      console.log(`syntax error position: ${t.spos} => ${pos + 1}`)
+      t.spos = pos + 1;
+    }
     env.perror(t, 'SyntaxError');
     return this.skip(env, t, out);
   }
