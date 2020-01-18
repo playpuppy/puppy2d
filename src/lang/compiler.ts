@@ -691,6 +691,9 @@ class Transpiler {
 
   public VarDecl(env: Env, t: ParseTree | any, out: string[]) {
     const left = t.left as ParseTree;
+    if (left.tag === 'NameOrNLP') {
+      left.tag = 'Name';
+    }
     if (left.tag === 'Name') {
       const name = left.tokenize();
       const symbol = env.getSymbol(name);
@@ -720,9 +723,20 @@ class Transpiler {
 
   public Name(env: Env, t: ParseTree, out: string[]) {
     const name = t.tokenize();
-    const symbol = env.get(name) as Symbol;
+    const symbol = env.getSymbol(name);
     if (symbol === undefined) {
       env.perror(t, 'UndefinedName');
+      return this.skip(env, t, out);
+    }
+    out.push(symbol.code);
+    return symbol.ty;
+  }
+
+  public NameOrNLP(env: Env, t: ParseTree, out: string[]) {
+    const name = t.tokenize();
+    const symbol = env.getSymbol(name);
+    if (symbol === undefined) {
+      env.perror(t, 'NLKeyValues');  //FIXME
       return this.skip(env, t, out);
     }
     out.push(symbol.code);

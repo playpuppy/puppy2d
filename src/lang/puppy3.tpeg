@@ -12,14 +12,6 @@ Source = EOL? {
     #Source
 } EOF
 
-Block = {
-    @scope(
-        @symbol(INDENT) (Statement (";" Statement)* ";"? / _ &EOL)
-        (@match(INDENT) (Statement (";" Statement)* ";"? / _ &EOL) )*
-    )
-    #Block
-}
-
 example Source '''
 from puppy import *
 def cat_clicked(cat): print('Meaw')
@@ -34,11 +26,24 @@ Statement =
     / ForStmt
     / WhileStmt
     / Return 
-    / Yield 
+    / Pass 
     / Break 
     / Continue
     / VarDecl
     / Expression
+
+Block = {
+    @scope(
+        @symbol(INDENT) (Statement (";" Statement)* ";"? / _ &EOL)
+        (@match(INDENT) (Statement (";" Statement)* ";"? / _ &EOL) )*
+    )
+    #Block
+}
+
+BlockStmt = {
+    Statement
+    #Block
+}
 
 /* import */
 
@@ -64,7 +69,7 @@ ClassDecl = {
     'class' S _ 
     name: Name 
     ('(' _ extends: Name ')' _)? ':' _
-    (Block / Statement)
+    (Block / BlockStmt)
     #ClassDecl
 }
 
@@ -80,7 +85,7 @@ FuncDecl = {
     'def' S _ 
     name: Name 
     params: FuncParams ':' _
-    body: (Block / Statement)
+    body: (Block / BlockStmt)
     #FuncDecl
 }
 
@@ -98,7 +103,7 @@ FuncParam = {
 Lambda = {
     'lambda' 
     (S _ params: LambdaParams)? ':' _
-    body: (Block / Statement)
+    body: (Block / Expression)
     #FuncExpr
 }
 
@@ -147,27 +152,15 @@ else :
     D
 '''
 
-// IfStmt = {
-//     ('if' S) _ 
-//     cond: Expression ':' _
-//     then: (Block / Statement)
-//     (
-//         (@match(INDENT) / NL)
-//         'else' _  ':' _
-//         else: (Block / Statement)
-//     )?
-//     #IfStmt
-// }
-
 IfStmt = {
     ('if' !W) _ 
     cond: Expression ':' _
-    then: (Block / Statement)
+    then: (Block / BlockStmt)
     (elif: ElifBlock)?
     (
         (@match(INDENT) / NL)
         'else' !W _  ':' _
-        else: (Block / Statement)
+        else: (Block / BlockStmt)
     )?
     #IfStmt
 }
@@ -180,7 +173,7 @@ ElifStmt = {
     (@match(INDENT) / NL)
     ('elif' !W) _ 
     cond: Expression ':' _
-    then: (Block / Statement)
+    then: (Block / BlockStmt)
     #ElifStmt
 }
 
@@ -197,14 +190,14 @@ ForStmt = {
     each: Name 
     ('in' !W) _ 
     list: Expression ':' _
-    body: (Block / Statement)
+    body: (Block / BlockStmt)
     #ForStmt
 }
 
 WhileStmt = {
     ('while' !W) _ 
     cond: Expression ':' _
-    body: (Block / Statement)
+    body: (Block / BlockStmt)
     #WhileStmt
 }
 
@@ -266,14 +259,13 @@ EqExpr =
 	SumExpr (left:^ { name: { EQ #Name } _ right: SumExpr #Infix })*
 
 EQ =
-	/ '==' !'=' 
-	/ '!=' !'='  
-	/ '<=' !'=' 
-	/ '>=' !'=' 
-	/ '<'  !'<' 
-	/ '>'  !'>'
+	/ '==' !'=' / '＝＝' !'＝'
+	/ '!=' !'=' / '！＝' !'＝'
+	/ '<=' !'=' / '＜＝' !'＝'
+	/ '>=' !'=' / '＞＝' !'＝'
+	/ '<'  !'<' / '＜' !'＜'
+	/ '>'  !'>' / '＞' !'＞'
     / ('in' S)
-    / ('is' S) / ('is not' S)
 
 SumExpr =
 	ProdExpr (left:^ { name: { SUM #Name } _ right: ProdExpr #Infix })*
@@ -366,11 +358,16 @@ KeyValue = {
 
 /* Name, Identifier */
 
-Name = Identifier // NLPSymbol
+Name = Identifier / IdentifierNLP
 
 Identifier = {
     [A-Za-z_] W*
     #Name
+} _
+
+IdentifierNLP = {
+    (HIRA / KATA / KANJI/ '_')+ W*
+    #NameOrNLP
 } _
 
 NLPSymbol = {
