@@ -493,6 +493,20 @@ export class Types {
     return ty instanceof FuncType;
   }
 
+  public static isVarFuncType(ty: Type) {
+    if (ty instanceof FuncType) {
+      if (ty.psize() > 0) {
+        const t = ty.ptype(ty.psize() - 1);
+        return t instanceof OptionType;
+      }
+    }
+    return false;
+  }
+
+  public static isOptionType(ty: Type) {
+    return ty instanceof OptionType;
+  }
+
   public static union(...types: Type[]) {
     return new UnionType(...types);
   }

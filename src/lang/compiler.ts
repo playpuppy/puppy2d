@@ -2,6 +2,9 @@ import { generate, ParseTree } from './puppy-parser';
 import { Type, BaseType, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
 import { SourceError, PuppyCode } from './code';
+import { messagefy } from './message';
+import { type } from 'os';
+
 const INDENT = '\t';
 
 class ModuleType extends BaseType {
@@ -115,7 +118,6 @@ class Env {
     const e = SourceError(t, key, params);
     const logs = this.getroot('@errors');
     logs.push(e);
-    console.log(e);
     return e;
   }
 
@@ -709,6 +711,9 @@ class Transpiler {
         const symbol1 = env.declVar(name, ty);
         const qual = symbol1.isGlobal() ? '' : 'var ';
         out.push(`${qual}${symbol1.code} = ${out1.join('')}`);
+        // if (symbol1.isGlobal()) {
+        //   out.push(`;Circle(showing='${name}')`);
+        // }
       }
       return Types.Void;
     }
@@ -827,7 +832,7 @@ class Transpiler {
 
   private ApplySymbolExpr(env: Env, t: ParseTree | any, name: string, symbol: Symbol, recv: ParseTree | undefined, out: string[]): Type {
     if (symbol === undefined) {
-      env.perror(t['name'], 'UndefinedFunctionName');
+      env.perror(t['name'], recv ? 'UndefinedMethod' : 'UndefinedFunction');
       return this.skip(env, t, out);
     }
     const args = t['params'].subs() as ParseTree[];
@@ -851,9 +856,21 @@ class Transpiler {
     if (funcType.hasAlpha()) {
       funcType = funcType.toVarType({ env, ref: t });
     }
+    //console.log(`FIXME ${symbol.code} args.length=${args.length} funcType.psize=${funcType.psize()}`)
+    const psize = Types.isVarFuncType(funcType) ? funcType.psize() - 1 : funcType.psize();
+    if (args.length < psize) {
+      env.perror(t['name'], 'MissingArguments', [
+        '@psize', (recv) ? psize - 1 : psize,
+        '@type', funcType,
+      ])
+      return this.skip(env, t, out);
+    }
     for (var i = 0; i < args.length; i += 1) {
       if (!(i < funcType.psize())) {
-        env.pwarn(args[i], 'TooManyArguments');
+        env.pwarn(args[i], 'TooManyArguments', [
+          '@psize', (recv) ? psize - 1 : psize,
+          '@type', funcType,
+        ]);
         break;
       }
       if (i > 0) {
@@ -862,14 +879,14 @@ class Transpiler {
       const ty = funcType.ptype(i);
       this.check(ty, env, args[i], out);
     }
-    if (args.length < funcType.psize()) {
-      if (!funcType.ptype(args.length)) {
-        env.perror(t['name'], 'RequiredArguments',
-          ['@req', `${funcType}`]
-        );
-        return this.skip(env, t, out);
-      }
-    }
+    // if (args.length < funcType.psize()) {
+    //   if (!funcType.ptype(args.length)) {
+    //     env.perror(t['name'], 'MissingArgument',
+    //       ['@req', `${funcType}`]
+    //     );
+    //     return this.skip(env, t, out);
+    //   }
+    // }
     out.push(')');
     if (symbol.isSync) {
       out.push(')')
@@ -1180,7 +1197,12 @@ export const utest = (s: string) => {
   const src = { source: s };
   const code = compile(src);
   if (code.errors.length > 0) {
+    console.log(messagefy(code.errors[0]))
     return code.errors[0].key;
+  }
+  if (code.warnings.length > 0) {
+    console.log(messagefy(code.warnings[0]))
+    return code.warnings[0].key;
   }
   //console.log(code.code);
   const ss = code.code.split('\n');

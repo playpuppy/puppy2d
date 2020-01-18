@@ -6,16 +6,28 @@ print("hello,world")
 `)).toBe('puppy.print1("hello,world")');
 });
 
+test('HelloWorld+', () => {
+	expect(utest(`
+print("hello,world", fontColor='red')
+`)).toBe(`puppy.print1(\"hello,world\",{'fontColor': 'red',})`);
+});
+
 test('print(1,2)', () => {
 	expect(utest(`
 print(1,2)
 `)).toBe('puppy.print2(1,2)');
 });
 
-test('print()', () => {
+test('あ', () => {
 	expect(utest(`
-print()
-`)).toBe('puppy.print1()');
+あ=1
+`)).toBe("vars['あ'] = 1");
+});
+
+test('重さ', () => {
+	expect(utest(`
+重さ=1
+`)).toBe("vars['重さ'] = 1");
 });
 
 // test('None', () => {
@@ -241,22 +253,3 @@ def __keyup__(key, time):
 `)).toBe('puppy.print1(key)');
 })
 
-
-// error
-test('ERR x=x+1', () => {
-	expect(utest(`
-x=x+1
-`)).toBe("UndefinedName");
-});
-
-test('ERR print = 1', () => {
-	expect(utest(`
-print = 1
-`)).toBe("Immutable");
-});
-
-test('ERR 1+"1"', () => {
-	expect(utest(`
-1+"1"
-`)).toBe("TypeError");
-});
