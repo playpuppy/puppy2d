@@ -135,20 +135,8 @@ const getMousePosition = (event: any, element: HTMLElement, pixelRatio: number, 
 * @class Render
 */
 
-//const _requestAnimationFrame: any = undefined;
-//const _cancelAnimationFrame: any = undefined;
-
 const _requestAnimationFrame = window.requestAnimationFrame;
 const _cancelAnimationFrame = window.cancelAnimationFrame;
-
-// if (typeof window !== 'undefined') {
-//   _requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame
-//     || window.mozRequestAnimationFrame || window.msRequestAnimationFrame
-//     || function (callback) { window.setTimeout(function () { callback(Common.now()); }, 1000 / 60); };
-
-//   _cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame
-//     || window.webkitCancelAnimationFrame || window.msCancelAnimationFrame;
-// }
 
 export class PuppyRender {
   public engine: any; // Engine
@@ -180,7 +168,8 @@ export class PuppyRender {
     this.options = this.world;
     //this.options.wireframes = true;
     this.canvas = createCanvas(element, element.clientWidth, element.clientHeight);
-    this.mouse = engine.setRender(this);
+    //this.mouse = engine.setRender(this);
+    this.mouse = engine.getMouse(this);
     this.context = this.canvas.getContext('2d')!;
     // init viewport
     this.bounds = new Bounds(0, 0, this.canvas.width, this.canvas.height);
@@ -336,7 +325,7 @@ export class PuppyRender {
   }
 
   private disableInputDevices() {
-    if (this.keyDown != null) {
+    if (this.keyDown !== null) {
       document.removeEventListener('keydown', this.keyDown);
       document.removeEventListener('keyup', this.keyUp);
 
@@ -474,7 +463,6 @@ export class PuppyRender {
       return m.width;
     }
   }
-
 
   showingMessage: string | null = null;
 
@@ -958,14 +946,9 @@ export class PuppyRender {
         }
         else {
           const width = ticker.width || 100;
-          c.textAlign = 'center';
-          // if (ticker.width === 0) {
-          //   const m = c.measureText(text);
-          //   ticker.width = m.width;
-          //   body.translate2(m.width / 2, 0);
-          //   //body.bounds.update2(cx, cy, m.width, 30);
-          //   body.bounds.dump('text-size');
-          // }
+          c.textAlign = ticker.textAlign || 'center';
+          // c.fillStyle = '#000000';
+          // c.fillText(text, -2, -2, width);
           c.fillText(text, 0, 0, width);
         }
         //c.rotate(-Math.PI);

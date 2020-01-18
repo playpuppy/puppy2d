@@ -218,7 +218,7 @@ const tFuncShape = ts.func(ts.Matter, ts.Option);
 const tFuncShape2 = ts.func(ts.Matter, ts.Int, ts.Int, ts.Option);
 const tFuncShape3 = ts.func(ts.Matter, ts.Int, ts.Int, ts.Int, ts.Option);
 const tFuncShape4 = ts.func(ts.Matter, ts.Int, ts.Int, ts.Int, ts.Int, ts.Option);
-const tFuncShape5 = ts.func(ts.Matter, ts.String, ts.Int, ts.Int, ts.Int, ts.Int, ts.Option);
+const tFuncShapeS1 = ts.func(ts.Matter, ts.String, ts.Option);
 
 const tFuncBody = ts.func(ts.Void, ts.Matter);
 const tFuncBodyInt = ts.func(ts.Void, ts.Matter, ts.Int);
@@ -228,6 +228,7 @@ const import_puppy2d: { [key: string]: Symbol } = {
   // # クラス
   'World': sym('puppy.World', tFuncShape),
   'Object': sym('puppy.Object', tFuncShape),
+  'Body': sym('puppy.Body', tFuncShape),
   'Rectangle': sym('puppy.Rectangle', tFuncShape4),
   'Rectangle@3': sym('puppy.Rectangle3', tFuncShape3),
   'Rectangle@2': sym('puppy.Rectangle2', tFuncShape2),
@@ -235,8 +236,7 @@ const import_puppy2d: { [key: string]: Symbol } = {
   'Circle': sym('puppy.Circle', tFuncShape3),
   'Circle@2': sym('puppy.Circle2', tFuncShape2),
   'Circle@0': sym('puppy.Circle0', tFuncShape),
-  'Body': sym('puppy.Body', tFuncShape),
-  'Variable': sym('puppy.Variable', tFuncShape5),
+  'Variable': sym('puppy.Variable', tFuncShapeS1),
   'Constraint': sym('puppy.Constraint', tFuncShape),
   // world
   'setGravity': sym('puppy.setGravity', ts.func(ts.Void, ts.Int, ts.Int)),

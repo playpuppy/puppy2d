@@ -68,6 +68,33 @@ const getradius = (options: any, radius = 50): number => {
   return radius;
 }
 
+const setLabelWidth = (world: PuppyWorld, options: any) => {
+  if (options.showing) {
+    const key = options.showing;
+    options.textRef = (body: any) => {
+      return body[key];
+    }
+    if (!options.fontColor) {
+      options.fontColor = '#ffffff';
+    }
+  }
+  if (options.textRef) {
+    if (!options.width) {
+      var text = `_${options.textRef()}_`;
+      if (options.caption) {
+        text = `${options.caption}_${text}`;
+      }
+      options.width = world.fontWidth(text, options.font);
+    }
+    if (!options.height) {
+      options.height = 40;
+    }
+    if (!options.fontColor) {
+      options.fontColor = '#000000'; //world.colors[0];
+    }
+  }
+}
+
 const _Polygon = (world: PuppyWorld, options: any, sides?: number, radius?: number) => {
   if (sides === undefined) {
     sides = options.sides !== undefined ? options.sides : 3;
@@ -100,23 +127,15 @@ const _Circle = (world: PuppyWorld, options: any, radius?: number) => {
   return _Polygon(world, options, sides, radius);
 }
 
+
 const _Label = (world: PuppyWorld, options: any) => {
-  if (!options.width) {
-    var text = `_${options.textRef()}_`;
-    if (options.caption) {
-      text = `${options.caption}_${text}`;
-    }
-    options.width = world.fontWidth(text, options.font);
-  }
+  setLabelWidth(world, options);
   const width = options.width;
-  const height = (!options.height) ? 40 : options.height;
+  const height = options.height;
   initVertices(options, [0, 0, width, 0, width, height, 0, height]);
   if (!options.fillStyle) {
     options.fillStyle = 'rgba(0,0,0,0)';
     options.opacity = 0;
-  }
-  if (!options.fontColor) {
-    options.fontColor = world.colors[0];
   }
   return options;
 }
@@ -126,22 +145,12 @@ export const PuppyShapeMap: { [key: string]: (world: PuppyWorld, options: any) =
     const width = options.width = options.width || 100;
     const height = options.height = options.height || 100;
     initVertices(options, [0, 0, width, 0, width, height, 0, height]);
+    setLabelWidth(world, options);
     return options;
   },
   'polygon': _Polygon,
   'circle': _Circle,
   'label': _Label,
-  'variable': (world: PuppyWorld, options: any) => {
-    const name = options.name;
-    options.caption = options.caption || name;
-    if (options.caption === '') {
-      delete options.caption;
-    }
-    options.textRef = (body: Body) => {
-      return `${world.vars[name]}`;
-    }
-    return _Label(world, options);
-  },
 }
 
 /* composite */
@@ -330,20 +339,31 @@ export class PuppyWorld extends World {
     return this.vm.render.measureWidth(text, font || this.font);
   }
 
-  public Variable(name: string, x: number, y: number, options: any = {}) {
+  private variableY = 480;
+  public Variable(name: string, options: any = {}) {
     options = Object.assign(options, {
-      shape: 'variable',
-      position: this.newVec(x, y),
-      name: name, caption: name,
+      shape: 'label',
+      name: name,
       zindex: Infinity,
     });
-    const width = this.width * 0.4;
-    initSize(this, options, width, this.fontSize + 4);
+    if (options.position) {
+      options.caption = options.caption || name;
+      options.textRef = (body: Body) => {
+        return `${this.vars[name]}`;
+      }
+    }
+    else {
+      options.textRef = (body: Body) => {
+        return `${name} = ${this.vars[name]}`;
+      }
+      setLabelWidth(this, options);
+      this.variableY -= 40;
+      options.position = this.newVec(options.width / 2 - 480, this.variableY);
+    }
     return this.newBody(options);
   }
 
   public print(text: string = '', options: any = {}) {
-    this.vm.syslog('stdout', text + (options.end || '\n'));
     const world = this;
     const bounds: Bounds = this.vars['VIEWPORT'] || this.bounds;
     const x = bounds.max.x;
@@ -353,8 +373,9 @@ export class PuppyWorld extends World {
       position: new Vector(x, y),
       shape: 'label',
       zindex: Infinity,
-      //fontColor: Common.choose(this.colors, 1),
+      fontColor: Common.choose(this.colors, 1),
     }, options);
+    this.vm.syslog('stdout', text + (options.end || '\n'));
     return this.newObject(options).addMotion((body: Body) => {
       body.translate2(-2, 0);
       if (body.position.x + body.bounds.getWidth() < world.bounds.min.x) {

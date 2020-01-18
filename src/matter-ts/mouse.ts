@@ -18,7 +18,7 @@ import { Detector } from './collision';
 */
 
 export class Mouse {
-  public element: HTMLElement; // = element || document.body;
+  public element: HTMLElement | null; // = element || document.body;
   public absolute = new Vector(); // { x: 0, y: 0 };
   public position = new Vector(); //{ x: 0, y: 0 };
   public mousedownPosition = new Vector(); //{ x: 0, y: 0 };
@@ -50,14 +50,14 @@ export class Mouse {
    * @return {mouse} A new mouse
    */
 
-  public constructor(element: HTMLElement) {
+  public constructor(element: HTMLElement | null) {
     this.element = element;
     if (element) {
       this.pixelRatio = element.getAttribute('data-pixel-ratio') ?
         parseInt(element.getAttribute('data-pixel-ratio')!, 10) : 1;
 
       this.mousemove = (event: any) => {
-        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const position = Mouse.getRelativeMousePosition(event, element, this.pixelRatio);
         const touches = event.changedTouches;
 
         if (touches) {
@@ -74,7 +74,7 @@ export class Mouse {
       };
 
       this.mousedown = (event: any) => {
-        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const position = Mouse.getRelativeMousePosition(event, element, this.pixelRatio);
         const touches = event.changedTouches;
         if (touches) {
           this.button = 0;
@@ -94,7 +94,7 @@ export class Mouse {
       };
 
       this.mouseup = (event: any) => {
-        const position = Mouse.getRelativeMousePosition(event, this.element, this.pixelRatio);
+        const position = Mouse.getRelativeMousePosition(event, element, this.pixelRatio);
         const touches = event.changedTouches;
 
         if (touches) {
@@ -115,7 +115,7 @@ export class Mouse {
         this.wheelDelta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
         //event.preventDefault();
       };
-      this.setElement(this.element);
+      this.setElement(element);
     }
   }
 

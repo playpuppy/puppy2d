@@ -11,7 +11,6 @@ import { Body, Constraint, World } from "./body";
 import { Pair, Pairs, Resolver, Grid } from "./collision";
 import { Render } from "./render";
 import { Mouse, MouseConstraint } from "./mouse";
-import { triggerAsyncId } from 'async_hooks';
 
 /**
 * The `Matter.Sleeping` module contains methods to manage the sleeping state of bodies.
@@ -253,6 +252,16 @@ export class Engine {
   public setRender(render: Render) {
     this.render = render;
     this.mouse = new Mouse(render.canvas);
+    this.mouseConstraint = new MouseConstraint(this, {
+      stiffness: 0.2,
+    });
+    this.world.addConstraint(this.mouseConstraint.constraint);
+    return this.mouse;
+  }
+
+  public getMouse(render: Render) {
+    this.render = render;
+    this.mouse = new Mouse(null);
     this.mouseConstraint = new MouseConstraint(this, {
       stiffness: 0.2,
     });
