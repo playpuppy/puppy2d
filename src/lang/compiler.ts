@@ -2,292 +2,9 @@ import { generate, ParseTree } from './puppy-parser';
 import { Type, BaseType, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
 import { SourceError, PuppyCode } from './code';
-import { Env, RootEnv, CompileCancelationError } from './environment';
+import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment';
 import { messagefy } from './message';
-
-// const INDENT = '\t';
-
-// class ModuleType extends BaseType {
-//   constructor(name: string, value: any) {
-//     super(`${name}.`, value);
-//   }
-// }
-
-// class Env {
-//   private root: Env;
-//   private parent: Env | null;
-//   private vars: any;
-
-//   public constructor(env?: Env) {
-//     this.vars = {}
-//     if (env === undefined) {
-//       this.root = this;
-//       this.parent = null;
-//       this.vars['@varmap'] = [];
-//       this.vars['@errors'] = [];
-//       this.vars['@warnings'] = [];
-//       this.vars['@notices'] = [];
-//       this.vars['@tokens'] = [];
-//       this.vars['@names'] = {};
-//       this.vars['@fields'] = {};
-//       this.vars['@indent'] = INDENT;
-//     }
-//     else {
-//       this.root = env.root;
-//       this.parent = env;
-//     }
-//   }
-
-//   public get(key: string, value?: any) {
-//     var e: Env | null = this;
-//     while (e !== null) {
-//       const v = e.vars[key];
-//       if (v !== undefined) {
-//         return v;
-//       }
-//       e = e.parent;
-//     }
-//     return value;
-//   }
-
-//   public has(key: string) {
-//     return this.get(key) !== undefined;
-//   }
-
-//   public set(key: string, value: any) {
-//     this.vars[key] = value;
-//     return value;
-//   }
-
-//   public getroot(key: string, value?: any) {
-//     return this.root.vars[key] || value;
-//   }
-
-//   public setroot(key: string, value: any) {
-//     this.root.vars[key] = value;
-//     return value;
-//   }
-
-//   public getSymbol(name: string): Symbol {
-//     return this.get(name) as Symbol;
-//   }
-
-//   public varType(t: ParseTree) {
-//     return Types.var(this, t);
-//   }
-
-//   public guessType(name: string, tree: ParseTree) {
-//     const names: { [key: string]: Type } = this.getroot('@names');
-//     var ty = names[name];
-//     if (ty === undefined) {
-//       ty = names[name] = this.varType(tree);
-//     }
-//     return ty;
-//   }
-
-//   public from_import(pkg: any, list?: string[]) {
-//     for (const name of Object.keys(pkg)) {
-//       if (list === undefined || list.indexOf(name) !== -1) {
-//         this.vars[name] = pkg[name];
-//       }
-//     }
-//   }
-
-//   public setModule(name: string, options: any) {
-//     this.set(name, new Symbol('undefined', new ModuleType(name, options)));
-//   }
-
-//   public isModule(name: string) {
-//     const s = this.get(name) as Symbol;
-//     if (s !== undefined && s.ty instanceof ModuleType) {
-//       return true;
-//     }
-//     return false;
-//   }
-
-//   public getModule(pkgname: string, name: string) {
-//     const s = this.get(pkgname) as Symbol;
-//     if (s !== undefined && s.ty instanceof ModuleType) {
-//       const options = s.ty.getValue();
-//       return options[name];
-//     }
-//     return undefined;
-//   }
-
-//   public perror(t: ParseTree, key: string, params?: any[]) {
-//     const e = SourceError(t, key, params);
-//     const logs = this.getroot('@errors');
-//     logs.push(e);
-//     return e;
-//   }
-
-//   public pwarn(t: ParseTree, key: string, params?: any[]) {
-//     const e = SourceError(t, key, params);
-//     const logs = this.getroot('@warnings');
-//     logs.push(e);
-//     e.type = 'warning';
-//     return e;
-//   }
-
-//   public pnotice(t: ParseTree, key: string, params?: any[]) {
-//     const e = SourceError(t, key, params);
-//     const logs = this.getroot('@notices');
-//     logs.push(e);
-//     e.type = 'info';
-//     return e;
-//   }
-
-//   public tkid(t: ParseTree) {
-//     const tokens: ParseTree[] = this.getroot('@tokens');
-//     for (var i = 0; i < tokens.length; i++) {
-//       if (tokens[i] === t) {
-//         return i;
-//       }
-//     }
-//     const tkid = tokens.length;
-//     tokens.push(t);
-//     return tkid;
-//   }
-
-//   public codemap(t: ParseTree) {
-//     return `,codemap[${this.tkid(t)}]`;
-//   }
-
-//   public setInLoop() {
-//     var nested = this.get('@inloop') || 0;
-//     this.set('@inloop', nested + 1);
-//     return nested + 1;
-//   }
-
-//   public inLoop() {
-//     return this.get('@inloop') !== undefined;
-//   }
-
-//   public setFunc(data: any) {
-//     this.set('@func', data)
-//     return data;
-//   }
-
-//   public inFunc() {
-//     return this.get('@func') !== undefined;
-//   }
-
-//   public isSync() {
-//     const funcData = this.get('@func');
-//     if (funcData) {
-//       return funcData.isSync;
-//     }
-//     return true;
-//   }
-
-//   public setSync() {
-//     const funcData = this.get('@func');
-//     console.log(funcData);
-//     if (funcData) {
-//       funcData.isSync = true;
-//     }
-//     return true;
-//   }
-
-//   public foundFunc(t: ParseTree, symbol: Symbol) {
-//     if (symbol.isMatter) {
-//       const data = this.get('@func');
-//       if (data !== undefined) {
-//         data['isMatter'] = true;
-//       }
-//       // else {
-//       //   const row = t.begin()[1] * 1000;
-//       //   this.setroot('@yeild', row + 200);
-//       // }
-//     }
-//   }
-
-//   private isUtf8Name(s: string) {
-//     for (var i = 0; i < s.length; i += 1) {
-//       if (s.charCodeAt(i) > 128) {
-//         return true;
-//       }
-//     }
-//     return false;
-//   }
-
-//   private local(s: string): string {
-//     if (this.isUtf8Name(s)) {
-//       const map = this.getroot('@utf8map');
-//       if (map === undefined) {
-//         this.setroot('@utf8map', {});
-//         return this.local(s);
-//       }
-//       var vname = map[name];
-//       if (vname === undefined) {
-//         const id = Object.keys(map).length;
-//         vname = `_v${id}`;
-//         map[name] = vname;
-//       }
-//       return vname as string;
-//     }
-//     return s;
-//   }
-
-//   public declVar(name: string, ty: Type) {
-//     var code = (this.inFunc() || this.inLoop()) ? this.local(name) : `vars['${name}']`
-//     const symbol = new Symbol(code, ty);
-//     symbol.isMutable = true;
-//     return this.set(name, symbol) as Symbol;
-//   }
-
-//   private prevRow = -1;
-
-//   emitYield(t: ParseTree, out: string[]) {
-//     if (!this.inFunc()) {
-//       const indent = this.get('@indent');
-//       const row = t.begin()[1] * 1000 + 200;
-//       if (this.prevRow !== row) {
-//         out.push(`${indent}yield ${row};\n`);
-//         this.prevRow = row;
-//       }
-//     }
-//   }
-
-//   emitSyncYield(t: ParseTree, out: string[]) {
-//     const indent = this.get('@indent');
-//     const row = t.begin()[1] * 1000 + 0;
-//     out.push(`${indent}if(puppy.pc++ % 16 === 0) yield ${row};\n`);
-//   }
-
-//   public emitAutoYield(t: ParseTree, out: string[]) {
-//     // if (!this.inFunc()) {
-//     //   const yieldparam = this.getroot('@yeild');
-//     //   if (yieldparam !== undefined) {
-//     //     out.push(`; yield ${yieldparam};\n`);
-//     //     this.setroot('@yeild', undefined);
-//     //     return yieldparam;
-//     //   }
-//     //   else {
-//     //     // const row = t.end()[1] * 1000;
-//     //     // out.push(`;yield ${row};\n`);
-//     //     out.push('\n');
-//     //   }
-//     // }
-//     // else {
-//     out.push('\n');
-//     // }
-//     return 0;
-//   }
-
-//   checkImmutable(t: ParseTree, symbol: Symbol | null) {
-//     if (symbol === null || !symbol.isMutable) {
-//       this.perror(t, 'Immutable');
-//       throw new CompileCancelationError();
-//     }
-//   }
-// }
-
-// class CompileCancelationError {
-//   constructor() {
-//     //uper();
-//   }
-// }
+import { emitJSBinary } from './operator';
 
 const ZenkakuToASCII: { [key: string]: string } = {
   '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
@@ -363,20 +80,19 @@ const getRightHandType = (op: string, ty: Type) => {
   return ty;  // 左と同じ型
 }
 
-class Transpiler {
+class JSTranspiler extends Transpiler {
 
   public autoPuppyMode = true;
 
   public constructor() {
-
+    super();
   }
 
-  public conv(env: Env, t: ParseTree, out: string[]) {
+  public conv(env: Env, t: ParseTree, out: string[]): Type {
     if ((this as any)[t.tag] !== undefined) {
       return (this as any)[t.tag](env, t, out);
     }
     console.log(`FIXME: undefined parse tree ${t.tag}`);
-    console.log(t);
     env.perror(t, 'UndefinedParseTree');
     return this.skip(env, t, out);
   }
@@ -400,53 +116,53 @@ class Transpiler {
     return ty;
   }
 
-  private checkBinary(env: Env, t: ParseTree, op: string, ty1: Type, left: string, ty2: Type, right: string, out: string[]) {
-    if (op === '==' || op === '!=') {
-      out.push(`${left} ${op}= ${right}`);
-      return Types.Bool;
-    }
-    ty1 = ty1.realType();
-    ty2 = ty2.realType();
-    if (op === '+') {
-      if (ty1 === Types.Int && ty2 === Types.Int) {
-        out.push(`(${left} + ${right})`);
-        return Types.Int;
-      }
-      if (ty1.accept(ty2, true)) {
-        out.push(`lib.anyAdd(${left},${right})`);
-        return ty1;
-      }
-      env.perror(t, 'TypeError', ['@infix', op]);
-      return this.skip(env, t, out);
-    }
-    if (op === '*') {
-      if (ty1 === Types.Int && ty2 === Types.Int) {
-        out.push(`(${left} * ${right})`);
-        return Types.Int;
-      }
-      out.push(`lib.anyMul(${left},${right})`);
-      if (ty1 === Types.Int || Types.ListAny.accept(ty2, false)) return ty2;
-      if (ty2 === Types.Int || Types.ListAny.accept(ty1, false)) return ty1;
-      return ty1;
-    }
-    if (op === '//') {
-      out.push(`((${left}/${right})|0)`);
-      return Types.Int;
-    }
-    if (op === '**') {
-      out.push(`Math.pow(${left},${right})`);
-      return Types.Int;
-    }
-    if (ty1.accept(ty2, true)) {
-      out.push(`(${left} ${op} ${right})`);
-      if (LeftHandType[op] === Types.Compr) {
-        return Types.Bool;
-      }
-      return ty1;
-    }
-    env.perror(t, 'TypeError', ['@infix', op]);
-    return this.skip(env, t, out);
-  }
+  // private checkBinary(env: Env, t: ParseTree, op: string, ty1: Type, left: string, ty2: Type, right: string, out: string[]) {
+  //   if (op === '==' || op === '!=') {
+  //     out.push(`${left} ${op}= ${right}`);
+  //     return Types.Bool;
+  //   }
+  //   ty1 = ty1.realType();
+  //   ty2 = ty2.realType();
+  //   if (op === '+') {
+  //     if (ty1 === Types.Int && ty2 === Types.Int) {
+  //       out.push(`(${left} + ${right})`);
+  //       return Types.Int;
+  //     }
+  //     if (ty1.accept(ty2, true)) {
+  //       out.push(`lib.anyAdd(${left},${right})`);
+  //       return ty1;
+  //     }
+  //     env.perror(t, 'TypeError', ['@infix', op]);
+  //     return this.skip(env, t, out);
+  //   }
+  //   if (op === '*') {
+  //     if (ty1 === Types.Int && ty2 === Types.Int) {
+  //       out.push(`(${left} * ${right})`);
+  //       return Types.Int;
+  //     }
+  //     out.push(`lib.anyMul(${left},${right})`);
+  //     if (ty1 === Types.Int || Types.ListAny.accept(ty2, false)) return ty2;
+  //     if (ty2 === Types.Int || Types.ListAny.accept(ty1, false)) return ty1;
+  //     return ty1;
+  //   }
+  //   if (op === '//') {
+  //     out.push(`((${left}/${right})|0)`);
+  //     return Types.Int;
+  //   }
+  //   if (op === '**') {
+  //     out.push(`Math.pow(${left},${right})`);
+  //     return Types.Int;
+  //   }
+  //   if (ty1.accept(ty2, true)) {
+  //     out.push(`(${left} ${op} ${right})`);
+  //     if (LeftHandType[op] === Types.Compr) {
+  //       return Types.Bool;
+  //     }
+  //     return ty1;
+  //   }
+  //   env.perror(t, 'TypeError', ['@infix', op]);
+  //   return this.skip(env, t, out);
+  // }
 
   public err(env: Env, t: ParseTree, out: string[]) {
     const inputs = t.inputs;
@@ -831,16 +547,17 @@ class Transpiler {
   }
 
   public Infix(env: Env, t: ParseTree | any, out: string[]) {
-    const op = operator(t.tokenize('name'));
-    if (op === undefined) {
-      env.perror(t.get('name'), 'UndefinedOperator');
-      return this.skip(env, t, out);
-    }
-    const out1: string[] = [];
-    const out2: string[] = [];
-    const ty1 = this.check(getLeftHandType(op), env, t['left'], out1);
-    const ty2 = this.check(getRightHandType(op, ty1), env, t['right'], out2);
-    return this.checkBinary(env, t, op, ty1, out1.join(''), ty2, out2.join(''), out);
+    return emitJSBinary(env, t, out);
+    // const op = operator(t.tokenize('name'));
+    // if (op === undefined) {
+    //   env.perror(t.get('name'), 'UndefinedOperator');
+    //   return this.skip(env, t, out);
+    // }
+    // const out1: string[] = [];
+    // const out2: string[] = [];
+    // const ty1 = this.check(getLeftHandType(op), env, t['left'], out1);
+    // const ty2 = this.check(getRightHandType(op, ty1), env, t['right'], out2);
+    // return this.checkBinary(env, t, op, ty1, out1.join(''), ty2, out2.join(''), out);
   }
 
   public Unary(env: Env, t: ParseTree | any, out: string[]) {
@@ -1202,9 +919,9 @@ export type Source = {
 export const compile = (s: Source): PuppyCode => {
   //const start = performance.now();
   const t = parser(s.source);
-  const env = new RootEnv();
+  const ts = new JSTranspiler();
+  const env = new RootEnv(ts);
   env.from_import(PuppyModules['']);
-  const ts = new Transpiler();
   const out: string[] = [];
   try {
     ts.conv(env, t, out);

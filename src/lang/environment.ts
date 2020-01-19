@@ -22,6 +22,13 @@ export class CompileCancelationError {
   }
 }
 
+export class Transpiler {
+  public conv(env: Env, t: ParseTree, out: string[]): Type {
+    console.log(`TODO: Transplier.conv()`);
+    return Types.Void;
+  }
+}
+
 export class Env {
   public static readonly INDENT = '\t';
   public root: RootEnv;
@@ -30,6 +37,7 @@ export class Env {
   public indent = Env.INDENT;
   protected loopNest = 0;
   public funcEnv: FunctionContext | null = null;
+  protected tspr: Transpiler;
 
   constructor(parent?: Env) {
     this.vars = {}
@@ -37,12 +45,14 @@ export class Env {
       this.root = this;
       this.parent = null;
       this.funcEnv = null;
+      this.tspr = new Transpiler();
     }
     else {
       this.root = parent!.root;
       this.parent = parent!;
       this.funcEnv = parent!.funcEnv;
       this.indent = parent!.indent;
+      this.tspr = parent!.tspr;
     }
   }
 
@@ -86,7 +96,7 @@ export class Env {
   }
 
   // error, handling
-  public perror(t: ParseTree, key: string, params?: any[]) {
+  public perror(t: ParseTree, key: string, params?: any[]): Type {
     const e = SourceError(t, key, params);
     this.root.errors.push(e);
     throw new CompileCancelationError();
@@ -153,6 +163,23 @@ export class Env {
     return ty;
   }
 
+  public conv(t: ParseTree, out: string[]) {
+    return this.tspr.conv(this, t, out);
+  }
+
+  public typeCheck(req: Type, t: ParseTree, out: string[], key = 'TypeError') {
+    const ty = this.conv(t, out);
+    if (req !== undefined) {
+      if (req.accept(ty, true)) {
+        return ty;
+      }
+      const params = [
+        '@req', req.toString(), '@given', ty.toString,
+      ];
+      this.perror(t, key);
+    }
+    return ty;
+  }
 
 
 
@@ -280,9 +307,10 @@ export class RootEnv extends Env {
   names = {};
   fields = {};
 
-  public constructor() {
+  public constructor(tspr: Transpiler) {
     super();
     this.root = this;
     this.parent = null;
+    this.tspr = tspr;
   }
 }
