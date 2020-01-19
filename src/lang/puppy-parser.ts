@@ -47,12 +47,12 @@ export class ParseTree {
     return this.tag === 'err';
   }
 
-  public subs() {
-    const subs: ParseTree[] = [];
+  public subs(): ParseTree[] {
+    const ts: ParseTree[] = [];
     for (var i = 0; i < this.nodes.length; i += 1) {
-      subs.push(this.nodes[i][1]);
+      ts.push(this.nodes[i][1]);
     }
-    return subs;
+    return ts;
   }
 
   public size() {
@@ -300,11 +300,11 @@ const pNot = (match: (px: ParserContext) => boolean) => {
     const pos = px.pos;
     const ast = px.ast;
     if (match(px)) {
-      px.head_pos = Math.max(px.pos, px.head_pos);
-      px.pos = pos;
-      px.ast = ast;
       return false;
     }
+    px.head_pos = Math.max(px.pos, px.head_pos);
+    px.pos = pos;
+    px.ast = ast;
     return true;
   }
 }
@@ -541,45 +541,45 @@ const grammar = (start: string) => {
     peg['BlockStmt'] = pNode(pEdge('', pRef(peg, 'Statement')), 'Block', 0);
     peg['ImportDecl'] = pOre2(pNode(pSeq3(pSeq2(pChar('import'), pRef(peg, 'S')), pEdge('name', pRef(peg, 'Name')), pOption(pSeq2(pSeq2(pChar('as'), pRef(peg, 'S')), pEdge('alias', pRef(peg, 'Name'))))), 'ImportDecl', 0), pNode(pSeq(pSeq2(pChar('from'), pRef(peg, 'S')), pEdge('name', pRef(peg, 'Name')), pSeq2(pChar('import'), pRef(peg, 'S')), pEdge('names', pOre2(pNode(pSeq2(pEdge('', pRef(peg, 'Name')), pMany(pSeq3(pChar(','), pRef(peg, '_'), pEdge('', pRef(peg, 'Name'))))), '', 0), pNode(pSeq2(pChar('*'), pRef(peg, '_')), '', 0)))), 'FromDecl', 0));
     peg['ClassDecl'] = pNode(pSeq(pChar('class'), pRef(peg, 'S'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name')), pOption(pSeq(pChar('('), pRef(peg, '_'), pEdge('extends', pRef(peg, 'Name')), pChar(')'), pRef(peg, '_'))), pChar(':'), pRef(peg, '_'), pOre2(pEdge('', pRef(peg, 'Block')), pEdge('', pRef(peg, 'BlockStmt')))), 'ClassDecl', 0);
-    peg['FuncDecl'] = pNode(pSeq(pChar('def'), pRef(peg, 'S'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name')), pEdge('params', pRef(peg, 'FuncParams')), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'FuncDecl', 0);
-    peg['FuncParams'] = pNode(pSeq(pRef(peg, '"("'), pOption(pEdge('', pRef(peg, 'FuncParam'))), pMany(pSeq2(pRef(peg, '","'), pEdge('', pRef(peg, 'FuncParam')))), pRef(peg, '")"')), 'FuncParam', 0);
-    peg['FuncParam'] = pNode(pSeq2(pEdge('name', pRef(peg, 'Name')), pOption(pSeq3(pChar(':'), pRef(peg, '_'), pEdge('type', pRef(peg, 'Name'))))), 'Param', 0);
-    peg['Lambda'] = pNode(pSeq(pChar('lambda'), pOption(pSeq3(pRef(peg, 'S'), pRef(peg, '_'), pEdge('params', pRef(peg, 'LambdaParams')))), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'Expression')))), 'FuncExpr', 0);
+    peg['FuncDecl'] = pNode(pSeq(pChar('def'), pRef(peg, 'S'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name')), pEdge('params', pRef(peg, 'FuncParams')), pRef(peg, '":"'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'FuncDecl', 0);
+    peg['FuncParams'] = pNode(pSeq(pRef(peg, '"("'), pOption(pEdge('', pRef(peg, 'FuncParam'))), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'FuncParam')))), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '")"')), pEdge('', pRef(peg, 'CloseP')))), 'FuncParam', 0);
+    peg['FuncParam'] = pNode(pSeq2(pEdge('name', pRef(peg, 'Name')), pOption(pSeq2(pRef(peg, '":"'), pEdge('type', pRef(peg, 'Name'))))), 'Param', 0);
+    peg['Lambda'] = pNode(pSeq(pChar('lambda'), pOption(pSeq3(pRef(peg, 'S'), pRef(peg, '_'), pEdge('params', pRef(peg, 'LambdaParams')))), pRef(peg, '":"'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'Expression')))), 'FuncExpr', 0);
     peg['LambdaParams'] = pNode(pSeq2(pOption(pEdge('', pRef(peg, 'Name'))), pMany(pSeq2(pRef(peg, '","'), pEdge('', pRef(peg, 'Name'))))), 'Param', 0);
     peg['Return'] = pNode(pSeq2(pChar('return'), pOption(pSeq3(pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('expr', pRef(peg, 'Expression'))))), 'Return', 0);
     peg['Yield'] = pNode(pSeq2(pChar('yield'), pRef(peg, '_')), 'Yield', 0);
     peg['Pass'] = pNode(pSeq2(pChar('pass'), pRef(peg, '_')), 'Pass', 0);
     peg['Break'] = pNode(pSeq2(pChar('break'), pRef(peg, '_')), 'Break', 0);
     peg['Continue'] = pNode(pSeq2(pChar('continue'), pRef(peg, '_')), 'Continue', 0);
-    peg['IfStmt'] = pNode(pSeq(pSeq2(pChar('if'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('then', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt'))), pOption(pEdge('elif', pRef(peg, 'ElifBlock'))), pOption(pSeq(pOre2(pMatch(0), pRef(peg, 'NL')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pChar(':'), pRef(peg, '_'), pEdge('else', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))))), 'IfStmt', 0);
+    peg['IfStmt'] = pNode(pSeq(pSeq2(pChar('if'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pRef(peg, '":"'), pEdge('then', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt'))), pOption(pEdge('elif', pRef(peg, 'ElifBlock'))), pOption(pSeq(pOre2(pMatch(0), pRef(peg, 'NL')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pRef(peg, '":"'), pEdge('else', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))))), 'IfStmt', 0);
     peg['ElifBlock'] = pNode(pMany1(pEdge('', pRef(peg, 'ElifStmt'))), '', 0);
-    peg['ElifStmt'] = pNode(pSeq(pOre2(pMatch(0), pRef(peg, 'NL')), pSeq2(pChar('elif'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('then', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'ElifStmt', 0);
-    peg['ForStmt'] = pNode(pSeq(pSeq2(pChar('for'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('each', pRef(peg, 'Name')), pSeq2(pChar('in'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('list', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'ForStmt', 0);
-    peg['WhileStmt'] = pNode(pSeq(pSeq2(pChar('while'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar(':'), pRef(peg, '_'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'WhileStmt', 0);
-    peg['VarDecl'] = pOre2(pNode(pSeq(pEdge('left', pRef(peg, 'LeftHand')), pChar('='), pRef(peg, '_'), pEdge('right', pRef(peg, 'Expression'))), 'VarDecl', 0), pRef(peg, 'SelfAssign'));
-    peg['LeftHand'] = pSeq2(pRef(peg, 'Name'), pMany(pOre2(pFold('recv', pSeq3(pChar('.'), pRef(peg, '_'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
+    peg['ElifStmt'] = pNode(pSeq(pOre2(pMatch(0), pRef(peg, 'NL')), pSeq2(pChar('elif'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pRef(peg, '":"'), pEdge('then', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'ElifStmt', 0);
+    peg['ForStmt'] = pNode(pSeq(pSeq2(pChar('for'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('each', pRef(peg, 'Name')), pSeq2(pChar('in'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('list', pRef(peg, 'Expression')), pRef(peg, '":"'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'ForStmt', 0);
+    peg['WhileStmt'] = pNode(pSeq(pSeq2(pChar('while'), pNot(pRef(peg, 'W'))), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pRef(peg, '":"'), pEdge('body', pOre2(pRef(peg, 'Block'), pRef(peg, 'BlockStmt')))), 'WhileStmt', 0);
+    peg['VarDecl'] = pOre2(pNode(pSeq3(pEdge('left', pRef(peg, 'LeftHand')), pRef(peg, '"="'), pEdge('right', pRef(peg, 'Expression'))), 'VarDecl', 0), pRef(peg, 'SelfAssign'));
+    peg['LeftHand'] = pSeq2(pRef(peg, 'Name'), pMany(pOre2(pFold('recv', pSeq2(pRef(peg, '"."'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
     peg['SelfAssign'] = pNode(pSeq3(pEdge('left', pRef(peg, 'LeftHand')), pEdge('name', pRef(peg, 'SelfAssignOp')), pEdge('right', pRef(peg, 'Expression'))), 'SelfAssign', 0);
-    peg['SelfAssignOp'] = pSeq2(pNode(pSeq2(pOre(pChar('<<'), pChar('>>'), pChar('**'), pChar('//'), pRange('+=*@/%&|^', [])), pChar('=')), '', 0), pRef(peg, '_'));
-    peg['Expression'] = pSeq2(pRef(peg, 'Operator'), pOption(pFold('then', pSeq(pChar('if'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('else', pRef(peg, 'Expression'))), 'IfExpr', 0)));
+    peg['SelfAssignOp'] = pSeq2(pNode(pSeq2(pOre(pChar('<<'), pChar('>>'), pChar('**'), pChar('//'), pRange('+=*/%&|^＋＝＊／％＆｜＾×÷', [])), pOre2(pChar('='), pChar('＝'))), '', 0), pRef(peg, '_'));
+    peg['Expression'] = pSeq2(pRef(peg, 'Operator'), pOption(pOre2(pFold('then', pSeq(pChar('if'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('else', pRef(peg, 'Expression'))), 'IfExpr', 0), pFold('left', pSeq2(pRef(peg, '"="'), pEdge('right', pRef(peg, 'Expression'))), 'AssignExpr', 0))));
     peg['Operator'] = pSeq2(pRef(peg, 'AndExpr'), pMany(pFold('left', pSeq3(pRef(peg, 'OR'), pRef(peg, '_'), pEdge('right', pRef(peg, 'AndExpr'))), 'Or', 0)));
-    peg['OR'] = pOre2(pSeq2(pChar('or'), pNot(pRef(peg, 'W'))), pChar('||'));
+    peg['OR'] = pOre(pSeq2(pChar('or'), pNot(pRef(peg, 'W'))), pChar('||'), pChar('｜｜'));
     peg['AndExpr'] = pSeq2(pRef(peg, 'NotExpr'), pMany(pFold('left', pSeq3(pRef(peg, 'AND'), pRef(peg, '_'), pEdge('right', pRef(peg, 'NotExpr'))), 'And', 0)));
-    peg['AND'] = pOre2(pSeq2(pChar('and'), pNot(pRef(peg, 'W'))), pChar('&&'));
+    peg['AND'] = pOre(pSeq2(pChar('and'), pNot(pRef(peg, 'W'))), pChar('&&'), pChar('＆＆'));
     peg['NotExpr'] = pOre2(pNode(pSeq3(pRef(peg, 'NOT'), pRef(peg, '_'), pEdge('', pRef(peg, 'NotExpr'))), 'Not', 0), pRef(peg, 'EqExpr'));
-    peg['NOT'] = pOre2(pSeq3(pChar('not'), pNot(pRef(peg, 'W')), pRef(peg, '_')), pChar('!'));
+    peg['NOT'] = pOre(pSeq3(pChar('not'), pNot(pRef(peg, 'W')), pRef(peg, '_')), pChar('!'), pChar('！'));
     peg['EqExpr'] = pSeq2(pRef(peg, 'SumExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'EQ'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'SumExpr'))), 'Infix', 0)));
     peg['EQ'] = pOre(pSeq2(pChar('=='), pNot(pChar('='))), pSeq2(pChar('＝＝'), pNot(pChar('＝'))), pSeq2(pChar('!='), pNot(pChar('='))), pSeq2(pChar('！＝'), pNot(pChar('＝'))), pSeq2(pChar('<='), pNot(pChar('='))), pSeq2(pChar('＜＝'), pNot(pChar('＝'))), pSeq2(pChar('>='), pNot(pChar('='))), pSeq2(pChar('＞＝'), pNot(pChar('＝'))), pSeq2(pChar('<'), pNot(pChar('<'))), pSeq2(pChar('＜'), pNot(pChar('＜'))), pSeq2(pChar('>'), pNot(pChar('>'))), pSeq2(pChar('＞'), pNot(pChar('＞'))), pSeq2(pChar('in'), pRef(peg, 'S')));
     peg['SumExpr'] = pSeq2(pRef(peg, 'ProdExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'SUM'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'ProdExpr'))), 'Infix', 0)));
-    peg['SUM'] = pRange('+-|＋ー', []);
+    peg['SUM'] = pRange('+-|＋ー｜', []);
     peg['ProdExpr'] = pSeq2(pRef(peg, 'PowExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'PROD'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'PowExpr'))), 'Infix', 0)));
-    peg['PROD'] = pOre(pChar('//'), pChar('<<'), pChar('>>'), pRange('*/%^&×÷', []));
+    peg['PROD'] = pOre(pChar('//'), pChar('<<'), pChar('>>'), pChar('／／'), pChar('＜＜'), pChar('＞＞'), pRange('*/%^&＊・／％＾＆×÷', []));
     peg['PowExpr'] = pSeq2(pRef(peg, 'UnaryExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pChar('**'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'UnaryExpr'))), 'Infix', 0)));
     peg['UnaryExpr'] = pOre2(pNode(pSeq3(pEdge('name', pNode(pRef(peg, 'PRE'), 'Name', 0)), pRef(peg, '_'), pEdge('expr', pRef(peg, 'UnaryExpr'))), 'Unary', 0), pRef(peg, 'SuffixExpr'));
-    peg['PRE'] = pRange('+-~', []);
+    peg['PRE'] = pRange('+-~＋ー〜', []);
     peg['SuffixExpr'] = pSeq2(pRef(peg, 'Primary'), pMany(pOre(pFold('recv', pSeq(pRef(peg, '"."'), pEdge('name', pRef(peg, 'Name')), pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '")"')), pEdge('err', pRef(peg, 'CloseP')))), 'MethodExpr', 0), pFold('recv', pSeq2(pRef(peg, '"."'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('name', pSeq3(pRef(peg, '"("'), pEdge('params', pRef(peg, 'Arguments')), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '")"')), pEdge('err', pRef(peg, 'CloseP')))), 'ApplyExpr', 0), pFold('recv', pSeq(pRef(peg, '"["'), pOption(pEdge('left', pRef(peg, 'Expression'))), pRef(peg, '":"'), pOption(pEdge('right', pRef(peg, 'Expression'))), pOre2(pRef(peg, '"]"'), pEdge('err', pRef(peg, 'CloseS')))), 'Slice', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pOre2(pRef(peg, '"]"'), pEdge('err', pRef(peg, 'CloseS')))), 'IndexExpr', 0))));
-    peg['Arguments'] = pNode(pSeq3(pOption(pSeq2(pEdge('', pRef(peg, 'Expression')), pNot(pChar('=')))), pMany(pSeq(pChar(','), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')), pNot(pChar('=')))), pOption(pEdge('', pRef(peg, 'KeywordArgument')))), 'Arguments', 0);
-    peg['KeywordArgument'] = pNode(pSeq3(pOption(pSeq2(pChar(','), pRef(peg, '__'))), pEdge('', pRef(peg, 'Argument')), pMany(pSeq3(pChar(','), pRef(peg, '__'), pEdge('', pRef(peg, 'Argument'))))), 'Data', 0);
-    peg['Argument'] = pOre2(pNode(pSeq(pEdge('name', pRef(peg, 'Name')), pChar('='), pRef(peg, '_'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0), pRef(peg, 'NLKeyValue'));
+    peg['Arguments'] = pNode(pSeq3(pOption(pSeq2(pNot(pSeq3(pRef(peg, 'NAME'), pRef(peg, '_'), pChar('='))), pEdge('', pRef(peg, 'Expression')))), pMany(pSeq(pRef(peg, '","'), pRef(peg, '__'), pNot(pSeq3(pRef(peg, 'NAME'), pRef(peg, '_'), pChar('='))), pEdge('', pRef(peg, 'Expression')))), pOption(pEdge('', pRef(peg, 'KeywordArgument')))), 'Arguments', 0);
+    peg['KeywordArgument'] = pNode(pSeq3(pOption(pSeq2(pRef(peg, '","'), pRef(peg, '__'))), pEdge('', pRef(peg, 'Argument')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'Argument'))))), 'Data', 0);
+    peg['Argument'] = pNode(pSeq(pEdge('name', pRef(peg, 'Name')), pRef(peg, '"="'), pRef(peg, '_'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0);
     peg['Primary'] = pOre(pRef(peg, 'GroupExpr'), pRef(peg, 'ListExpr'), pRef(peg, 'DataExpr'), pRef(peg, 'Lambda'), pRef(peg, 'Constant'), pRef(peg, 'Name'));
     peg['GroupExpr'] = pNode(pSeq(pRef(peg, '"("'), pEdge('', pRef(peg, 'Expression')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')))), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '")"')), pEdge('', pRef(peg, 'CloseP')))), 'Tuple', 0);
     peg['ListExpr'] = pNode(pSeq(pRef(peg, '"["'), pOption(pSeq2(pEdge('', pRef(peg, 'Expression')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')))))), pOption(pRef(peg, '","')), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '"]"')), pEdge('', pRef(peg, 'CloseS')))), 'List', 0);
@@ -590,7 +590,8 @@ const grammar = (start: string) => {
     peg['CloseB'] = pNode(pSeq2(pNot(pRef(peg, '"}"')), pAnd(pRef(peg, 'DELIM'))), 'RecoverB', 0);
     peg['KeyValue'] = pNode(pSeq3(pEdge('name', pOre(pRef(peg, 'Name'), pRef(peg, 'StringExpr'), pRef(peg, 'CharExpr'))), pRef(peg, '":"'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0);
     peg['Name'] = pOre2(pRef(peg, 'Identifier'), pRef(peg, 'IdentifierNLP'));
-    peg['Identifier'] = pSeq2(pNode(pSeq2(pRange('_', ['AZ', 'az']), pMany(pRef(peg, 'W'))), 'Name', 0), pRef(peg, '_'));
+    peg['NAME'] = pSeq2(pRange('_', ['AZ', 'az']), pMany(pRef(peg, 'W')));
+    peg['Identifier'] = pSeq2(pNode(pRef(peg, 'NAME'), 'Name', 0), pRef(peg, '_'));
     peg['IdentifierNLP'] = pSeq2(pNode(pSeq2(pMany1(pOre(pRef(peg, 'HIRA'), pRef(peg, 'KATA'), pRef(peg, 'KANJI'), pChar('_'))), pMany(pRef(peg, 'W'))), 'NameOrNLP', 0), pRef(peg, '_'));
     peg['NLPSymbol'] = pSeq2(pNode(pMany1(pOre(pRef(peg, 'HIRA'), pRef(peg, 'KATA'), pRef(peg, 'KANJI'))), 'NLPSymbol', 0), pRef(peg, '_'));
     peg['NLKeyValue'] = pSeq2(pNode(pMany1(pOre(pRef(peg, 'HIRA'), pRef(peg, 'KATA'), pRef(peg, 'KANJI'))), 'NLKeyValue', 0), pRef(peg, '_'));
@@ -602,23 +603,26 @@ const grammar = (start: string) => {
     peg['FormatContent3D'] = pOre2(pSeq3(pChar('{'), pRef(peg, 'Expression'), pChar('}')), pNode(pMany(pSeq3(pNot(pChar('"""')), pNot(pChar('{')), pAny())), 'StringPart', 0));
     peg['FormatContent1D'] = pOre2(pSeq3(pChar('{'), pRef(peg, 'Expression'), pChar('}')), pNode(pMany(pSeq3(pNot(pChar('"')), pNot(pChar('{')), pAny())), 'StringPart', 0));
     peg['LongString'] = pOre2(pSeq(pChar("''"), pNode(pSeq3(pChar("'"), pMany(pOre(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange("\\'", [])), pAny()), pSeq2(pNot(pChar("'''")), pChar("'")))), pChar("'")), 'MultiString', 0), pChar("''"), pRef(peg, '_')), pSeq(pChar('""'), pNode(pSeq3(pChar('"'), pMany(pOre(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange('\\"', [])), pAny()), pSeq2(pNot(pChar('"""')), pChar('"')))), pChar('"')), 'MultiString', 0), pChar('""'), pRef(peg, '_')));
-    peg['StringExpr'] = pSeq2(pNode(pSeq3(pChar('"'), pMany(pRef(peg, 'STRING_CONTENT')), pChar('"')), 'String', 0), pRef(peg, '_'));
-    peg['CharExpr'] = pSeq2(pNode(pSeq3(pChar("'"), pMany(pRef(peg, 'CHAR_CONTENT')), pChar("'")), 'Char', 0), pRef(peg, '_'));
-    peg['STRING_CONTENT'] = pOre2(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange('"\n\\', [])), pAny()));
-    peg['CHAR_CONTENT'] = pOre2(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange("'\n\\", [])), pAny()));
+    peg['StringExpr'] = pOre2(pSeq2(pNode(pSeq3(pChar('"'), pMany(pRef(peg, 'STRING')), pChar('"')), 'String', 0), pRef(peg, '_')), pSeq2(pNode(pSeq3(pRef(peg, 'DQ'), pMany(pRef(peg, 'ZSTRING')), pRef(peg, 'DQ')), 'ZString', 0), pRef(peg, '_')));
+    peg['CharExpr'] = pOre2(pSeq2(pNode(pSeq3(pChar("'"), pMany(pRef(peg, 'CHAR')), pChar("'")), 'Char', 0), pRef(peg, '_')), pSeq2(pNode(pSeq3(pRef(peg, 'SQ'), pMany(pRef(peg, 'ZCHAR')), pRef(peg, 'SQ')), 'ZChar', 0), pRef(peg, '_')));
+    peg['SQ'] = pRange("'’‘＇", []);
+    peg['DQ'] = pRange('"”“＂', []);
+    peg['STRING'] = pOre2(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange('"\n\\', [])), pAny()));
+    peg['CHAR'] = pOre2(pRef(peg, 'ESCAPE'), pSeq2(pNot(pRange("'\n\\", [])), pAny()));
+    peg['ZSTRING'] = pOre2(pRef(peg, 'ESCAPE'), pSeq3(pNot(pRef(peg, 'DQ')), pNot(pRange('\n\\', [])), pAny()));
+    peg['ZCHAR'] = pOre2(pRef(peg, 'ESCAPE'), pSeq3(pNot(pRef(peg, 'SQ')), pNot(pRange('\n\\', [])), pAny()));
     peg['ESCAPE'] = pOre(pSeq2(pChar('\\'), pRange('\'"\\bfnrt', [])), pSeq(pChar('\\'), pRange('', ['03']), pRange('', ['07']), pRange('', ['07'])), pSeq3(pChar('\\'), pRange('', ['07']), pRange('', ['07'])), pSeq2(pChar('\\'), pRange('', ['07'])), pSeq(pChar('\\'), pRange('uU', []), pRef(peg, 'HEX'), pRef(peg, 'HEX'), pRef(peg, 'HEX'), pRef(peg, 'HEX')));
-    peg['IntExpr'] = pSeq2(pNode(pOre(pRef(peg, 'DECIMAL'), pRef(peg, 'HEXADECIMAL'), pRef(peg, 'BINARY'), pRef(peg, 'OCTAL')), 'Int', 0), pRef(peg, '_'));
-    peg['DECIMAL'] = pOre2(pSeq2(pChar('0'), pNot(pRange('bBxX_', ['09']))), pSeq2(pRange('', ['19']), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'DIGIT')))));
+    peg['IntExpr'] = pSeq2(pNode(pOre(pRef(peg, 'HEXADECIMAL'), pRef(peg, 'BINARY'), pRef(peg, 'DECIMAL')), 'Int', 0), pRef(peg, '_'));
+    peg['DECIMAL'] = pSeq3(pNot(pChar('_')), pRef(peg, 'DIGIT'), pMany(pRef(peg, 'DIGIT')));
     peg['HEXADECIMAL'] = pSeq(pChar('0'), pRange('xX', []), pRef(peg, 'HEX'), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'HEX'))));
     peg['BINARY'] = pSeq(pChar('0'), pRange('bB', []), pRange('01', []), pMany(pSeq2(pMany(pChar('_')), pRange('01', []))));
-    peg['OCTAL'] = pSeq2(pChar('0'), pMany(pSeq2(pMany(pChar('_')), pRange('', ['07']))));
-    peg['DIGIT'] = pRange('', ['09']);
-    peg['HEX'] = pRange('', ['af', 'AF', '09']);
+    peg['DIGIT'] = pRange('_', ['09', '０９']);
+    peg['HEX'] = pRange('\x08', ['af', 'AF', '09']);
     peg['LONG_SUFFIX'] = pRange('lL', []);
     peg['FloatExpr'] = pSeq2(pNode(pRef(peg, 'FLOAT'), 'Double', 0), pRef(peg, '_'));
-    peg['FLOAT'] = pOre2(pSeq2(pRef(peg, 'FRACTION'), pOption(pRef(peg, 'EXPONENT'))), pSeq2(pMany1(pRef(peg, 'DIGIT')), pRef(peg, 'EXPONENT')));
-    peg['FRACTION'] = pOre2(pSeq(pNot(pChar('_')), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'DIGIT'))), pChar('.'), pRef(peg, 'DIGIT'), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'DIGIT')))), pSeq(pRef(peg, 'DIGIT'), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'DIGIT'))), pChar('.'), pNot(pChar('.'))));
-    peg['EXPONENT'] = pSeq(pRange('eE', []), pOption(pRange('+-', [])), pRef(peg, 'DIGIT'), pMany(pSeq2(pMany(pChar('_')), pRef(peg, 'DIGIT'))));
+    peg['FLOAT'] = pSeq2(pNot(pChar('_')), pOre2(pSeq2(pRef(peg, 'FRACTION'), pOption(pRef(peg, 'EXPONENT'))), pSeq2(pMany1(pRef(peg, 'DIGIT')), pRef(peg, 'EXPONENT'))));
+    peg['FRACTION'] = pOre2(pSeq(pMany(pRef(peg, 'DIGIT')), pRef(peg, '"."'), pNot(pChar('_')), pMany1(pRef(peg, 'DIGIT'))), pSeq(pRef(peg, 'DIGIT'), pMany(pRef(peg, 'DIGIT')), pRef(peg, '"."'), pNot(pChar('.'))));
+    peg['EXPONENT'] = pSeq(pRange('eE', []), pOption(pRange('+-', [])), pNot(pChar('_')), pMany1(pRef(peg, 'DIGIT')));
     peg['Number'] = pOre2(pRef(peg, 'FloatExpr'), pRef(peg, 'IntExpr'));
     peg['TrueExpr'] = pSeq2(pNode(pSeq2(pRange('Tt', []), pChar('rue')), 'TrueExpr', 0), pRef(peg, '_'));
     peg['FalseExpr'] = pSeq2(pNode(pSeq2(pRange('Ff', []), pChar('alse')), 'FalseExpr', 0), pRef(peg, '_'));
@@ -649,8 +653,16 @@ const grammar = (start: string) => {
     peg['","'] = pSeq2(pRange(',，、', []), pRef(peg, '_'));
     peg['";"'] = pMany1(pSeq2(pRange(';；', []), pRef(peg, '_')));
     peg['":"'] = pSeq2(pRange(':：', []), pRef(peg, '_'));
+    peg['"_"'] = pRange('_＿', []);
   }
   return peg[start];
+}
+
+const example = (start: string, sample?: string) => {
+  const parser = generate(start);
+  const t = parser(sample || 'abc');
+  console.log(`${start} ${sample}`)
+  console.log(t.toString());
 }
 
 // pegpy nezcc -g math.tpeg parser.ts > math.ts

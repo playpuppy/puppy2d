@@ -84,25 +84,25 @@ def succ(x):
 FuncDecl = {
     'def' S _ 
     name: Name 
-    params: FuncParams ':' _
+    params: FuncParams ":"
     body: (Block / BlockStmt)
     #FuncDecl
 }
 
 FuncParams = {
-    "(" FuncParam? ( "," FuncParam )* ")"
+    "(" FuncParam? ( "," __ FuncParam )* (__ ")" / CloseP)
     #FuncParam
 }
 
 FuncParam = {
     name: Name
-    (':' _ type: Name)?
+    ( ":" type: Name)?
     #Param
 }
 
 Lambda = {
     'lambda' 
-    (S _ params: LambdaParams)? ':' _
+    (S _ params: LambdaParams)? ":"
     body: (Block / Expression)
     #FuncExpr
 }
@@ -154,12 +154,12 @@ else :
 
 IfStmt = {
     ('if' !W) _ 
-    cond: Expression ':' _
+    cond: Expression ":"
     then: (Block / BlockStmt)
     (elif: ElifBlock)?
     (
         (@match(INDENT) / NL)
-        'else' !W _  ':' _
+        'else' !W _  ":"
         else: (Block / BlockStmt)
     )?
     #IfStmt
@@ -172,7 +172,7 @@ ElifBlock = {
 ElifStmt = {
     (@match(INDENT) / NL)
     ('elif' !W) _ 
-    cond: Expression ':' _
+    cond: Expression ":"
     then: (Block / BlockStmt)
     #ElifStmt
 }
@@ -189,14 +189,14 @@ ForStmt = {
     ('for' !W) _ 
     each: Name 
     ('in' !W) _ 
-    list: Expression ':' _
+    list: Expression ":"
     body: (Block / BlockStmt)
     #ForStmt
 }
 
 WhileStmt = {
     ('while' !W) _ 
-    cond: Expression ':' _
+    cond: Expression ":"
     body: (Block / BlockStmt)
     #WhileStmt
 }
@@ -208,14 +208,14 @@ example VarDecl,Statement A += 1
 
 VarDecl = {
     left: LeftHand
-    '=' _ 
+    "=" 
     right: Expression
     #VarDecl
 } / SelfAssign
 
 LeftHand =
     Name (
-	    recv:^ { [.] _ name: Name #GetExpr }
+	    recv:^ { "." name: Name #GetExpr }
     	/ recv:^ { "[" index: Expression "]" #IndexExpr }
     )*
 
@@ -227,7 +227,7 @@ SelfAssign = {
 }
 
 SelfAssignOp = {
-    ('<<' / '>>' / '**' / '//' / [+=*@/%&|^]) '='
+    ('<<' / '>>' / '**' / '//' / [+=*/%&|^＋＝＊／％＆｜＾×÷]) ('='/'＝')
 } _
 
 /* Reserved */
@@ -237,23 +237,25 @@ SelfAssignOp = {
 example Expression not 1 == 2
 example Expression not 1 == 2 and 1 > 3
 
-Expression = 
-    Operator (then:^ { 'if' !W _ cond: Expression 'else' !W _ else: Expression #IfExpr })?
+Expression = Operator ( 
+    (then:^ { 'if' !W _ cond: Expression 'else' !W _ else: Expression #IfExpr })
+    / (left:^ { "=" right: Expression #AssignExpr})
+)?
 
 Operator =
 	AndExpr (left:^ { OR _ right: AndExpr #Or })*
 
-OR = 'or' !W / '||'
+OR = 'or' !W / '||' / '｜｜'
 
 AndExpr =
 	NotExpr (left:^ { AND _ right: NotExpr #And })*
 
-AND = 'and' !W / '&&'
+AND = 'and' !W / '&&' / '＆＆'
 
 NotExpr =
 	{ NOT _ NotExpr #Not } / EqExpr
 
-NOT = ('not' !W _) / '!'
+NOT = ('not' !W _) / '!' / '！'
 
 EqExpr =
 	SumExpr (left:^ { name: { EQ #Name } _ right: SumExpr #Infix })*
@@ -270,14 +272,14 @@ EQ =
 SumExpr =
 	ProdExpr (left:^ { name: { SUM #Name } _ right: ProdExpr #Infix })*
 
-SUM = [+\-|＋ー]
+SUM = [+\-|＋ー｜]
 
 ProdExpr =
 	PowExpr (left:^ { name: { PROD #Name } _ right: PowExpr #Infix })*
 
 PROD =
-    / '//' / '<<' / '>>' 
-	/ [*/%^&×÷]
+    / '//' / '<<' / '>>' / '／／' / '＜＜' / '＞＞'
+	/ [*/%^&＊・／％＾＆×÷]
 
 PowExpr = UnaryExpr (left:^ { name: { '**' #Name } _ right: UnaryExpr #Infix })*
 
@@ -285,7 +287,7 @@ UnaryExpr
 	= { name: {PRE #Name } _ expr: UnaryExpr #Unary }
     / SuffixExpr
 
-PRE = [+\-~]
+PRE = [+\-~＋ー〜]
 
 SuffixExpr =
 	Primary (
@@ -301,23 +303,24 @@ example Expression a[1:]
 example Expression a[:2]
 
 Arguments = {
-	(Expression !'=')? ( ',' __ Expression !'=')*
+	( !(NAME _ '=') Expression)? 
+    ( "," __ !(NAME _ '=') Expression )*
     KeywordArgument?
     #Arguments
 }
 
 KeywordArgument = {
-    (',' __ )?
-    Argument ( ',' __ Argument )*
+    ("," __ )?
+    Argument ( "," __ Argument )*
     #Data
 }
 
 Argument = {
     name: Name
-    '=' _ 
+    "=" _ 
     value: Expression
     #KeyValue
-} / NLKeyValue
+}
 
 example Expression Circle(500, 500)
 example Expression Circle(500, 500, clicked=cat_clicked)
@@ -369,8 +372,10 @@ KeyValue = {
 
 Name = Identifier / IdentifierNLP
 
+NAME = [A-Za-z_] W*
+
 Identifier = {
-    [A-Za-z_] W*
+    NAME
     #Name
 } _
 
@@ -388,7 +393,6 @@ NLKeyValue = {
     (HIRA / KATA / KANJI)+
     #NLKeyValue
 } _
-
 
 W = [A-Za-z0-9_]
 
@@ -441,10 +445,20 @@ LongString =
     '\'\'' { '\'' ( ESCAPE / ![\\'] . / !'\'\'\'' '\'' )* '\'' #MultiString } '\'\'' _
     / '""' { '"' ( ESCAPE / ![\\"] . / !'"""' '"' )* '"' #MultiString } '""' _
 
-StringExpr =  { '"' STRING_CONTENT* '"' #String }  _
-CharExpr = { '\'' CHAR_CONTENT* '\'' #Char } _
-STRING_CONTENT = ESCAPE / ![\"\n\\] .
-CHAR_CONTENT   = ESCAPE / !['\n\\] .
+StringExpr = 
+    / { '"' STRING* '"' #String } _
+    / { DQ ZSTRING* DQ #ZString } _
+CharExpr = 
+    / { '\'' CHAR* '\'' #Char } _
+    / { SQ ZCHAR* SQ #ZChar } _
+
+SQ = ['’‘＇]
+DQ = ["”“＂]
+STRING = ESCAPE / ![\"\n\\] .
+CHAR   = ESCAPE / !['\n\\] .
+ZSTRING = ESCAPE / !DQ ![\n\\] .
+ZCHAR   = ESCAPE / !SQ ![\n\\] .
+
 ESCAPE =
 	'\\' ['\"\\bfnrt]
 	/ '\\' [0-3] [0-7] [0-7]
@@ -453,37 +467,35 @@ ESCAPE =
 	/ '\\' [uU] HEX HEX HEX HEX
 
 IntExpr = {
-	(DECIMAL / HEXADECIMAL / BINARY / OCTAL)
+	(HEXADECIMAL / BINARY / DECIMAL )
 	#Int
 } _
 
-DECIMAL = '0' ![bBxX0-9_] / [1-9] ( '_'* DIGIT )*
+DECIMAL = !'_' DIGIT ( DIGIT )*
 HEXADECIMAL = '0' [xX] HEX ( '_'* HEX )*
 BINARY = '0' [bB] [01] ( '_'* [01] )*
-OCTAL = '0' ( '_'* [0-7] )*
-DIGIT = [0-9]
-HEX = [a-fA-F0-9]
+DIGIT = [0-9０-９_]
+HEX = [a-fA-F0-9]
 LONG_SUFFIX = [lL]
 
 FloatExpr = {
 	FLOAT #Double
 } _
 
-FLOAT =
-	FRACTION EXPONENT?
-    / DIGIT+ EXPONENT
+FLOAT = !'_' (
+	FRACTION EXPONENT? / DIGIT+ EXPONENT
+)
 
 FRACTION =
-	!'_' ( '_'* DIGIT )* '.' DIGIT ( '_'* DIGIT )*
-    / DIGIT ( '_'* DIGIT )* '.' !'.'
+	/ DIGIT* "." !'_' DIGIT+
+    / DIGIT DIGIT* "." !'.'
 
 EXPONENT =
-	[eE] [+\-]? DIGIT ( '_'* DIGIT )*
+	[eE] [+\-]? !'_' DIGIT+
 
 /* Number,Unit */
 
 Number = FloatExpr / IntExpr
-
 
 /* Const */
 
@@ -536,6 +548,7 @@ MARK = [ー]
 "," = [,，、] _
 ";" = ([;；] _)+
 ":" = [:：] _
+"_" = [_＿]
 
 example Source '''
 World(1600, 900, background="white");
@@ -552,3 +565,6 @@ Rectangle(100, 200, width=200, height=200)
 example Source '''
 a=1;b=1
 '''
+
+example Expression ”Hello World“
+example Expression Circle(0, hoge, hoge=1)
