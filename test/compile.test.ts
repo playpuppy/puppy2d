@@ -37,6 +37,12 @@ test('あ+=1', () => {
 `)).toBe(`vars['あ'] = (vars['あ'] + 1)`);
 });
 
+test('1＋1', () => {
+	expect(utest(`
+a=1＋1
+`)).toBe('Zenkaku');
+});
+
 // test('None', () => {
 // 	expect(utest('None')).toBe('null');
 // });

@@ -18,6 +18,7 @@ const JMessage: { [key: string]: string | string[] } = {
 
   'UndefinedParseTree': 'Puppyではサポートされていない構文です.',
   'UndefinedOperator': 'Puppyではサポートされていない演算子です.',
+  'Transition': 'Python以外の言語を学ぶときに困るかもしれません',
 
   'UndefinedName': 'はじめて用いる変数名です.',
   '?UndefinedName': [
@@ -42,16 +43,18 @@ const JMessage: { [key: string]: string | string[] } = {
     'Puppyは、Pythonの全てのライブラリが使えるわけではありません',
     'Pythonのソースコードをそのまま貼り付けてはいけません'],
 
-  'TypeError': 'データの種類が一致しません',
-  '@req': '正しいデータの種類：',
-  '@given': '実際に与えられた種類：',
+  'TypeError': '値の種類が一致しません',
+  '@req': '必要な値の種類：',
+  '@given': 'コード上の種類：',
+  'BinaryTypeError': '演算子の左辺と右辺の種類が一致しません',
 
   'MissingArguments': 'パラメータの数が足りません',
   'TooManyArguments': '引数（パラメータ）の数が多すぎます',
   '@psize': '必要なパラメータの数：',
   '@type': '型情報：',
 
-  'UnknownName': 'この名前はタイプミスかも知れません',
+  'UnknownName': 'タイプミスかも知れません',
+  'Zenkaku': '全角文字は使わないようにしましょう',
 
   'InferredPackage': 'ライブラリを自動インポートしました',
   '@inferred': '推論されたもの',

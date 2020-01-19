@@ -38,9 +38,21 @@ print = 1
 `)).toBe("Immutable");
 });
 
+test('ERR True+True', () => {
+	expect(utest(`
+True+True
+`)).toBe("TypeError");
+});
+
 test('ERR 1+"1"', () => {
 	expect(utest(`
 1+"1"
+`)).toBe("BinaryTypeError");
+});
+
+test('ERR True*True', () => {
+	expect(utest(`
+True*True
 `)).toBe("TypeError");
 });
 

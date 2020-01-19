@@ -4,7 +4,7 @@ import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './pa
 import { SourceError, PuppyCode } from './code';
 import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment';
 import { messagefy } from './message';
-import { emitJSBinary } from './operator';
+import { PuppyTypeSystem } from './operator';
 
 // const ZenkakuToASCII: { [key: string]: string } = {
 //   '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
@@ -96,72 +96,6 @@ class JSTranspiler extends Transpiler {
     return env.perror(t, 'UndefinedParseTree');
   }
 
-  // public skip(env: Env, t: ParseTree, out: string[]): Type {
-  //   throw new CompileCancelationError();
-  // }
-
-  // public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
-  //   const ty = this.conv(env, t, out);
-  //   if (req !== undefined) {
-  //     if (req.accept(ty, true)) {
-  //       return ty;
-  //     }
-  //     const params = [
-  //       '@req', req.toString(), '@given', ty.toString,
-  //     ];
-  //     return env.perror(t, key);
-  //   }
-  //   return ty;
-  // }
-
-  // private checkBinary(env: Env, t: ParseTree, op: string, ty1: Type, left: string, ty2: Type, right: string, out: string[]) {
-  //   if (op === '==' || op === '!=') {
-  //     out.push(`${left} ${op}= ${right}`);
-  //     return Types.Bool;
-  //   }
-  //   ty1 = ty1.realType();
-  //   ty2 = ty2.realType();
-  //   if (op === '+') {
-  //     if (ty1 === Types.Int && ty2 === Types.Int) {
-  //       out.push(`(${left} + ${right})`);
-  //       return Types.Int;
-  //     }
-  //     if (ty1.accept(ty2, true)) {
-  //       out.push(`lib.anyAdd(${left},${right})`);
-  //       return ty1;
-  //     }
-  //     env.perror(t, 'TypeError', ['@infix', op]);
-  //     return this.skip(env, t, out);
-  //   }
-  //   if (op === '*') {
-  //     if (ty1 === Types.Int && ty2 === Types.Int) {
-  //       out.push(`(${left} * ${right})`);
-  //       return Types.Int;
-  //     }
-  //     out.push(`lib.anyMul(${left},${right})`);
-  //     if (ty1 === Types.Int || Types.ListAny.accept(ty2, false)) return ty2;
-  //     if (ty2 === Types.Int || Types.ListAny.accept(ty1, false)) return ty1;
-  //     return ty1;
-  //   }
-  //   if (op === '//') {
-  //     out.push(`((${left}/${right})|0)`);
-  //     return Types.Int;
-  //   }
-  //   if (op === '**') {
-  //     out.push(`Math.pow(${left},${right})`);
-  //     return Types.Int;
-  //   }
-  //   if (ty1.accept(ty2, true)) {
-  //     out.push(`(${left} ${op} ${right})`);
-  //     if (LeftHandType[op] === Types.Compr) {
-  //       return Types.Bool;
-  //     }
-  //     return ty1;
-  //   }
-  //   env.perror(t, 'TypeError', ['@infix', op]);
-  //   return this.skip(env, t, out);
-  // }
-
   public err(env: Env, t: ParseTree, out: string[]) {
     const inputs = t.inputs;
     var pos = t.spos - 1;
@@ -212,7 +146,6 @@ class JSTranspiler extends Transpiler {
         out2.push(env.get('@indent'))
         this.conv(env, subtree, out2);
         out2.push(`\n`);
-        //env.emitAutoYield(subtree, out2);
         out.push(out2.join(''))
       }
       catch (e) {
@@ -271,7 +204,6 @@ class JSTranspiler extends Transpiler {
     out.push('))');
     return ty;
   }
-
 
   public IfStmt(env: Env, t: ParseTree | any, out: string[]) {
     out.push('if (');
@@ -539,18 +471,46 @@ class JSTranspiler extends Transpiler {
     return Types.Bool;
   }
 
+  typeSystem = new PuppyTypeSystem();
+
   public Infix(env: Env, t: ParseTree | any, out: string[]) {
-    return emitJSBinary(env, t, out);
-    // const op = operator(t.tokenize('name'));
-    // if (op === undefined) {
-    //   env.perror(t.get('name'), 'UndefinedOperator');
-    //   return this.skip(env, t, out);
-    // }
-    // const out1: string[] = [];
-    // const out2: string[] = [];
-    // const ty1 = this.check(getLeftHandType(op), env, t['left'], out1);
-    // const ty2 = this.check(getRightHandType(op, ty1), env, t['right'], out2);
-    // return this.checkBinary(env, t, op, ty1, out1.join(''), ty2, out2.join(''), out);
+    const op = this.typeSystem.getBinaryOperator(env, t.name);
+    const pat = this.typeSystem.getBinaryType(env, t.name, op);
+
+    const out1: string[] = [];
+    const out2: string[] = [];
+    const ty1 = env.typeCheck(pat, t.left, out1, 'TypeError').realType();
+    const ty2 = env.typeCheck(ty1, t.right, out2, 'BinaryTypeError').realType();
+    const left = out1.join('');
+    const right = out2.join('');
+
+    /** */
+    if (op === '==' || op === '!=') {
+      out.push(`${left} ${op}= ${right}`);
+      return Types.Bool;
+    }
+    if (op === '+') {
+      if ((ty1.isNumberType() && ty2.isNumberType()) ||
+        (ty1.isStringType() && ty2.isStringType())) {
+        out.push(`(${left} + ${right})`);
+        return ty1;
+      }
+    }
+    if (op === '//') {
+      out.push(`((${left}/${right})|0)`);
+      return Types.Int;
+    }
+    if (op === '**') {
+      env.pwarn(t.name, 'Transition');
+      out.push(`Math.pow(${left},${right})`);
+      return Types.Int;
+    }
+    if (ty1.accept(ty2, true)) {
+      out.push(`(${left} ${op} ${right})`);
+      return (this.typeSystem.isComparator(op)) ? Types.Bool : ty1;
+    }
+    console.log(`FIXME: ${t.tokenize()} ${ty1} ${ty2}`);
+    return env.perror(t, 'TypeError', ['@infix', op]);
   }
 
   public Unary(env: Env, t: ParseTree | any, out: string[]) {
