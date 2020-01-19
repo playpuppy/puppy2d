@@ -289,11 +289,11 @@ PRE = [+\-~]
 
 SuffixExpr =
 	Primary (
-	    recv:^ { '.' _ name: Name "(" params: Arguments __ ")" #MethodExpr }
-	    / recv:^ { [.] _ name: Name #GetExpr }
-	    / name:^ { "(" params: Arguments __ ")" #ApplyExpr }
-        / recv:^ { "[" (left: Expression)? ':' _ (right: Expression)? "]" #Slice }
-	    / recv:^ { "[" index: Expression "]" #IndexExpr }
+	    recv:^ { "." name: Name "(" params: Arguments (__ ")" / err: CloseP) #MethodExpr }
+	    / recv:^ { "." name: Name #GetExpr }
+	    / name:^ { "(" params: Arguments (__ ")" / err: CloseP)  #ApplyExpr }
+        / recv:^ { "[" (left: Expression)? ":" (right: Expression)? ("]" / err: CloseS) #Slice }
+	    / recv:^ { "[" index: Expression ("]" / err: CloseS) #IndexExpr }
 	)*
 
 example Expression a[1:2]
@@ -343,11 +343,20 @@ Primary =
   / Constant
   / Name
 
-GroupExpr = { "(" Expression ("," __ Expression)*  __ ")" #Tuple }
+GroupExpr = { "(" Expression ("," __ Expression)*  (__ ")" / CloseP) #Tuple }
 
-ListExpr = { "[" (Expression ("," __ Expression)* )? ","?  __ "]" #List }
+ListExpr = { "[" (Expression ("," __ Expression)* )? ","?  (__ "]"/CloseS) #List }
 
-DataExpr = { "{" KeyValue ("," __ KeyValue)* ","? __ "}" #Data }
+DataExpr = { "{" KeyValue ("," __ KeyValue)* ","? (__ "}"/CloseB) #Data }
+
+DELIM = [.:+\-*/%<>=!(){}[\],]
+
+CloseP = { !")" &DELIM #RecoverP }
+CloseS = { !"]" &DELIM #RecoverS }
+CloseB = { !"}" &DELIM #RecoverB }
+
+example GroupExpr （1, (1）= 
+example GroupExpr (1,(2))= 
 
 KeyValue = {
 	name: (Name/StringExpr/CharExpr)
@@ -494,7 +503,7 @@ SPC          = ( S / BLOCKCOMMENT / LINECOMMENT )+
 
 BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
              / '(*' ( !'*)' . )* '*)'
-LINECOMMENT  = '#' ( !NL . )*
+LINECOMMENT  = ('#'/'＃') ( !NL . )*
 
 EOL          = _ NL (_ NL)*
 INDENT       = '\n' [ \t]+
@@ -518,13 +527,13 @@ MARK = [ー]
 
 "{" = [{｛] __
 "}" = [}｝] _
-"[" = [[［【] __
-"]" = [\]］】] _
+"[" = [[［] __
+"]" = [\]］] _
 "(" = [(（] __
 ")" = [)）] _
 "=" = [=＝] ![=＝] _
 "." = [.．。] _
-"," = [,、] _
+"," = [,，、] _
 ";" = ([;；] _)+
 ":" = [:：] _
 
