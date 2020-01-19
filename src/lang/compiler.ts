@@ -93,13 +93,12 @@ class JSTranspiler extends Transpiler {
       return (this as any)[t.tag](env, t, out);
     }
     console.log(`FIXME: undefined parse tree ${t.tag}`);
-    env.perror(t, 'UndefinedParseTree');
-    return this.skip(env, t, out);
+    return env.perror(t, 'UndefinedParseTree');
   }
 
-  public skip(env: Env, t: ParseTree, out: string[]): Type {
-    throw new CompileCancelationError();
-  }
+  // public skip(env: Env, t: ParseTree, out: string[]): Type {
+  //   throw new CompileCancelationError();
+  // }
 
   public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
     const ty = this.conv(env, t, out);
@@ -110,8 +109,7 @@ class JSTranspiler extends Transpiler {
       const params = [
         '@req', req.toString(), '@given', ty.toString,
       ];
-      env.perror(t, key);
-      return this.skip(env, t, out);
+      return env.perror(t, key);
     }
     return ty;
   }
@@ -174,15 +172,13 @@ class JSTranspiler extends Transpiler {
       console.log(`TODO: syntax error position: ${t.spos} => ${pos + 1}`)
       t.spos = pos + 1;
     }
-    env.perror(t, 'SyntaxError');
-    return this.skip(env, t, out);
+    return env.perror(t, 'SyntaxError');
   }
 
   private getModule(env: Env, name: string, t: ParseTree, out: string[]) {
     const pkg = PuppyModules[name];
     if (pkg === undefined) {
-      env.perror(t.get('name'), 'UnknownPackageName');
-      return this.skip(env, t, out);
+      return env.perror(t.get('name'), 'UnknownPackageName');
     }
     return pkg;
   }
@@ -357,10 +353,9 @@ class JSTranspiler extends Transpiler {
     if (defined !== undefined) {
       env.checkImmutable(t.name, defined);
       if (defined.ty.accept(funcType, true)) {
-        env.perror(t.name, 'TypeError', [
+        return env.perror(t.name, 'TypeError', [
           '@req', `${defined.ty}`, '@given', `${funcType}`,
         ]);
-        return this.skip(env, t, out);
       }
     }
     const symbol = env.declVar(name, funcType);
@@ -492,8 +487,7 @@ class JSTranspiler extends Transpiler {
     const name = t.tokenize();
     const symbol = env.getSymbol(name);
     if (symbol === undefined) {
-      env.perror(t, 'UndefinedName');
-      return this.skip(env, t, out);
+      return env.perror(t, 'UndefinedName');
     }
     out.push(symbol.code);
     return symbol.ty;
@@ -503,8 +497,7 @@ class JSTranspiler extends Transpiler {
     const name = t.tokenize();
     const symbol = env.getSymbol(name);
     if (symbol === undefined) {
-      env.perror(t, 'NLKeyValues');  //FIXME
-      return this.skip(env, t, out);
+      return env.perror(t, 'NLKeyValues');  //FIXME
     }
     out.push(symbol.code);
     return symbol.ty;
@@ -514,8 +507,7 @@ class JSTranspiler extends Transpiler {
     const name = t.tokenize();
     const symbol = env.getSymbol(name);
     if (symbol === undefined) {
-      env.perror(t, 'UndefinedName');
-      return this.skip(env, t, out);
+      return env.perror(t, 'UndefinedName');
     }
     env.checkImmutable(t, symbol);
     t.tag = 'Name';
@@ -598,8 +590,7 @@ class JSTranspiler extends Transpiler {
 
   private ApplySymbolExpr(env: Env, t: ParseTree | any, name: string, symbol: Symbol, recv: ParseTree | undefined, out: string[]): Type {
     if (symbol === undefined) {
-      env.perror(t['name'], recv ? 'UndefinedMethod' : 'UndefinedFunction');
-      return this.skip(env, t, out);
+      return env.perror(t['name'], recv ? 'UndefinedMethod' : 'UndefinedFunction');
     }
     const args = t['params'].subs() as ParseTree[];
     if (recv !== undefined) {
@@ -608,10 +599,9 @@ class JSTranspiler extends Transpiler {
     symbol = this.refineWithParamSize(env, symbol, name, args);
     var funcType = symbol.ty;
     if (!Types.isFuncType(funcType)) {
-      env.perror(t['name'], 'TypeError', [
+      return env.perror(t['name'], 'TypeError', [
         '@req', '@function', '@given', `${funcType}`
       ]);
-      return this.skip(env, t, out);
     }
     if (symbol.isSync) {
       env.setSync();
@@ -630,11 +620,10 @@ class JSTranspiler extends Transpiler {
     //console.log(`FIXME ${symbol.code} args.length=${args.length} funcType.psize=${funcType.psize()}`)
     const psize = Types.isVarFuncType(funcType) ? funcType.psize() - 1 : funcType.psize();
     if (args.length < psize) {
-      env.perror(t['name'], 'MissingArguments', [
+      return env.perror(t['name'], 'MissingArguments', [
         '@psize', (recv) ? psize - 1 : psize,
         '@type', funcType,
       ])
-      return this.skip(env, t, out);
     }
     for (var i = 0; i < args.length; i += 1) {
       if (!(i < funcType.psize())) {
