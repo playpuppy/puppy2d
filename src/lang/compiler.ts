@@ -1,5 +1,5 @@
 import { generate, ParseTree } from './puppy-parser';
-import { Type, BaseType, Types } from './types';
+import { Type, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
 import { SourceError, PuppyCode } from './code';
 import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment';
@@ -100,19 +100,19 @@ class JSTranspiler extends Transpiler {
   //   throw new CompileCancelationError();
   // }
 
-  public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
-    const ty = this.conv(env, t, out);
-    if (req !== undefined) {
-      if (req.accept(ty, true)) {
-        return ty;
-      }
-      const params = [
-        '@req', req.toString(), '@given', ty.toString,
-      ];
-      return env.perror(t, key);
-    }
-    return ty;
-  }
+  // public check(req: Type, env: Env, t: ParseTree, out: string[], key = 'TypeError') {
+  //   const ty = this.conv(env, t, out);
+  //   if (req !== undefined) {
+  //     if (req.accept(ty, true)) {
+  //       return ty;
+  //     }
+  //     const params = [
+  //       '@req', req.toString(), '@given', ty.toString,
+  //     ];
+  //     return env.perror(t, key);
+  //   }
+  //   return ty;
+  // }
 
   // private checkBinary(env: Env, t: ParseTree, op: string, ty1: Type, left: string, ty2: Type, right: string, out: string[]) {
   //   if (op === '==' || op === '!=') {
@@ -263,11 +263,11 @@ class JSTranspiler extends Transpiler {
 
   public IfExpr(env: Env, t: ParseTree | any, out: string[]) {
     out.push('((');
-    this.check(Types.Bool, env, t['cond'], out);
+    env.typeCheck(Types.Bool, t.cond, out);
     out.push(') ? (');
-    const ty = this.conv(env, t['then'], out);
+    const ty = this.conv(env, t.then, out);
     out.push(') : (');
-    this.check(ty, env, t['else'], out);
+    env.typeCheck(ty, t['else'], out);
     out.push('))');
     return ty;
   }
@@ -275,13 +275,13 @@ class JSTranspiler extends Transpiler {
 
   public IfStmt(env: Env, t: ParseTree | any, out: string[]) {
     out.push('if (');
-    this.check(Types.Bool, env, t['cond'], out);
+    env.typeCheck(Types.Bool, t.cond, out);
     out.push(') ');
     var cond = t.cond;
     this.preYield(cond, t.then);
-    this.conv(env, t['then'], out);
-    if (t['elif'] !== undefined) {
-      for (const stmt of t['elif'].subs()) {
+    this.conv(env, t.then, out);
+    if (t.elif !== undefined) {
+      for (const stmt of t.elif.subs()) {
         cond = stmt.cond;
         this.conv(env, stmt, out);
       }
@@ -296,10 +296,10 @@ class JSTranspiler extends Transpiler {
 
   public ElifStmt(env: Env, t: ParseTree | any, out: string[]) {
     out.push('else if (');
-    this.check(Types.Bool, env, t['cond'], out);
+    env.typeCheck(Types.Bool, t.cond, out);
     out.push(') ');
     this.preYield(t.cond, t.then);
-    this.conv(env, t['then'], out);
+    this.conv(env, t.then, out);
     return Types.Void;
   }
 
@@ -307,7 +307,7 @@ class JSTranspiler extends Transpiler {
     const name = t.each.tokenize();
     const ty = env.varType(t.each);
     out.push(`for (let ${name} of `)
-    this.check(Types.list(ty), env, t.list, out)
+    env.typeCheck(Types.list(ty), t.list, out)
     out.push(')')
     const lenv = env.newEnv(env.indent);
     lenv.enterLoop();
@@ -321,10 +321,12 @@ class JSTranspiler extends Transpiler {
   public WhileStmt(env: Env, t: ParseTree | any, out: string[]) {
     env.setSync();
     out.push('while (');
-    this.check(Types.Bool, env, t['cond'], out);
+    env.typeCheck(Types.Bool, t.cond, out);
     out.push(') ');
+    env.enterLoop();
     this.syncYield(t.cond, t.body);
-    this.conv(env, t['body'], out);
+    this.conv(env, t.body, out);
+    env.exitLoop();
     return Types.Void
   }
 
@@ -332,7 +334,7 @@ class JSTranspiler extends Transpiler {
 
   public FuncDecl(env: Env, t: ParseTree | any, out: string[]) {
     const name = t.tokenize('name');
-    const types = [env.varType(t['name'])];
+    const types = [env.varType(t.name)];
     const names = [];
     const lenv = env.newEnv(env.indent);
     const funcEnv = lenv.setFunc({
@@ -343,7 +345,7 @@ class JSTranspiler extends Transpiler {
     });
     for (const p of t['params'].subs()) {
       const pname = p.tokenize('name');
-      const ptype = env.varType(p['name']);
+      const ptype = env.varType(p.name);
       const symbol = lenv.declVar(pname, ptype);
       names.push(symbol.code);
       types.push(ptype);
@@ -410,7 +412,7 @@ class JSTranspiler extends Transpiler {
       funcEnv.hasReturn = true;
       if (t.expr !== undefined) {
         out.push('return ');
-        this.check(funcEnv.returnType, env, t.expr, out);
+        env.typeCheck(funcEnv.returnType, t.expr, out);
       }
       else {
         out.push('return');
@@ -419,7 +421,6 @@ class JSTranspiler extends Transpiler {
     else {
       env.pwarn(t, 'ReturnOnlyInFunction');
     }
-    return Types.Void;
     return Types.Void;
   }
 
@@ -456,12 +457,12 @@ class JSTranspiler extends Transpiler {
       if (symbol !== undefined) {
         env.checkImmutable(left, symbol);
         out.push(`${symbol.code} = `);
-        this.check(symbol.ty, env, t.right, out);
+        env.typeCheck(symbol.ty, t.right, out);
       }
       else {
         const ty = env.varType(left);
         const out1: string[] = [];
-        this.check(ty, env, t.right, out1);
+        env.typeCheck(ty, t.right, out1);
         const symbol1 = env.declVar(name, ty);
         const qual = symbol1.isGlobal() ? '' : 'var ';
         out.push(`${qual}${symbol1.code} = ${out1.join('')}`);
@@ -513,27 +514,27 @@ class JSTranspiler extends Transpiler {
     t.tag = 'Name';
     out.push(symbol.code);
     out.push(' = ');
-    this.check(symbol.ty, env, t.get('right'), out);
+    env.typeCheck(symbol.ty, t.get('right'), out);
     return Types.Void;
   }
 
   public And(env: Env, t: ParseTree | any, out: string[]) {
-    this.check(Types.Bool, env, t['left'], out);
+    env.typeCheck(Types.Bool, t.left, out);
     out.push(' && ');
-    this.check(Types.Bool, env, t['right'], out);
+    env.typeCheck(Types.Bool, t.right, out);
     return Types.Bool;
   }
 
   public Or(env: Env, t: ParseTree | any, out: string[]) {
-    this.check(Types.Bool, env, t['left'], out);
+    env.typeCheck(Types.Bool, t.left, out);
     out.push(' || ');
-    this.check(Types.Bool, env, t['right'], out);
+    env.typeCheck(Types.Bool, t.right, out);
     return Types.Bool;
   }
 
   public Not(env: Env, t: ParseTree | any, out: string[]) {
     out.push('!(');
-    this.check(Types.Bool, env, t[0], out);
+    env.typeCheck(Types.Bool, t[0], out);
     out.push(')');
     return Types.Bool;
   }
@@ -556,13 +557,13 @@ class JSTranspiler extends Transpiler {
     const op = t.tokenize('name');
     if (op === '!' || op === 'not') {
       out.push(`${op}(`);
-      this.check(Types.Bool, env, t['expr'], out);
+      env.typeCheck(Types.Bool, t.expr, out);
       out.push(')');
       return Types.Bool;
     }
     else {
       out.push(`${op}(`);
-      this.check(Types.Int, env, t['expr'], out);
+      env.typeCheck(Types.Int, t.expr, out);
       out.push(')');
       return Types.Int;
     }
@@ -637,7 +638,7 @@ class JSTranspiler extends Transpiler {
         out.push(',');
       }
       const ty = funcType.ptype(i);
-      this.check(ty, env, args[i], out);
+      env.typeCheck(ty, args[i], out);
     }
     // if (args.length < funcType.psize()) {
     //   if (!funcType.ptype(args.length)) {
@@ -700,7 +701,7 @@ class JSTranspiler extends Transpiler {
     const field = getField(env, name, t['name']);
     const fmts = field.getter.split('$');
     out.push(fmts[0]);
-    this.check(field.base, env, t['recv'], out);
+    env.typeCheck(field.base, t.recv, out);
     out.push(fmts[1]);
     return field.ty;
   }
@@ -715,18 +716,18 @@ class JSTranspiler extends Transpiler {
     const field = getField(env, name, t['name']);
     const fmts = field.setter.split('$');
     out.push(fmts[0]);
-    this.check(field.base, env, t['recv'], out);
+    env.typeCheck(field.base, t['recv'], out);
     out.push(fmts[1]);
-    this.check(field.ty, env, t['right'], out);
+    env.typeCheck(field.ty, t['right'], out);
     out.push(fmts[2]);
     return Types.Void;
   }
 
   public IndexExpr(env: Env, t: ParseTree | any, out: string[]) {
     out.push('lib.getindex(');
-    const ty = this.check(Types.union(Types.list(env.varType(t)), Types.String), env, t['recv'], out);
+    const ty = env.typeCheck(Types.union(Types.list(env.varType(t)), Types.String), t['recv'], out);
     out.push(',');
-    this.check(Types.Int, env, t['index'], out);
+    env.typeCheck(Types.Int, t['index'], out);
     out.push(`${env.codemap(t)})`);
     return Types.isListType(ty) ? ty.ptype(0) : ty;
   }
@@ -734,11 +735,11 @@ class JSTranspiler extends Transpiler {
   public SetIndexExpr(env: Env, t: ParseTree | any, out: string[]) {
     t.tag = 'IndexExpr';  // see SelfAssign
     out.push('lib.setindex(');
-    const ty = this.check(Types.list(env.varType(t)), env, t['recv'], out);
+    const ty = env.typeCheck(Types.list(env.varType(t)), t['recv'], out);
     out.push(',')
-    this.check(Types.Int, env, t['index'], out)
+    env.typeCheck(Types.Int, t['index'], out)
     out.push(',');
-    this.check(ty.ptype(0), env, t['right'], out)
+    env.typeCheck(ty.ptype(0), t['right'], out)
     out.push(`${env.codemap(t)})`);
     return Types.Void;
   }
@@ -774,7 +775,7 @@ class JSTranspiler extends Transpiler {
       this.conv(env, t['value'], out)
     }
     else {
-      this.check(ty, env, t['value'], out);
+      env.typeCheck(ty, t.value, out);
     }
     return Types.Void
   }
@@ -792,9 +793,9 @@ class JSTranspiler extends Transpiler {
       return ty;
     }
     out.push('puppy.newVec(')
-    this.check(Types.Int, env, subs[0], out);
+    env.typeCheck(Types.Int, subs[0], out);
     out.push(',')
-    this.check(Types.Int, env, subs[1], out);
+    env.typeCheck(Types.Int, subs[1], out);
     out.push(')')
     return Types.Vec;
   }
@@ -803,7 +804,7 @@ class JSTranspiler extends Transpiler {
     var ty = env.varType(t);
     out.push('[')
     for (const sub of t.subs()) {
-      ty = this.check(ty, env, sub, out, 'MustSameType');
+      ty = env.typeCheck(ty, sub, out, 'TypeError');
       out.push(',')
     }
     out.push(']')
