@@ -6,79 +6,79 @@ import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment
 import { messagefy } from './message';
 import { emitJSBinary } from './operator';
 
-const ZenkakuToASCII: { [key: string]: string } = {
-  '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
-  '＝': '=', '＆': '&', '｜': '|', '！': '!',
-  '＜': '<', '＞': '>', '＾': '^',
-  '０': '0', '１': '1', '２': '2', '３': '3', '４': '4',
-  '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
-}
+// const ZenkakuToASCII: { [key: string]: string } = {
+//   '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
+//   '＝': '=', '＆': '&', '｜': '|', '！': '!',
+//   '＜': '<', '＞': '>', '＾': '^',
+//   '０': '0', '１': '1', '２': '2', '３': '3', '４': '4',
+//   '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
+// }
 
-const zenkakuToASCII = (s: string) => {
-  const buf = []
-  for (const c of s) {
-    if (c in ZenkakuToASCII) {
-      buf.push(ZenkakuToASCII[c]);
-    }
-    else {
-      buf.push(c);
-    }
-  }
-  return buf.join('');
-}
+// const zenkakuToASCII = (s: string) => {
+//   const buf = []
+//   for (const c of s) {
+//     if (c in ZenkakuToASCII) {
+//       buf.push(ZenkakuToASCII[c]);
+//     }
+//     else {
+//       buf.push(c);
+//     }
+//   }
+//   return buf.join('');
+// }
 
-const checkZenkaku = (env: Env, t: ParseTree) => {
-  const name = t.tokenize();
-  for (const c of name) {
-    if (c in ZenkakuToASCII) {
-      env.pwarn(t, 'Zenkaku');
-      return zenkakuToASCII(name);
-    }
-  }
-  return name;
-}
+// const checkZenkaku = (env: Env, t: ParseTree) => {
+//   const name = t.tokenize();
+//   for (const c of name) {
+//     if (c in ZenkakuToASCII) {
+//       env.pwarn(t, 'Zenkaku');
+//       return zenkakuToASCII(name);
+//     }
+//   }
+//   return name;
+// }
 
-/* binary, unary operators */
+// /* binary, unary operators */
 
-const SupportedOperators: { [key: string]: string } = {
-  'and': '&&', 'or': '||', 'not': '!',
-  '<': '<', '>': '>', '<=': '<=', '>=': '>=',
-  '==': '==', '!=': '!=', 'in': 'in',
-  '+': '+', '-': '-', '*': '*', '//': '//', '/': '/', '%': '%', '**': '**',
-  '<<': '<<', '>>': '>>', '|': '|', '&': '&', '^': '^',
-  '+=': '+', '-=': '-', '*=': '*', '//=': '//', '/=': '/', '%=': '%',
-  '<<=': '<<', '>>=': '>>', '|=': '|', '&=': '&', '^=': '^',
-}
+// const SupportedOperators: { [key: string]: string } = {
+//   'and': '&&', 'or': '||', 'not': '!',
+//   '<': '<', '>': '>', '<=': '<=', '>=': '>=',
+//   '==': '==', '!=': '!=', 'in': 'in',
+//   '+': '+', '-': '-', '*': '*', '//': '//', '/': '/', '%': '%', '**': '**',
+//   '<<': '<<', '>>': '>>', '|': '|', '&': '&', '^': '^',
+//   '+=': '+', '-=': '-', '*=': '*', '//=': '//', '/=': '/', '%=': '%',
+//   '<<=': '<<', '>>=': '>>', '|=': '|', '&=': '&', '^=': '^',
+// }
 
-const operator = (op: string) => {
-  return SupportedOperators[op];
-}
+// const operator = (op: string) => {
+//   return SupportedOperators[op];
+// }
 
-const LeftHandType: { [key: string]: Type } = {
-  '+': Types.union(Types.Int, Types.String, Types.ListAny),
-  '-': Types.Int, '**': Types.Int, '*': Types.Int,
-  //'*': Types.union(Types.Int, Types.String, Types.ListAny),
-  '/': Types.Int, '//': Types.Int, '%': Types.Int,
-  '==': Types.Any, '!=': Types.Any, 'in': Types.Any,
-  '<': Types.Compr, '<=': Types.Compr, '>': Types.Compr, '>=': Types.Compr,
-  '^': Types.Int, '|': Types.Int, '&': Types.Int, '<<': Types.Int, '>>': Types.Int,
-};
+// const LeftHandType: { [key: string]: Type } = {
+//   '+': Types.union(Types.Int, Types.String, Types.ListAny),
+//   '-': Types.Int, '**': Types.Int, '*': Types.Int,
+//   //'*': Types.union(Types.Int, Types.String, Types.ListAny),
+//   '/': Types.Int, '//': Types.Int, '%': Types.Int,
+//   '==': Types.Any, '!=': Types.Any, 'in': Types.Any,
+//   '<': Types.Compr, '<=': Types.Compr, '>': Types.Compr, '>=': Types.Compr,
+//   '^': Types.Int, '|': Types.Int, '&': Types.Int, '<<': Types.Int, '>>': Types.Int,
+// };
 
-const getLeftHandType = (op: string) => {
-  const ty = LeftHandType[op];
-  if (ty === undefined) {
-    console.log(`FIXME undefined '${op}'`);
-    return Types.Any;
-  }
-  return ty;
-}
+// const getLeftHandType = (op: string) => {
+//   const ty = LeftHandType[op];
+//   if (ty === undefined) {
+//     console.log(`FIXME undefined '${op}'`);
+//     return Types.Any;
+//   }
+//   return ty;
+// }
 
-const getRightHandType = (op: string, ty: Type) => {
-  if (op == 'in') {
-    return Types.union(Types.list(ty), Types.String);
-  }
-  return ty;  // 左と同じ型
-}
+// const getRightHandType = (op: string, ty: Type) => {
+//   if (op == 'in') {
+//     return Types.union(Types.list(ty), Types.String);
+//   }
+//   return ty;  // 左と同じ型
+// }
 
 class JSTranspiler extends Transpiler {
 
