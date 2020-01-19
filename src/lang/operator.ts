@@ -10,6 +10,20 @@ const ZenkakuToASCII: { [key: string]: string } = {
   '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
 }
 
+const updateZenkaku = () => {
+  for (var c = 65; c <= 90; c++) {
+    const a = String.fromCharCode(c);
+    const z = String.fromCharCode(c + 65248);
+    ZenkakuToASCII[z] = a;
+  }
+  for (var c = 97; c <= 122; c++) {
+    const a = String.fromCharCode(c);
+    const z = String.fromCharCode(c + 65248);
+    ZenkakuToASCII[z] = a;
+  }
+}
+updateZenkaku();
+
 const zenkakuToASCII = (s: string) => {
   const buf = []
   for (const c of s) {
@@ -36,6 +50,10 @@ const checkZenkaku = (env: Env, t: ParseTree) => {
 
 /* binary, unary operators */
 
+const PuppyUnaryOperator: { [key: string]: string } = {
+  '+': '+', '-': '-', '~': '~',
+}
+
 const PuppyBinaryOperator: { [key: string]: string } = {
   'and': '&&', 'or': '||', 'not': '!',
   '<': '<', '>': '>', '<=': '<=', '>=': '>=',
@@ -56,6 +74,16 @@ const LeftHandType: { [key: string]: Type } = {
 };
 
 export class PuppyTypeSystem {
+
+  public getUnaryOperator(env: Env, t: ParseTree): string {
+    var op = checkZenkaku(env, t);
+    op = PuppyUnaryOperator[op];
+    if (op === undefined) {
+      env.perror(t, 'Unsupported');
+    }
+    return op;
+  }
+
   public getBinaryOperator(env: Env, t: ParseTree): string {
     var op = checkZenkaku(env, t);
     op = PuppyBinaryOperator[op];

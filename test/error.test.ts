@@ -44,6 +44,13 @@ True+True
 `)).toBe("TypeError");
 });
 
+test('ERR "" * 3', () => {
+	expect(utest(`
+"" * 3
+`)).toBe("TypeError");
+});
+
+
 test('ERR 1+"1"', () => {
 	expect(utest(`
 1+"1"
@@ -103,4 +110,7 @@ Circle(0, 0, hoge=1)
 `)).toBe("UnknownName");
 });
 
+test('**', () => {
+	expect(utest(`1*2**3+4`)).toBe("Transition");
+});
 

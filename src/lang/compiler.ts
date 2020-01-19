@@ -514,19 +514,11 @@ class JSTranspiler extends Transpiler {
   }
 
   public Unary(env: Env, t: ParseTree | any, out: string[]) {
-    const op = t.tokenize('name');
-    if (op === '!' || op === 'not') {
-      out.push(`${op}(`);
-      env.typeCheck(Types.Bool, t.expr, out);
-      out.push(')');
-      return Types.Bool;
-    }
-    else {
-      out.push(`${op}(`);
-      env.typeCheck(Types.Int, t.expr, out);
-      out.push(')');
-      return Types.Int;
-    }
+    const op = this.typeSystem.getUnaryOperator(env, t.name);
+    out.push(`${op}(`);
+    env.typeCheck(Types.Int, t.expr, out);
+    out.push(')');
+    return Types.Int;
   }
 
   public ApplyExpr(env: Env, t: ParseTree | any, out: string[]): Type {
