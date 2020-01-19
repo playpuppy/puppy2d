@@ -30,6 +30,13 @@ test('重さ', () => {
 `)).toBe("vars['重さ'] = 1");
 });
 
+test('あ+=1', () => {
+	expect(utest(`
+あ=1
+あ += 1
+`)).toBe(`vars['あ'] = (vars['あ'] + 1)`);
+});
+
 // test('None', () => {
 // 	expect(utest('None')).toBe('null');
 // });

@@ -2,291 +2,323 @@ import { generate, ParseTree } from './puppy-parser';
 import { Type, BaseType, Types } from './types';
 import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './package';
 import { SourceError, PuppyCode } from './code';
+import { Env, RootEnv, CompileCancelationError } from './environment';
 import { messagefy } from './message';
-import { type } from 'os';
 
-const INDENT = '\t';
+// const INDENT = '\t';
 
-class ModuleType extends BaseType {
-  constructor(name: string, value: any) {
-    super(`${name}.`, value);
-  }
+// class ModuleType extends BaseType {
+//   constructor(name: string, value: any) {
+//     super(`${name}.`, value);
+//   }
+// }
+
+// class Env {
+//   private root: Env;
+//   private parent: Env | null;
+//   private vars: any;
+
+//   public constructor(env?: Env) {
+//     this.vars = {}
+//     if (env === undefined) {
+//       this.root = this;
+//       this.parent = null;
+//       this.vars['@varmap'] = [];
+//       this.vars['@errors'] = [];
+//       this.vars['@warnings'] = [];
+//       this.vars['@notices'] = [];
+//       this.vars['@tokens'] = [];
+//       this.vars['@names'] = {};
+//       this.vars['@fields'] = {};
+//       this.vars['@indent'] = INDENT;
+//     }
+//     else {
+//       this.root = env.root;
+//       this.parent = env;
+//     }
+//   }
+
+//   public get(key: string, value?: any) {
+//     var e: Env | null = this;
+//     while (e !== null) {
+//       const v = e.vars[key];
+//       if (v !== undefined) {
+//         return v;
+//       }
+//       e = e.parent;
+//     }
+//     return value;
+//   }
+
+//   public has(key: string) {
+//     return this.get(key) !== undefined;
+//   }
+
+//   public set(key: string, value: any) {
+//     this.vars[key] = value;
+//     return value;
+//   }
+
+//   public getroot(key: string, value?: any) {
+//     return this.root.vars[key] || value;
+//   }
+
+//   public setroot(key: string, value: any) {
+//     this.root.vars[key] = value;
+//     return value;
+//   }
+
+//   public getSymbol(name: string): Symbol {
+//     return this.get(name) as Symbol;
+//   }
+
+//   public varType(t: ParseTree) {
+//     return Types.var(this, t);
+//   }
+
+//   public guessType(name: string, tree: ParseTree) {
+//     const names: { [key: string]: Type } = this.getroot('@names');
+//     var ty = names[name];
+//     if (ty === undefined) {
+//       ty = names[name] = this.varType(tree);
+//     }
+//     return ty;
+//   }
+
+//   public from_import(pkg: any, list?: string[]) {
+//     for (const name of Object.keys(pkg)) {
+//       if (list === undefined || list.indexOf(name) !== -1) {
+//         this.vars[name] = pkg[name];
+//       }
+//     }
+//   }
+
+//   public setModule(name: string, options: any) {
+//     this.set(name, new Symbol('undefined', new ModuleType(name, options)));
+//   }
+
+//   public isModule(name: string) {
+//     const s = this.get(name) as Symbol;
+//     if (s !== undefined && s.ty instanceof ModuleType) {
+//       return true;
+//     }
+//     return false;
+//   }
+
+//   public getModule(pkgname: string, name: string) {
+//     const s = this.get(pkgname) as Symbol;
+//     if (s !== undefined && s.ty instanceof ModuleType) {
+//       const options = s.ty.getValue();
+//       return options[name];
+//     }
+//     return undefined;
+//   }
+
+//   public perror(t: ParseTree, key: string, params?: any[]) {
+//     const e = SourceError(t, key, params);
+//     const logs = this.getroot('@errors');
+//     logs.push(e);
+//     return e;
+//   }
+
+//   public pwarn(t: ParseTree, key: string, params?: any[]) {
+//     const e = SourceError(t, key, params);
+//     const logs = this.getroot('@warnings');
+//     logs.push(e);
+//     e.type = 'warning';
+//     return e;
+//   }
+
+//   public pnotice(t: ParseTree, key: string, params?: any[]) {
+//     const e = SourceError(t, key, params);
+//     const logs = this.getroot('@notices');
+//     logs.push(e);
+//     e.type = 'info';
+//     return e;
+//   }
+
+//   public tkid(t: ParseTree) {
+//     const tokens: ParseTree[] = this.getroot('@tokens');
+//     for (var i = 0; i < tokens.length; i++) {
+//       if (tokens[i] === t) {
+//         return i;
+//       }
+//     }
+//     const tkid = tokens.length;
+//     tokens.push(t);
+//     return tkid;
+//   }
+
+//   public codemap(t: ParseTree) {
+//     return `,codemap[${this.tkid(t)}]`;
+//   }
+
+//   public setInLoop() {
+//     var nested = this.get('@inloop') || 0;
+//     this.set('@inloop', nested + 1);
+//     return nested + 1;
+//   }
+
+//   public inLoop() {
+//     return this.get('@inloop') !== undefined;
+//   }
+
+//   public setFunc(data: any) {
+//     this.set('@func', data)
+//     return data;
+//   }
+
+//   public inFunc() {
+//     return this.get('@func') !== undefined;
+//   }
+
+//   public isSync() {
+//     const funcData = this.get('@func');
+//     if (funcData) {
+//       return funcData.isSync;
+//     }
+//     return true;
+//   }
+
+//   public setSync() {
+//     const funcData = this.get('@func');
+//     console.log(funcData);
+//     if (funcData) {
+//       funcData.isSync = true;
+//     }
+//     return true;
+//   }
+
+//   public foundFunc(t: ParseTree, symbol: Symbol) {
+//     if (symbol.isMatter) {
+//       const data = this.get('@func');
+//       if (data !== undefined) {
+//         data['isMatter'] = true;
+//       }
+//       // else {
+//       //   const row = t.begin()[1] * 1000;
+//       //   this.setroot('@yeild', row + 200);
+//       // }
+//     }
+//   }
+
+//   private isUtf8Name(s: string) {
+//     for (var i = 0; i < s.length; i += 1) {
+//       if (s.charCodeAt(i) > 128) {
+//         return true;
+//       }
+//     }
+//     return false;
+//   }
+
+//   private local(s: string): string {
+//     if (this.isUtf8Name(s)) {
+//       const map = this.getroot('@utf8map');
+//       if (map === undefined) {
+//         this.setroot('@utf8map', {});
+//         return this.local(s);
+//       }
+//       var vname = map[name];
+//       if (vname === undefined) {
+//         const id = Object.keys(map).length;
+//         vname = `_v${id}`;
+//         map[name] = vname;
+//       }
+//       return vname as string;
+//     }
+//     return s;
+//   }
+
+//   public declVar(name: string, ty: Type) {
+//     var code = (this.inFunc() || this.inLoop()) ? this.local(name) : `vars['${name}']`
+//     const symbol = new Symbol(code, ty);
+//     symbol.isMutable = true;
+//     return this.set(name, symbol) as Symbol;
+//   }
+
+//   private prevRow = -1;
+
+//   emitYield(t: ParseTree, out: string[]) {
+//     if (!this.inFunc()) {
+//       const indent = this.get('@indent');
+//       const row = t.begin()[1] * 1000 + 200;
+//       if (this.prevRow !== row) {
+//         out.push(`${indent}yield ${row};\n`);
+//         this.prevRow = row;
+//       }
+//     }
+//   }
+
+//   emitSyncYield(t: ParseTree, out: string[]) {
+//     const indent = this.get('@indent');
+//     const row = t.begin()[1] * 1000 + 0;
+//     out.push(`${indent}if(puppy.pc++ % 16 === 0) yield ${row};\n`);
+//   }
+
+//   public emitAutoYield(t: ParseTree, out: string[]) {
+//     // if (!this.inFunc()) {
+//     //   const yieldparam = this.getroot('@yeild');
+//     //   if (yieldparam !== undefined) {
+//     //     out.push(`; yield ${yieldparam};\n`);
+//     //     this.setroot('@yeild', undefined);
+//     //     return yieldparam;
+//     //   }
+//     //   else {
+//     //     // const row = t.end()[1] * 1000;
+//     //     // out.push(`;yield ${row};\n`);
+//     //     out.push('\n');
+//     //   }
+//     // }
+//     // else {
+//     out.push('\n');
+//     // }
+//     return 0;
+//   }
+
+//   checkImmutable(t: ParseTree, symbol: Symbol | null) {
+//     if (symbol === null || !symbol.isMutable) {
+//       this.perror(t, 'Immutable');
+//       throw new CompileCancelationError();
+//     }
+//   }
+// }
+
+// class CompileCancelationError {
+//   constructor() {
+//     //uper();
+//   }
+// }
+
+const ZenkakuToASCII: { [key: string]: string } = {
+  '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
+  '＝': '=', '＆': '&', '｜': '|', '！': '!',
+  '＜': '<', '＞': '>', '＾': '^',
+  '０': '0', '１': '1', '２': '2', '３': '3', '４': '4',
+  '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
 }
 
-class Env {
-  private root: Env;
-  private parent: Env | null;
-  private vars: any;
-
-  public constructor(env?: Env) {
-    this.vars = {}
-    if (env === undefined) {
-      this.root = this;
-      this.parent = null;
-      this.vars['@varmap'] = [];
-      this.vars['@errors'] = [];
-      this.vars['@warnings'] = [];
-      this.vars['@notices'] = [];
-      this.vars['@tokens'] = [];
-      this.vars['@names'] = {};
-      this.vars['@fields'] = {};
-      this.vars['@indent'] = INDENT;
+const zenkakuToASCII = (s: string) => {
+  const buf = []
+  for (const c of s) {
+    if (c in ZenkakuToASCII) {
+      buf.push(ZenkakuToASCII[c]);
     }
     else {
-      this.root = env.root;
-      this.parent = env;
+      buf.push(c);
     }
   }
-
-  public get(key: string, value?: any) {
-    var e: Env | null = this;
-    while (e !== null) {
-      const v = e.vars[key];
-      if (v !== undefined) {
-        return v;
-      }
-      e = e.parent;
-    }
-    return value;
-  }
-
-  public has(key: string) {
-    return this.get(key) !== undefined;
-  }
-
-  public set(key: string, value: any) {
-    this.vars[key] = value;
-    return value;
-  }
-
-  public getroot(key: string, value?: any) {
-    return this.root.vars[key] || value;
-  }
-
-  public setroot(key: string, value: any) {
-    this.root.vars[key] = value;
-    return value;
-  }
-
-  public getSymbol(name: string): Symbol {
-    return this.get(name) as Symbol;
-  }
-
-  public varType(t: ParseTree) {
-    return Types.var(this, t);
-  }
-
-  public guessType(name: string, tree: ParseTree) {
-    const names: { [key: string]: Type } = this.getroot('@names');
-    var ty = names[name];
-    if (ty === undefined) {
-      ty = names[name] = this.varType(tree);
-    }
-    return ty;
-  }
-
-  public from_import(pkg: any, list?: string[]) {
-    for (const name of Object.keys(pkg)) {
-      if (list === undefined || list.indexOf(name) !== -1) {
-        this.vars[name] = pkg[name];
-      }
-    }
-  }
-
-  public setModule(name: string, options: any) {
-    this.set(name, new Symbol('undefined', new ModuleType(name, options)));
-  }
-
-  public isModule(name: string) {
-    const s = this.get(name) as Symbol;
-    if (s !== undefined && s.ty instanceof ModuleType) {
-      return true;
-    }
-    return false;
-  }
-
-  public getModule(pkgname: string, name: string) {
-    const s = this.get(pkgname) as Symbol;
-    if (s !== undefined && s.ty instanceof ModuleType) {
-      const options = s.ty.getValue();
-      return options[name];
-    }
-    return undefined;
-  }
-
-  public perror(t: ParseTree, key: string, params?: any[]) {
-    const e = SourceError(t, key, params);
-    const logs = this.getroot('@errors');
-    logs.push(e);
-    return e;
-  }
-
-  public pwarn(t: ParseTree, key: string, params?: any[]) {
-    const e = SourceError(t, key, params);
-    const logs = this.getroot('@warnings');
-    logs.push(e);
-    e.type = 'warning';
-    return e;
-  }
-
-  public pnotice(t: ParseTree, key: string, params?: any[]) {
-    const e = SourceError(t, key, params);
-    const logs = this.getroot('@notices');
-    logs.push(e);
-    e.type = 'info';
-    return e;
-  }
-
-  public tkid(t: ParseTree) {
-    const tokens: ParseTree[] = this.getroot('@tokens');
-    for (var i = 0; i < tokens.length; i++) {
-      if (tokens[i] === t) {
-        return i;
-      }
-    }
-    const tkid = tokens.length;
-    tokens.push(t);
-    return tkid;
-  }
-
-  public codemap(t: ParseTree) {
-    return `,codemap[${this.tkid(t)}]`;
-  }
-
-  public setInLoop() {
-    var nested = this.get('@inloop') || 0;
-    this.set('@inloop', nested + 1);
-    return nested + 1;
-  }
-
-  public inLoop() {
-    return this.get('@inloop') !== undefined;
-  }
-
-  public setFunc(data: any) {
-    this.set('@func', data)
-    return data;
-  }
-
-  public inFunc() {
-    return this.get('@func') !== undefined;
-  }
-
-  public isSync() {
-    const funcData = this.get('@func');
-    if (funcData) {
-      return funcData.isSync;
-    }
-    return true;
-  }
-
-  public setSync() {
-    const funcData = this.get('@func');
-    console.log(funcData);
-    if (funcData) {
-      funcData.isSync = true;
-    }
-    return true;
-  }
-
-  public foundFunc(t: ParseTree, symbol: Symbol) {
-    if (symbol.isMatter) {
-      const data = this.get('@func');
-      if (data !== undefined) {
-        data['isMatter'] = true;
-      }
-      // else {
-      //   const row = t.begin()[1] * 1000;
-      //   this.setroot('@yeild', row + 200);
-      // }
-    }
-  }
-
-  private isUtf8Name(s: string) {
-    for (var i = 0; i < s.length; i += 1) {
-      if (s.charCodeAt(i) > 128) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private local(s: string): string {
-    if (this.isUtf8Name(s)) {
-      const map = this.getroot('@utf8map');
-      if (map === undefined) {
-        this.setroot('@utf8map', {});
-        return this.local(s);
-      }
-      var vname = map[name];
-      if (vname === undefined) {
-        const id = Object.keys(map).length;
-        vname = `_v${id}`;
-        map[name] = vname;
-      }
-      return vname as string;
-    }
-    return s;
-  }
-
-  public declVar(name: string, ty: Type) {
-    var code = (this.inFunc() || this.inLoop()) ? this.local(name) : `vars['${name}']`
-    const symbol = new Symbol(code, ty);
-    symbol.isMutable = true;
-    return this.set(name, symbol) as Symbol;
-  }
-
-  private prevRow = -1;
-
-  emitYield(t: ParseTree, out: string[]) {
-    if (!this.inFunc()) {
-      const indent = this.get('@indent');
-      const row = t.begin()[1] * 1000 + 200;
-      if (this.prevRow !== row) {
-        out.push(`${indent}yield ${row};\n`);
-        this.prevRow = row;
-      }
-    }
-  }
-
-  emitSyncYield(t: ParseTree, out: string[]) {
-    const indent = this.get('@indent');
-    const row = t.begin()[1] * 1000 + 0;
-    out.push(`${indent}if(puppy.pc++ % 16 === 0) yield ${row};\n`);
-  }
-
-  public emitAutoYield(t: ParseTree, out: string[]) {
-    // if (!this.inFunc()) {
-    //   const yieldparam = this.getroot('@yeild');
-    //   if (yieldparam !== undefined) {
-    //     out.push(`; yield ${yieldparam};\n`);
-    //     this.setroot('@yeild', undefined);
-    //     return yieldparam;
-    //   }
-    //   else {
-    //     // const row = t.end()[1] * 1000;
-    //     // out.push(`;yield ${row};\n`);
-    //     out.push('\n');
-    //   }
-    // }
-    // else {
-    out.push('\n');
-    // }
-    return 0;
-  }
-
-  checkImmutable(t: ParseTree, symbol: Symbol | null) {
-    if (symbol === null || !symbol.isMutable) {
-      this.perror(t, 'Immutable');
-      throw new CompileCancelationError();
-    }
-  }
+  return buf.join('');
 }
 
-class CompileCancelationError {
-  constructor() {
-    //uper();
+const checkZenkaku = (env: Env, t: ParseTree) => {
+  const name = t.tokenize();
+  for (const c of name) {
+    if (c in ZenkakuToASCII) {
+      env.pwarn(t, 'Zenkaku');
+      return zenkakuToASCII(name);
+    }
   }
+  return name;
 }
 
 /* binary, unary operators */
@@ -343,6 +375,8 @@ class Transpiler {
     if ((this as any)[t.tag] !== undefined) {
       return (this as any)[t.tag](env, t, out);
     }
+    console.log(`FIXME: undefined parse tree ${t.tag}`);
+    console.log(t);
     env.perror(t, 'UndefinedParseTree');
     return this.skip(env, t, out);
   }
@@ -501,19 +535,17 @@ class Transpiler {
   }
 
   public Block(penv: Env, t: ParseTree, out: string[]) {
-    const indent = INDENT + penv.get('@indent');
-    const env = new Env(penv);
-    env.set('@indent', indent);
+    const env = penv.newEnv(Env.INDENT + penv.indent);
     out.push('{\n');
     this.emitPreYield(env, t, out);
     for (const subtree of t.subs()) {
       env.emitYield(subtree, out);
-      out.push(indent);
+      out.push(env.indent);
       this.conv(env, subtree, out);
       out.push(`\n`);
       //env.emitAutoYield(subtree, out);
     }
-    out.push(penv.get('@indent') + '}')
+    out.push(penv.indent + '}')
     return Types.Void;
   }
 
@@ -560,17 +592,17 @@ class Transpiler {
   }
 
   public ForStmt(env: Env, t: ParseTree | any, out: string[]) {
-    const name = t['each'].tokenize();
-    const ty = env.varType(t['each']);
+    const name = t.each.tokenize();
+    const ty = env.varType(t.each);
     out.push(`for (let ${name} of `)
-    this.check(Types.list(ty), env, t['list'], out)
+    this.check(Types.list(ty), env, t.list, out)
     out.push(')')
-    const lenv = new Env(env);
-    lenv.setInLoop();
+    const lenv = env.newEnv(env.indent);
+    lenv.enterLoop();
     lenv.declVar(name, ty);
     this.preYield(t.each, t.body);
-    this.conv(lenv, t['body'], out);
-    //env.emitYield(t, out);
+    this.conv(lenv, t.body, out);
+    lenv.exitLoop();
     return Types.Void
   }
 
@@ -590,13 +622,12 @@ class Transpiler {
     const name = t.tokenize('name');
     const types = [env.varType(t['name'])];
     const names = [];
-    const lenv = new Env(env);
-    const funcData = lenv.setFunc({
-      'name': name,
-      'return': types[0],
-      'hasReturn': false,
-      'isMatter': false,
-      'isSync': false,
+    const lenv = env.newEnv(env.indent);
+    const funcEnv = lenv.setFunc({
+      name: name,
+      returnType: types[0],
+      hasReturn: false,
+      isSync: false,
     });
     for (const p of t['params'].subs()) {
       const pname = p.tokenize('name');
@@ -619,9 +650,8 @@ class Transpiler {
     const symbol = env.declVar(name, funcType);
     const out2: string[] = [];
     this.conv(lenv, t['body'], out2);
-    console.log(funcData);
-    symbol.isMatter = funcData['isMatter'];
-    symbol.isSync = funcData['isSync'];
+    // symbol.isMatter = funcData['isMatter'];
+    symbol.isSync = funcEnv.isSync;
     const defun = symbol.isGlobal() ? '' : 'var ';
     if (symbol.isSync) {
       out.push(`${defun}${symbol.code} = function* (${names.join(', ')}) ${out2.join('')}`)
@@ -630,7 +660,7 @@ class Transpiler {
       out.push(`${defun}${symbol.code} = (${names.join(', ')}) => ${out2.join('')}`)
     }
     //this.conv(lenv, t['body'], out);
-    if (!funcData['hasReturn']) {
+    if (!funcEnv.hasReturn) {
       types[0].accept(Types.Void, true);
     }
     console.log(`DEFINED ${name} :: ${funcType}`)
@@ -640,10 +670,12 @@ class Transpiler {
   public FuncExpr(env: Env, t: ParseTree | any, out: string[]) {
     const types = [env.varType(t)];
     const names = [];
-    const lenv = new Env(env);
-    const funcData = lenv.setFunc({
-      'return': types[0],
-      'hasReturn': false,
+    const lenv = env.newEnv(env.indent);
+    const funcEnv = lenv.setFunc({
+      name: '',
+      returnType: types[0],
+      hasReturn: false,
+      isSync: false,
     });
     for (const p of t['params'].subs()) {
       const pname = p.tokenize('name');
@@ -655,26 +687,28 @@ class Transpiler {
     const funcType = Types.func(...types);
     out.push(`(${names.join(', ')}) => `)
     this.conv(lenv, t['body'], out);
-    if (!funcData['hasReturn']) {
+    if (!funcEnv.hasReturn) {
       types[0].accept(Types.Void, true);
     }
     return funcType;
   }
 
   public Return(env: Env, t: ParseTree | any, out: string[]) {
-    if (!env.inFunc()) {
-      env.pwarn(t, 'ReturnOnlyInFunction');
-      return Types.Void;
-    }
-    const funcData = env.get('@func');
-    funcData['hasReturn'] = true;
-    if (t['expr'] !== undefined) {
-      out.push('return ');
-      this.check(funcData['return'], env, t['expr'], out);
+    if (env.funcEnv) {
+      const funcEnv = env.funcEnv;
+      funcEnv.hasReturn = true;
+      if (t.expr !== undefined) {
+        out.push('return ');
+        this.check(funcEnv.returnType, env, t.expr, out);
+      }
+      else {
+        out.push('return');
+      }
     }
     else {
-      out.push('return');
+      env.pwarn(t, 'ReturnOnlyInFunction');
     }
+    return Types.Void;
     return Types.Void;
   }
 
@@ -729,9 +763,12 @@ class Transpiler {
     return this.conv(env, this.asSetter(left, t['right']), out);
   }
 
-  private asSetter(t: ParseTree, right: ParseTree) {
+  private asSetter(t: ParseTree | any, right: ParseTree) {
+    if (t.tag === 'NameOrNLP') {
+      t.tag = 'Name';
+    }
     t.tag = `Set${t.tag}`;
-    (t as any)['right'] = right;
+    t.right = right;
     return t;
   }
 
@@ -866,7 +903,12 @@ class Transpiler {
     out.push(symbol.code)
     out.push('(')
     if (funcType.hasAlpha()) {
-      funcType = funcType.toVarType({ env, ref: t });
+      const root = env.root;
+      funcType = funcType.toVarType({
+        vartypes: root.vartypes,
+        varids: root.varids,
+        ref: t
+      });
     }
     //console.log(`FIXME ${symbol.code} args.length=${args.length} funcType.psize=${funcType.psize()}`)
     const psize = Types.isVarFuncType(funcType) ? funcType.psize() - 1 : funcType.psize();
@@ -903,7 +945,7 @@ class Transpiler {
     if (symbol.isSync) {
       out.push(')')
     }
-    env.foundFunc(t, symbol);
+    //env.foundFunc(t, symbol);
     return funcType.rtype();
   }
 
@@ -1160,7 +1202,7 @@ export type Source = {
 export const compile = (s: Source): PuppyCode => {
   //const start = performance.now();
   const t = parser(s.source);
-  const env = new Env();
+  const env = new RootEnv();
   env.from_import(PuppyModules['']);
   const ts = new Transpiler();
   const out: string[] = [];
@@ -1196,11 +1238,11 @@ ${jscode}
   //const end = performance.now();
   code['world'] = {};
   code['code'] = jscode;
-  code['errors'] = env.getroot('@errors');
-  code['warnings'] = env.getroot('@warnings');
-  code['notices'] = env.getroot('@notices');
-  code['codemap'] = env.getroot('@tokens');
-  code['symbols'] = env.getroot('@symbols');
+  code['errors'] = env.errors;
+  code['warnings'] = env.warnings;
+  code['notices'] = env.notices;
+  code['codemap'] = env.tokens;
+  //code['symbols'] = env.symbols;
   //code['time'] = end - start;
   return code as PuppyCode;
 }

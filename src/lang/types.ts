@@ -7,10 +7,6 @@ export class Type {
     this.value = value;
   }
 
-  public isOptional() {
-    return this.value !== undefined;
-  }
-
   public getValue() {
     return this.value;
   }
@@ -19,9 +15,14 @@ export class Type {
     return '?';
   }
 
+  public isOptional() {
+    return this.value !== undefined;
+  }
+
   public rtype(): Type {
     return this;
   }
+
   public psize() {
     return 0;
   }
@@ -45,7 +46,7 @@ export class Type {
     return false;
   }
 
-  public toVarType(map: any): Type {
+  public toVarType(tenv: TypeEnv): Type {
     return this;
   }
 
@@ -53,10 +54,22 @@ export class Type {
     return false;
   }
 
+  public isBoolType() {
+    return false;
+  }
+
+  public isNumberType() {
+    return false;
+  }
+
+  public isStringType() {
+    return false;
+  }
+
 }
 
 export class BaseType extends Type {
-  private name: string;
+  protected name: string;
 
   constructor(name: string, value?: any) {
     super(value);
@@ -79,22 +92,50 @@ export class BaseType extends Type {
   }
 
   public isPattern() {
-    return (this.name === 'a' || this.name === 'b');
+    return false;
   }
 
   public hasAlpha(): boolean {
-    return (this.name === 'a' || this.name === 'b');
+    return false;
   }
 
-  public toVarType(map: any) {
-    if (this.hasAlpha()) {
-      const ty = map[this.name];
-      if (ty === undefined) {
-        map[this.name] = new VarType(map.env, map.t);
-      }
-      return map[this.name];
-    }
+  public toVarType(tenv: TypeEnv): Type {
     return this;
+  }
+
+  public isBoolType() {
+    return this.name === 'boolean';
+  }
+
+  public isNumberType() {
+    return this.name === 'number';
+  }
+
+  public isStringType() {
+    return this.name === 'string';
+  }
+}
+
+class AlphaType extends BaseType {
+  constructor(name: string) {
+    super(name);
+  }
+
+  public isPattern() {
+    return false;
+  }
+
+  public hasAlpha(): boolean {
+    return true;
+  }
+
+  public toVarType(tenv: TypeEnv | any) {
+    var ty = tenv[this.name];
+    if (ty === undefined) {
+      ty = new VarType(tenv.vartypes, tenv.varids, tenv.ref);
+      tenv[this.name] = ty;
+    }
+    return ty;
   }
 }
 
@@ -135,8 +176,8 @@ class AnyType extends BaseType {
     return true;
   }
 
-  public toVarType(map: any) {
-    return new VarType(map.env, map.t);
+  public toVarType(tenv: TypeEnv) {
+    return new VarType(tenv.vartypes, tenv.varids, tenv.ref) as Type;
   }
 
 }
@@ -201,11 +242,11 @@ class FuncType extends Type {
     return false;
   }
 
-  public toVarType(map: any) {
+  public toVarType(tenv: TypeEnv) {
     if (this.hasAlpha()) {
       const v = [];
       for (const ty of this.types) {
-        v.push(ty.toVarType(map));
+        v.push(ty.toVarType(tenv));
       }
       return new FuncType(...v);
     }
@@ -261,9 +302,9 @@ class ListType extends Type {
     return this.param.hasAlpha();
   }
 
-  public toVarType(map: any) {
+  public toVarType(tenv: TypeEnv) {
     if (this.hasAlpha()) {
-      return new ListType(this.param.toVarType(map));
+      return new ListType(this.param.toVarType(tenv));
     }
     return this;
   }
@@ -317,11 +358,11 @@ class UnionType extends Type {
     return false;
   }
 
-  public toVarType(map: any) {
+  public toVarType(tenv: TypeEnv) {
     if (this.hasAlpha()) {
       const ts: Type[] = [];
       for (const ty of this.types) {
-        ts.push(ty.toVarType(map));
+        ts.push(ty.toVarType(tenv));
       }
       return new UnionType(...ts);
     }
@@ -337,8 +378,6 @@ const union = (...types: Type[]) => {
 }
 
 //const tUndefined = new BaseType('undefined');
-
-const EmptyNumberSet: number[] = [];
 
 const unionSet = (a: number[], b: number[], c?: number[]) => {
   const A: number[] = [];
@@ -362,22 +401,31 @@ const unionSet = (a: number[], b: number[], c?: number[]) => {
   return A;
 }
 
+export type TypeEnv = {
+  vartypes: VarType[];
+  varids: (Type | number[])[];
+  ref: any;
+}
 
-class VarType extends Type {
-  private varMap: (Type | number[])[];
+export class VarType extends Type {
+  static readonly EmptyNumberSet: number[] = [];
   private varid: number;
+  private vartypes: VarType[];
+  private varids: (Type | number[])[];
   private ref: any /*ParseTree | null*/;
 
-  constructor(env: any /*Env*/, ref: any/*ParseTree*/) {
-    super(false);
-    this.varMap = env.getroot('@varmap');
-    this.varid = this.varMap.length;
-    this.varMap.push(EmptyNumberSet);
+  constructor(vartypes: VarType[], varids: (Type | number[])[], ref: any/*ParseTree*/) {
+    super(undefined);
+    this.vartypes = vartypes;
+    this.varids = varids;
+    this.varid = this.varids.length;
+    this.vartypes.push(this);
+    this.varids.push(VarType.EmptyNumberSet);
     this.ref = ref;
   }
 
   public toString() {
-    const v = this.varMap[this.varid];
+    const v = this.varids[this.varid];
     if (v instanceof Type) {
       return v.toString();
     }
@@ -385,12 +433,12 @@ class VarType extends Type {
   }
 
   public realType(): Type {
-    const v = this.varMap[this.varid];
+    const v = this.varids[this.varid];
     return (v instanceof Type) ? v : this;
   }
 
   public accept(ty: Type, update: boolean): boolean {
-    var v = this.varMap[this.varid];
+    var v = this.varids[this.varid];
     if (v instanceof Type && v !== this) {
       return v.accept(ty, update);
     }
@@ -404,19 +452,19 @@ class VarType extends Type {
         if (v1.varid === this.varid) {
           return true;
         }
-        const u = unionSet(this.varMap[this.varid] as number[],
-          this.varMap[v1.varid] as number[], [v1.varid, this.varid]);
+        const u = unionSet(this.varids[this.varid] as number[],
+          this.varids[v1.varid] as number[], [v1.varid, this.varid]);
         for (const id of u) {
-          this.varMap[id] = u;
+          this.varids[id] = u;
         }
         return true;
       }
       if (!v1.isPattern()) {
-        const u = this.varMap[this.varid] as number[];
+        const u = this.varids[this.varid] as number[];
         for (const id of u) {
-          this.varMap[id] = v1;
+          this.varids[id] = v1;
         }
-        this.varMap[this.varid] = v1;
+        this.varids[this.varid] = v1;
       }
     }
     return true;
@@ -461,15 +509,12 @@ class OptionType extends Type {
 export class Types {
   public static Any = new AnyType();
   public static Void = new VoidType();
-  public static Bool = new BaseType('bool');
+  public static Bool = new BaseType('boolean');
   public static Int = new BaseType('number');
-  //  public static Int_ = new BaseType('Number', true);
   public static Float = Types.Int;
-  //  public static Float_ = Types.Int_;
   public static String = new BaseType('string');
-  //  public static String_ = new BaseType('String', true);
-  public static A = new BaseType('a');
-  public static B = new BaseType('b');
+  public static A = new AlphaType('a');
+  public static B = new AlphaType('b');
   public static ListA = new ListType(Types.A);
   public static ListB = new ListType(Types.B);
   public static ListInt = new ListType(Types.Int);
@@ -519,8 +564,8 @@ export class Types {
     return ty instanceof ListType;
   }
 
-  public static var(env: any, tree: any) {
-    return new VarType(env, tree);
+  public static var(vartypes: VarType[], varids: (Type | number[])[], tree: any) {
+    return new VarType(vartypes, varids, tree);
   }
 
   public static isVarType(ty: Type) {
