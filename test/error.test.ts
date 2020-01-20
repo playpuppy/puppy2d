@@ -151,3 +151,15 @@ test('１２３.４', () => {
 a = １２３.４
 `)).toBe("Zenkaku");
 });
+
+test('””', () => {
+	expect(utest(`
+””
+`)).toBe("Zenkaku");
+});
+
+test('"”', () => {
+	expect(utest(`
+"”
+`)).toBe("Zenkaku");
+});

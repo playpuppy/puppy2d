@@ -5,6 +5,7 @@ import { SourceError, PuppyCode } from './code';
 import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment';
 import { messagefy } from './message';
 import { PuppyTypeSystem, checkZenkaku } from './operator';
+import { Z_ERRNO } from 'zlib';
 
 class JSTranspiler extends Transpiler {
 
@@ -772,6 +773,36 @@ class JSTranspiler extends Transpiler {
 
   public Char(env: Env, t: ParseTree, out: string[]) {
     out.push(t.tokenize());  // FIXME
+    return Types.String;
+  }
+
+  public ZString(env: Env, t: ParseTree, out: string[]) {
+    const s = t.tokenize();
+    if (s[0] !== '"') {
+      t.epos = t.spos + 1;
+      env.pwarn(t, 'Zenkaku');
+    } else {
+      t.spos = t.epos - 1;
+      env.pwarn(t, 'Zenkaku');
+    }
+    out.push('"');
+    out.push(s.substring(1, s.length - 1));
+    out.push('"');
+    return Types.String;
+  }
+
+  public ZChar(env: Env, t: ParseTree, out: string[]) {
+    const s = t.tokenize();
+    if (s[0] !== "'") {
+      t.epos = t.spos + 1;
+      env.pwarn(t, 'Zenkaku');
+    } else {
+      t.spos = t.epos - 1;
+      env.pwarn(t, 'Zenkaku');
+    }
+    out.push("'");
+    out.push(s.substring(1, s.length - 1));
+    out.push("'");
     return Types.String;
   }
 
