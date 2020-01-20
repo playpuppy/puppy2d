@@ -43,49 +43,51 @@ export type PuppyCode = {
   code: string;
 };
 
-const JMessage: { [key: string]: string } = {
-  'SyntaxError': '文法的に正しくありません',
-  'TypeError': 'データの種類が一致しません',
-  '@req': '正しいデータの種類：',
-  '@given': '実際に与えられた種類：',
-  'UnknownPackageName': 'PuppyはPythonの全てのライブラリが使えるわけではありません',
+// message.ts の messagefy を使う。
 
-  'UndefinedName': '変数は使用する前に値を設定しましょう',
-  'UndefinedFunctionName': '関数の定義を探すことができませんでした',
+// const JMessage: { [key: string]: string } = {
+//   'SyntaxError': '文法的に正しくありません',
+//   'TypeError': 'データの種類が一致しません',
+//   '@req': '正しいデータの種類：',
+//   '@given': '実際に与えられた種類：',
+//   'UnknownPackageName': 'PuppyはPythonの全てのライブラリが使えるわけではありません',
 
-  'UnknownName': 'この名前はタイプミスかも知れません',
+//   'UndefinedName': '変数は使用する前に値を設定しましょう',
+//   'UndefinedFunctionName': '関数の定義を探すことができませんでした',
 
-  'InferredPackage': 'ライブラリを自動インポートしました',
-  '@inferred': '推論されたもの',
-  '@fixme': 'コード',
+//   'UnknownName': 'この名前はタイプミスかも知れません',
 
-  'OutofArrayIndexError': '配列の大きさを超えてアクセスしました',
-  '@index': 'あなたが与えた位置：',
-  '@length': '配列の大きさ 0 〜',
+//   'InferredPackage': 'ライブラリを自動インポートしました',
+//   '@inferred': '推論されたもの',
+//   '@fixme': 'コード',
 
-}
+//   'OutofArrayIndexError': '配列の大きさを超えてアクセスしました',
+//   '@index': 'あなたが与えた位置：',
+//   '@length': '配列の大きさ 0 〜',
 
-export const messagefy = (s: SourceEvent, lang = 'en') => {
-  const msgs = JMessage;
-  const buf = [];
-  if (s.key in msgs) {
-    buf.push(`(${s.key}) ${msgs[s.key]}`);
-  }
-  else {
-    buf.push(`(${s.key})`);
-  }
-  if (s.params) {
-    var c = 0;
-    for (const p of s.params) {
-      buf.push((c % 2 === 0) ? '\n ' : ' ');
-      if (p in msgs) {
-        buf.push(msgs[p]);
-      }
-      else {
-        buf.push(`${p}`);
-      }
-      c += 1;
-    }
-  }
-  return buf.join('');
-}
+// }
+
+// export const messagefy = (s: SourceEvent, lang = 'en') => {
+//   const msgs = JMessage;
+//   const buf = [];
+//   if (s.key in msgs) {
+//     buf.push(`(${s.key}) ${msgs[s.key]}`);
+//   }
+//   else {
+//     buf.push(`(${s.key})`);
+//   }
+//   if (s.params) {
+//     var c = 0;
+//     for (const p of s.params) {
+//       buf.push((c % 2 === 0) ? '\n ' : ' ');
+//       if (p in msgs) {
+//         buf.push(msgs[p]);
+//       }
+//       else {
+//         buf.push(`${p}`);
+//       }
+//       c += 1;
+//     }
+//   }
+//   return buf.join('');
+// }
