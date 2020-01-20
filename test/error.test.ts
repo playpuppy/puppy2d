@@ -114,3 +114,40 @@ test('**', () => {
 	expect(utest(`1*2**3+4`)).toBe("Transition");
 });
 
+test('BadAssign', () => {
+	expect(utest(`
+a = 1
+if a = 1: pass
+`)).toBe("BadAssign");
+});
+
+test('BadAssign', () => {
+	expect(utest(`
+a = 1
+if a = 1 and a = 1: pass
+`)).toBe("BadAssign");
+});
+
+test('RecoverS', () => {
+	expect(utest(`
+a = ([1, 2)
+`)).toBe("RecoverS");
+});
+
+test('RecoverP', () => {
+	expect(utest(`
+a = [(1, 2]
+`)).toBe("RecoverP");
+});
+
+test('１２３', () => {
+	expect(utest(`
+a = １２３
+`)).toBe("Zenkaku");
+});
+
+test('１２３.４', () => {
+	expect(utest(`
+a = １２３.４
+`)).toBe("Zenkaku");
+});

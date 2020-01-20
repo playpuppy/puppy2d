@@ -237,10 +237,15 @@ SelfAssignOp = {
 example Expression not 1 == 2
 example Expression not 1 == 2 and 1 > 3
 
-Expression = Operator ( 
-    (then:^ { 'if' !W _ cond: Expression 'else' !W _ else: Expression #IfExpr })
-    / (left:^ { "=" right: Expression #AssignExpr})
-)?
+// Expression = Operator ( 
+//     (then:^ { 'if' !W _ cond: Expression 'else' !W _ else: Expression #IfExpr })
+//     / (left:^ { "=" right: Expression #AssignExpr})
+// )?
+
+Expression =
+     Operator (then:^ { 'if' !W _ cond: Expression 'else' !W _ else: Expression #IfExpr })?
+
+BUGS = [)\]} ）］｝　]*
 
 Operator =
 	AndExpr (left:^ { OR _ right: AndExpr #Or })*
@@ -267,6 +272,7 @@ EQ =
 	/ '>=' !'=' / '＞＝' !'＝'
 	/ '<'  !'<' / '＜' !'＜'
 	/ '>'  !'>' / '＞' !'＞'
+    / '=' !'='  / '＝' !'＝'
     / ('in' S)
 
 SumExpr =
@@ -352,11 +358,11 @@ ListExpr = { "[" (Expression ("," __ Expression)* )? ","?  (__ "]"/CloseS) #List
 
 DataExpr = { "{" KeyValue ("," __ KeyValue)* ","? (__ "}"/CloseB) #Data }
 
-DELIM = [.:+\-*/%<>=!(){}[\],]
+DELIM = [.:+\-*/%<>=!(){}[\],\n]
 
-CloseP = { !")" &DELIM #RecoverP }
-CloseS = { !"]" &DELIM #RecoverS }
-CloseB = { !"}" &DELIM #RecoverB }
+CloseP = { !")" (&DELIM / EOF) #RecoverP }
+CloseS = { !"]" (&DELIM / EOF) #RecoverS }
+CloseB = { !"}" (&DELIM / EOF) #RecoverB }
 
 example GroupExpr （1, (1）= 
 example GroupExpr (1,(2))= 
@@ -568,3 +574,4 @@ a=1;b=1
 
 example Expression ”Hello World“
 example Expression Circle(0, hoge, hoge=1)
+example Source if a = b and b = c: pass

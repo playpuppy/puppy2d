@@ -55,6 +55,13 @@ const JMessage: { [key: string]: string | string[] } = {
 
   'UnknownName': 'タイプミスかも知れません',
   'Zenkaku': '全角文字は使わないようにしましょう',
+  'BadAssign': 'もしかしたら、等しいかどうかの比較？',
+  '?BadAssign': [
+    '比較するときは、= ではなく、== を使いましょう'
+  ],
+  'RecoverS': 'たぶん、この辺りで ] を閉じ忘れています',
+  'RecoverP': 'たぶん、この辺りで ) を閉じ忘れています',
+  'RecoverB': 'たぶん、この辺りで } を閉じ忘れています',
 
   'InferredPackage': 'ライブラリを自動インポートしました',
   '@inferred': '推論されたもの',

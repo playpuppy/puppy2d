@@ -560,7 +560,8 @@ const grammar = (start: string) => {
     peg['LeftHand'] = pSeq2(pRef(peg, 'Name'), pMany(pOre2(pFold('recv', pSeq2(pRef(peg, '"."'), pEdge('name', pRef(peg, 'Name'))), 'GetExpr', 0), pFold('recv', pSeq3(pRef(peg, '"["'), pEdge('index', pRef(peg, 'Expression')), pRef(peg, '"]"')), 'IndexExpr', 0))));
     peg['SelfAssign'] = pNode(pSeq3(pEdge('left', pRef(peg, 'LeftHand')), pEdge('name', pRef(peg, 'SelfAssignOp')), pEdge('right', pRef(peg, 'Expression'))), 'SelfAssign', 0);
     peg['SelfAssignOp'] = pSeq2(pNode(pSeq2(pOre(pChar('<<'), pChar('>>'), pChar('**'), pChar('//'), pRange('+=*/%&|^＋＝＊／％＆｜＾×÷', [])), pOre2(pChar('='), pChar('＝'))), '', 0), pRef(peg, '_'));
-    peg['Expression'] = pSeq2(pRef(peg, 'Operator'), pOption(pOre2(pFold('then', pSeq(pChar('if'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('else', pRef(peg, 'Expression'))), 'IfExpr', 0), pFold('left', pSeq2(pRef(peg, '"="'), pEdge('right', pRef(peg, 'Expression'))), 'AssignExpr', 0))));
+    peg['Expression'] = pSeq2(pRef(peg, 'Operator'), pOption(pFold('then', pSeq(pChar('if'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('cond', pRef(peg, 'Expression')), pChar('else'), pNot(pRef(peg, 'W')), pRef(peg, '_'), pEdge('else', pRef(peg, 'Expression'))), 'IfExpr', 0)));
+    peg['BUGS'] = pMany(pRange(')]} ）］｝\u3000', []));
     peg['Operator'] = pSeq2(pRef(peg, 'AndExpr'), pMany(pFold('left', pSeq3(pRef(peg, 'OR'), pRef(peg, '_'), pEdge('right', pRef(peg, 'AndExpr'))), 'Or', 0)));
     peg['OR'] = pOre(pSeq2(pChar('or'), pNot(pRef(peg, 'W'))), pChar('||'), pChar('｜｜'));
     peg['AndExpr'] = pSeq2(pRef(peg, 'NotExpr'), pMany(pFold('left', pSeq3(pRef(peg, 'AND'), pRef(peg, '_'), pEdge('right', pRef(peg, 'NotExpr'))), 'And', 0)));
@@ -568,7 +569,7 @@ const grammar = (start: string) => {
     peg['NotExpr'] = pOre2(pNode(pSeq3(pRef(peg, 'NOT'), pRef(peg, '_'), pEdge('', pRef(peg, 'NotExpr'))), 'Not', 0), pRef(peg, 'EqExpr'));
     peg['NOT'] = pOre(pSeq3(pChar('not'), pNot(pRef(peg, 'W')), pRef(peg, '_')), pChar('!'), pChar('！'));
     peg['EqExpr'] = pSeq2(pRef(peg, 'SumExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'EQ'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'SumExpr'))), 'Infix', 0)));
-    peg['EQ'] = pOre(pSeq2(pChar('=='), pNot(pChar('='))), pSeq2(pChar('＝＝'), pNot(pChar('＝'))), pSeq2(pChar('!='), pNot(pChar('='))), pSeq2(pChar('！＝'), pNot(pChar('＝'))), pSeq2(pChar('<='), pNot(pChar('='))), pSeq2(pChar('＜＝'), pNot(pChar('＝'))), pSeq2(pChar('>='), pNot(pChar('='))), pSeq2(pChar('＞＝'), pNot(pChar('＝'))), pSeq2(pChar('<'), pNot(pChar('<'))), pSeq2(pChar('＜'), pNot(pChar('＜'))), pSeq2(pChar('>'), pNot(pChar('>'))), pSeq2(pChar('＞'), pNot(pChar('＞'))), pSeq2(pChar('in'), pRef(peg, 'S')));
+    peg['EQ'] = pOre(pSeq2(pChar('=='), pNot(pChar('='))), pSeq2(pChar('＝＝'), pNot(pChar('＝'))), pSeq2(pChar('!='), pNot(pChar('='))), pSeq2(pChar('！＝'), pNot(pChar('＝'))), pSeq2(pChar('<='), pNot(pChar('='))), pSeq2(pChar('＜＝'), pNot(pChar('＝'))), pSeq2(pChar('>='), pNot(pChar('='))), pSeq2(pChar('＞＝'), pNot(pChar('＝'))), pSeq2(pChar('<'), pNot(pChar('<'))), pSeq2(pChar('＜'), pNot(pChar('＜'))), pSeq2(pChar('>'), pNot(pChar('>'))), pSeq2(pChar('＞'), pNot(pChar('＞'))), pSeq2(pChar('='), pNot(pChar('='))), pSeq2(pChar('＝'), pNot(pChar('＝'))), pSeq2(pChar('in'), pRef(peg, 'S')));
     peg['SumExpr'] = pSeq2(pRef(peg, 'ProdExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'SUM'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'ProdExpr'))), 'Infix', 0)));
     peg['SUM'] = pRange('+-|＋ー｜', []);
     peg['ProdExpr'] = pSeq2(pRef(peg, 'PowExpr'), pMany(pFold('left', pSeq3(pEdge('name', pNode(pRef(peg, 'PROD'), 'Name', 0)), pRef(peg, '_'), pEdge('right', pRef(peg, 'PowExpr'))), 'Infix', 0)));
@@ -584,10 +585,10 @@ const grammar = (start: string) => {
     peg['GroupExpr'] = pNode(pSeq(pRef(peg, '"("'), pEdge('', pRef(peg, 'Expression')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')))), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '")"')), pEdge('', pRef(peg, 'CloseP')))), 'Tuple', 0);
     peg['ListExpr'] = pNode(pSeq(pRef(peg, '"["'), pOption(pSeq2(pEdge('', pRef(peg, 'Expression')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'Expression')))))), pOption(pRef(peg, '","')), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '"]"')), pEdge('', pRef(peg, 'CloseS')))), 'List', 0);
     peg['DataExpr'] = pNode(pSeq(pRef(peg, '"{"'), pEdge('', pRef(peg, 'KeyValue')), pMany(pSeq3(pRef(peg, '","'), pRef(peg, '__'), pEdge('', pRef(peg, 'KeyValue')))), pOption(pRef(peg, '","')), pOre2(pSeq2(pRef(peg, '__'), pRef(peg, '"}"')), pEdge('', pRef(peg, 'CloseB')))), 'Data', 0);
-    peg['DELIM'] = pRange('.:+-*/%<>=!(){}[],', []);
-    peg['CloseP'] = pNode(pSeq2(pNot(pRef(peg, '")"')), pAnd(pRef(peg, 'DELIM'))), 'RecoverP', 0);
-    peg['CloseS'] = pNode(pSeq2(pNot(pRef(peg, '"]"')), pAnd(pRef(peg, 'DELIM'))), 'RecoverS', 0);
-    peg['CloseB'] = pNode(pSeq2(pNot(pRef(peg, '"}"')), pAnd(pRef(peg, 'DELIM'))), 'RecoverB', 0);
+    peg['DELIM'] = pRange('.:+-*/%<>=!(){}[],\n', []);
+    peg['CloseP'] = pNode(pSeq2(pNot(pRef(peg, '")"')), pOre2(pAnd(pRef(peg, 'DELIM')), pRef(peg, 'EOF'))), 'RecoverP', 0);
+    peg['CloseS'] = pNode(pSeq2(pNot(pRef(peg, '"]"')), pOre2(pAnd(pRef(peg, 'DELIM')), pRef(peg, 'EOF'))), 'RecoverS', 0);
+    peg['CloseB'] = pNode(pSeq2(pNot(pRef(peg, '"}"')), pOre2(pAnd(pRef(peg, 'DELIM')), pRef(peg, 'EOF'))), 'RecoverB', 0);
     peg['KeyValue'] = pNode(pSeq3(pEdge('name', pOre(pRef(peg, 'Name'), pRef(peg, 'StringExpr'), pRef(peg, 'CharExpr'))), pRef(peg, '":"'), pEdge('value', pRef(peg, 'Expression'))), 'KeyValue', 0);
     peg['Name'] = pOre2(pRef(peg, 'Identifier'), pRef(peg, 'IdentifierNLP'));
     peg['NAME'] = pSeq2(pRange('_', ['AZ', 'az']), pMany(pRef(peg, 'W')));
@@ -664,6 +665,7 @@ const example = (start: string, sample?: string) => {
   console.log(`${start} ${sample}`)
   console.log(t.toString());
 }
+
 
 // pegpy nezcc -g math.tpeg parser.ts > math.ts
 // npx ts-node math.ts

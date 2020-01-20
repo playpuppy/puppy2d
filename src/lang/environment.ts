@@ -168,6 +168,11 @@ export class Env {
   }
 
   public typeCheck(req: Type, t: ParseTree, out: string[], key = 'TypeError') {
+    //console.log(`typeCheck ${t.tag} ${req}`);
+    if (req.isBoolType() && t.tag === 'Infix' && t.tokenize('name') === '=') {
+      this.pwarn(t, 'BadAssign');
+      t.tag = 'Eq';
+    }
     const ty = this.conv(t, out);
     if (req !== undefined) {
       if (req.accept(ty, true)) {
@@ -180,9 +185,6 @@ export class Env {
     }
     return ty;
   }
-
-
-
 
   public tkid(t: ParseTree) {
     const tokens: ParseTree[] = this.root.tokens;

@@ -37,7 +37,7 @@ const zenkakuToASCII = (s: string) => {
   return buf.join('');
 }
 
-const checkZenkaku = (env: Env, t: ParseTree) => {
+export const checkZenkaku = (env: Env, t: ParseTree) => {
   const name = t.tokenize();
   for (const c of name) {
     if (c in ZenkakuToASCII) {

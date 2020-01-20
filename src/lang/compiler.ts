@@ -4,81 +4,7 @@ import { Symbol, PuppyModules, KEYTYPES, PackageSymbolMap, getField } from './pa
 import { SourceError, PuppyCode } from './code';
 import { Env, RootEnv, CompileCancelationError, Transpiler } from './environment';
 import { messagefy } from './message';
-import { PuppyTypeSystem } from './operator';
-
-// const ZenkakuToASCII: { [key: string]: string } = {
-//   '＋': '+', 'ー': '-', '＊': '*', '／': '/', '％': '%',
-//   '＝': '=', '＆': '&', '｜': '|', '！': '!',
-//   '＜': '<', '＞': '>', '＾': '^',
-//   '０': '0', '１': '1', '２': '2', '３': '3', '４': '4',
-//   '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
-// }
-
-// const zenkakuToASCII = (s: string) => {
-//   const buf = []
-//   for (const c of s) {
-//     if (c in ZenkakuToASCII) {
-//       buf.push(ZenkakuToASCII[c]);
-//     }
-//     else {
-//       buf.push(c);
-//     }
-//   }
-//   return buf.join('');
-// }
-
-// const checkZenkaku = (env: Env, t: ParseTree) => {
-//   const name = t.tokenize();
-//   for (const c of name) {
-//     if (c in ZenkakuToASCII) {
-//       env.pwarn(t, 'Zenkaku');
-//       return zenkakuToASCII(name);
-//     }
-//   }
-//   return name;
-// }
-
-// /* binary, unary operators */
-
-// const SupportedOperators: { [key: string]: string } = {
-//   'and': '&&', 'or': '||', 'not': '!',
-//   '<': '<', '>': '>', '<=': '<=', '>=': '>=',
-//   '==': '==', '!=': '!=', 'in': 'in',
-//   '+': '+', '-': '-', '*': '*', '//': '//', '/': '/', '%': '%', '**': '**',
-//   '<<': '<<', '>>': '>>', '|': '|', '&': '&', '^': '^',
-//   '+=': '+', '-=': '-', '*=': '*', '//=': '//', '/=': '/', '%=': '%',
-//   '<<=': '<<', '>>=': '>>', '|=': '|', '&=': '&', '^=': '^',
-// }
-
-// const operator = (op: string) => {
-//   return SupportedOperators[op];
-// }
-
-// const LeftHandType: { [key: string]: Type } = {
-//   '+': Types.union(Types.Int, Types.String, Types.ListAny),
-//   '-': Types.Int, '**': Types.Int, '*': Types.Int,
-//   //'*': Types.union(Types.Int, Types.String, Types.ListAny),
-//   '/': Types.Int, '//': Types.Int, '%': Types.Int,
-//   '==': Types.Any, '!=': Types.Any, 'in': Types.Any,
-//   '<': Types.Compr, '<=': Types.Compr, '>': Types.Compr, '>=': Types.Compr,
-//   '^': Types.Int, '|': Types.Int, '&': Types.Int, '<<': Types.Int, '>>': Types.Int,
-// };
-
-// const getLeftHandType = (op: string) => {
-//   const ty = LeftHandType[op];
-//   if (ty === undefined) {
-//     console.log(`FIXME undefined '${op}'`);
-//     return Types.Any;
-//   }
-//   return ty;
-// }
-
-// const getRightHandType = (op: string, ty: Type) => {
-//   if (op == 'in') {
-//     return Types.union(Types.list(ty), Types.String);
-//   }
-//   return ty;  // 左と同じ型
-// }
+import { PuppyTypeSystem, checkZenkaku } from './operator';
 
 class JSTranspiler extends Transpiler {
 
@@ -261,8 +187,6 @@ class JSTranspiler extends Transpiler {
     env.exitLoop();
     return Types.Void
   }
-
-
 
   public FuncDecl(env: Env, t: ParseTree | any, out: string[]) {
     const name = t.tokenize('name');
@@ -486,7 +410,7 @@ class JSTranspiler extends Transpiler {
 
     /** */
     if (op === '==' || op === '!=') {
-      out.push(`${left} ${op}= ${right}`);
+      out.push(`(${left} ${op}= ${right})`);
       return Types.Bool;
     }
     if (op === '+') {
@@ -519,6 +443,21 @@ class JSTranspiler extends Transpiler {
     env.typeCheck(Types.Int, t.expr, out);
     out.push(')');
     return Types.Int;
+  }
+
+  public Eq(env: Env, t: ParseTree | any, out: string[]) {
+    const ty1 = env.typeCheck(Types.Any, t.left, out, 'TypeError').realType();
+    out.push(`===`);
+    env.typeCheck(ty1, t.right, out, 'BinaryTypeError').realType();
+    return Types.Bool;
+  }
+
+  public Assign(env: Env, t: ParseTree | any, out: string[]) {
+    env.perror(t, 'Unsupported');
+    const ty1 = env.typeCheck(Types.Any, t.left, out).realType();
+    out.push(`=`);
+    env.typeCheck(ty1, t.right, out).realType();
+    return ty1;
   }
 
   public ApplyExpr(env: Env, t: ParseTree | any, out: string[]): Type {
@@ -732,8 +671,20 @@ class JSTranspiler extends Transpiler {
     return Types.Void
   }
 
+  private checkRecovery(env: Env, t: ParseTree) {
+    const subs = t.subs();
+    if (subs.length > 0) {
+      const tail = subs[subs.length - 1];
+      if (tail.tag === 'RecoverP' || tail.tag === 'RecoverS' || tail.tag === 'RecoverB') {
+        env.pwarn(tail, tail.tag);
+        subs.pop();
+      }
+    }
+    return subs;
+  }
+
   public Tuple(env: Env, t: ParseTree, out: string[]) {
-    const subs = t.subs()
+    const subs = this.checkRecovery(env, t);
     if (subs.length > 2) {
       env.pwarn(t, 'SyntaxError/List'); //リストは[ ]で囲みましょう
       return this.List(env, t, out);
@@ -755,7 +706,7 @@ class JSTranspiler extends Transpiler {
   public List(env: Env, t: ParseTree, out: string[]) {
     var ty = env.varType(t);
     out.push('[')
-    for (const sub of t.subs()) {
+    for (const sub of this.checkRecovery(env, t)) {
       ty = env.typeCheck(ty, sub, out, 'TypeError');
       out.push(',')
     }
@@ -800,17 +751,17 @@ class JSTranspiler extends Transpiler {
   }
 
   public Int(env: Env, t: ParseTree, out: string[]) {
-    out.push(t.tokenize());
+    out.push(checkZenkaku(env, t));
     return Types.Int;
   }
 
   public Float(env: Env, t: ParseTree, out: string[]) {
-    out.push(t.tokenize());
+    out.push(checkZenkaku(env, t));
     return Types.Float;
   }
 
   public Double(env: Env, t: ParseTree, out: string[]) {
-    out.push(t.tokenize());
+    out.push(checkZenkaku(env, t));
     return Types.Float;
   }
 
