@@ -1590,6 +1590,8 @@ export class World extends Composite {
   public screen = false;
   protected bodies0: Body[] = [];
   protected bodiesZ: Body[] = [];
+  // Puppy World
+  public vars: any = {};
 
   public constructor(options: any) {
     super(options);
@@ -1597,15 +1599,16 @@ export class World extends Composite {
     this.height = options.height || this.width;
   }
 
-  public yscale(y = 1) {
-    return this.screen ? y : -y;
-  }
-
   private uniqueId = 1;
 
   public newId() {
     return this.uniqueId++;
   }
+
+  public yscale(y = 1) {
+    return this.screen ? y : -y;
+  }
+
 
   public addBody(body: Body) {
     const zindex = body.zindex;
@@ -1649,6 +1652,20 @@ export class World extends Composite {
 
   public allBodiesZ() {
     return this.bodiesZ;
+  }
+
+  // Puppy World
+
+  public fficall(name: string, ...params: any[]) {
+    const callback = this.vars[name];
+    if (callback !== undefined) {
+      try {
+        return callback(...params);
+      }
+      catch (e) {
+        console.log(e);
+      }
+    }
   }
 
 }

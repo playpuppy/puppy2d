@@ -165,10 +165,7 @@ export class Engine {
   public constraintIterations = 2;
   public enableSleeping = false;
   public events = [];
-  public timing: Timing = {
-    timestamp: 0,
-    timeScale: 1
-  };
+  public timing: Timing;
 
   /**
   * Creates a new engine. The options parameter is an object that specifies any properties you wish to override the defaults.
@@ -178,66 +175,6 @@ export class Engine {
   * @param {object} [options]
   * @return {engine} engine
   */
-
-  // Engine.create = function (element, options) {
-  //   // options may be passed as the first (and only) argument
-  //   options = Common.isElement(element) ? options : element;
-  //   element = Common.isElement(element) ? element : null;
-  //   options = options || {};
-
-  //   if (element || options.render) {
-  //     Common.warn('Engine.create: engine.render is deprecated (see docs)');
-  //   }
-
-  //   var defaults = {
-  //     positionIterations: 6,
-  //     velocityIterations: 4,
-  //     constraintIterations: 2,
-  //     enableSleeping: false,
-  //     events: [],
-  //     plugin: {},
-  //     timing: {
-  //       timestamp: 0,
-  //       timeScale: 1
-  //     },
-  //     broadphase: {
-  //       controller: Grid
-  //     }
-  //   };
-
-  //   var engine = Common.extend(defaults, options);
-
-  //   // @deprecated
-  //   if (element || engine.render) {
-  //     var renderDefaults = {
-  //       element: element,
-  //       controller: Render
-  //     };
-
-  //     engine.render = Common.extend(renderDefaults, engine.render);
-  //   }
-
-  //   // @deprecated
-  //   if (engine.render && engine.render.controller) {
-  //     engine.render = engine.render.controller.create(engine.render);
-  //   }
-
-  //   // @deprecated
-  //   if (engine.render) {
-  //     engine.render.engine = engine;
-  //   }
-
-  //   engine.world = options.world || World.create(engine.world);
-  //   engine.pairs = Pairs.create();
-  //   engine.broadphase = engine.broadphase.controller.create(engine.broadphase);
-  //   engine.metrics = engine.metrics || { extended: false };
-
-  //   // @if DEBUG
-  //   engine.metrics = Metrics.create(engine.metrics);
-  //   // @endif
-
-  //   return engine;
-  // };
 
   public constructor(world: World) {
     this.world = world;
@@ -404,7 +341,7 @@ export class Engine {
 
     // trigger collision events
     if (pairs.collisionStart.length > 0) {
-      Engine.triggerCollision('movein', pairs.collisionStart);
+      this.triggerCollision('__movein__', pairs.collisionStart);
       //Events.trigger(this, 'collisionStart', { pairs: pairs.collisionStart });
     }
 
@@ -442,12 +379,12 @@ export class Engine {
     // trigger collision events
     if (pairs.collisionActive.length > 0) {
       //Events.trigger(this, 'collisionActive', { pairs: pairs.collisionActive });
-      Engine.triggerCollision('moveover', pairs.collisionActive);
+      this.triggerCollision('__moveover__', pairs.collisionActive);
     }
 
     if (pairs.collisionEnd.length > 0) {
       //Events.trigger(this, 'collisionEnd', { pairs: pairs.collisionEnd });
-      Engine.triggerCollision('moveout', pairs.collisionEnd);
+      this.triggerCollision('__moveout__', pairs.collisionEnd);
     }
 
     // @if DEBUG
@@ -457,17 +394,28 @@ export class Engine {
 
     // clear force buffers
     Engine.bodiesClearForces(allBodies);
-
     Events.trigger(this, 'afterUpdate', event);
   }
 
-  static triggerCollision(key: string, pairs: Pair[]) {
+  private triggerCollision(key: string, pairs: Pair[]) {
     for (var i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
-      var bodyA = pair.bodyA;
-      var bodyB = pair.bodyB;
-      bodyA.fficall(key, bodyB);
-      bodyB.fficall(key, bodyA);
+      const bodyA = pair.bodyA;
+      const bodyB = pair.bodyB;
+      var called = false;
+      const moveFuncA = (bodyA as any)[key];
+      if (moveFuncA) {
+        moveFuncA(bodyA, bodyB);
+        called = true;
+      }
+      const moveFuncB = (bodyB as any)[key];
+      if (moveFuncB) {
+        moveFuncB(bodyB, bodyA);
+        called = true;
+      }
+      if (!called) {
+        this.world.fficall(key, bodyA, bodyB);
+      }
     }
   }
 
