@@ -353,6 +353,7 @@ export const KEYTYPES: { [key: string]: Type } = {
   'textAlign': ts.String,
   'value': ts.Int,
   'message': ts.String,
+  'showing': ts.String,
 }
 
 //const ty1 = this.check(tleft(op), env, t['left'], out1);

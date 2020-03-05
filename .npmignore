@@ -1,1 +1,10 @@
-src/*
+.prettierrc
+tsconfig.json
+tslint.json
+test/
+src/
+index.html
+oldvm.ts
+css/
+build/
+.cache/
