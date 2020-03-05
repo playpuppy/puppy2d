@@ -128,16 +128,16 @@ export class Mouse {
 
   public setElement(element: HTMLElement) {
     this.element = element;
-    element.addEventListener('mousemove', this.mousemove);
-    element.addEventListener('mousedown', this.mousedown);
-    element.addEventListener('mouseup', this.mouseup);
+    // element.addEventListener('mousemove', this.mousemove);
+    // element.addEventListener('mousedown', this.mousedown);
+    // element.addEventListener('mouseup', this.mouseup);
 
     //element.addEventListener('mousewheel', this.mousewheel);
     //element.addEventListener('DOMMouseScroll', this.mousewheel);
 
-    element.addEventListener('touchmove', this.mousemove);
-    element.addEventListener('touchstart', this.mousedown);
-    element.addEventListener('touchend', this.mouseup);
+    // element.addEventListener('touchmove', this.mousemove);
+    // element.addEventListener('touchstart', this.mousedown);
+    // element.addEventListener('touchend', this.mouseup);
   }
 
   /**

@@ -7,7 +7,7 @@
 
 import { Common, Events } from '../matter-ts/commons';
 import { Vector, Bounds } from '../matter-ts/geometry';
-import { Body, Constraint, Composite, World } from '../matter-ts/body';
+import { Body, Constraint, World } from '../matter-ts/body';
 import { Pair, Grid } from '../matter-ts/collision';
 
 /**
@@ -214,7 +214,7 @@ export class PuppyRender {
         startTime = this.engine.timing.timestamp;
       }
       this.engine.world.isStillActive = true;
-      this.engine.world.fficall('__keydown__', keyName);
+      this.engine.world.fficall('__keydown__', keyName, 0);
     }
 
     this.keyUp = (event: KeyboardEvent) => {
@@ -434,20 +434,6 @@ export class PuppyRender {
     if (this.viewports) {
       this.lookAt(this.viewports[0], this.viewports[1], this.viewports[2], this.viewports[3], true);
     }
-    // canvas.style.width = width.toString();
-    // canvas.style.height = height.toString();
-
-    // let w = width;
-    // let h = (width * canvas.height) / canvas.width;
-    // if (h > height) {
-    //   h = height;
-    //   w = (height * canvas.width) / canvas.height;
-    // }
-    // canvas.setAttribute('width', w.toString());
-    // canvas.setAttribute('height', h.toString());
-    // console.log('resize width {this.render.options.width} => {w} height {this.render.options.height} => {h}');
-    // render.options.width = w;
-    // render.options.height = h;
   }
 
   public measureWidth(text: string, font?: string) {
@@ -655,7 +641,7 @@ export class PuppyRender {
 
     this.endViewTransform();
     this.ticks += 1;
-    (this.world as any).fficall('__anime__', this.ticks % 60);
+    this.world.fficall('__motion__', this.ticks);
 
     if (this.showingMessage !== null) {
       context.font = 'bold 80px sans-serif';

@@ -9,7 +9,6 @@ import { Common, Events } from './commons';
 import { Vector, Bounds } from './geometry';
 import { Body, Constraint, Composite, World } from './body';
 import { Pair, Grid } from './collision';
-//import { Mouse } from './mouse';
 
 /**
  * Description

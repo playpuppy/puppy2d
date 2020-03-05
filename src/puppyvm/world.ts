@@ -236,7 +236,6 @@ export class PuppyWorld extends World {
   public vm: any;
   public lib: LibPython;
   public pc = 0;  // used in if(puppy.pc++ % 16===0) yield 0;
-  public vars: any = {};
   public colors: string[] = ['#000000', '#ff0000', '#00ff00', '#0000ff'];
   public frictionAir = 0.1;
   public font = 'bold 36pt sans-serif';
@@ -619,17 +618,17 @@ export class PuppyWorld extends World {
     }
   }
 
-  public fficall(name: string, ...params: any[]) {
-    const callback = this.vars[name];
-    if (callback !== undefined) {
-      try {
-        return callback(...params);
-      }
-      catch (e) {
-        console.log(e);
-      }
-    }
-  }
+  // public fficall(name: string, ...params: any[]) {
+  //   const callback = this.vars[name];
+  //   if (callback !== undefined) {
+  //     try {
+  //       return callback(...params);
+  //     }
+  //     catch (e) {
+  //       console.log(e);
+  //     }
+  //   }
+  // }
 
   // private token(tkid: number, event: any) {
   //   return event;
@@ -664,19 +663,19 @@ export class PuppyWorld extends World {
 
   // lazy updates
 
-  private lazyUpdates: (() => void)[] = [];
+  // private lazyUpdates: (() => void)[] = [];
 
-  public setLazy(key: string, target: any, value: any) {
-    this.lazyUpdates.push(() => {
-      target[key] = value;
-    })
-  }
+  // public setLazy(key: string, target: any, value: any) {
+  //   this.lazyUpdates.push(() => {
+  //     target[key] = value;
+  //   })
+  // }
 
-  public updateLazies() {
-    for (const f of this.lazyUpdates) {
-      f();
-    }
-    this.lazyUpdates = [];
-  }
+  // public updateLazies() {
+  //   for (const f of this.lazyUpdates) {
+  //     f();
+  //   }
+  //   this.lazyUpdates = [];
+  // }
 
 }
