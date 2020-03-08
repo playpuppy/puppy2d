@@ -251,6 +251,12 @@ export class Engine {
       const body = bodies[i];
       if (body.isStatic || body.isSleeping)
         continue;
+      if (body.fixAngle) {
+        const prevAngle = body.angle
+        body.update(deltaTime, timeScale, correction);
+        body.angle = prevAngle
+        continue;
+      }
       body.update(deltaTime, timeScale, correction);
     }
   }
