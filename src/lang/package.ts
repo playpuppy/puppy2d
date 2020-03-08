@@ -243,6 +243,7 @@ const import_puppy2d: { [key: string]: Symbol } = {
   'setViewport': sym('puppy.setViewport', ts.func(ts.Void, ts.Int, ts.Int, ts.Int, ts.Int)),
   'paint': sym('puppy.paint', ts.func(ts.Void, ts.Int, ts.Int, ts.Option)),
   'plot': sym('puppy.plot', ts.func(ts.Void, ts.Int, ts.Int, ts.Option)),
+  'remove': sym('puppy.removeBody', ts.func(ts.Void, ts.Matter)),
 
   // # 物体メソッド
   '.setPosition': sym('lib.setPosition', ts.func(ts.Matter, ts.Matter, ts.Int, ts.Int)),
