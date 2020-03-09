@@ -1,4 +1,6 @@
 import { ParseTree } from './puppy-parser';
+import { Body } from '../matter-ts/body';
+import { Vector } from '../matter-ts/geometry';
 
 export class LibPython {
   world: any;
@@ -421,6 +423,10 @@ export class LibPython {
   }
 
   /* Matter.Body */
+
+  public applyForce(body: Body, fx: number, fy: number) {
+    body.applyForce(body.position, new Vector(fx, fy))
+  }
 
 }
 

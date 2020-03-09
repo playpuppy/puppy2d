@@ -236,7 +236,7 @@ export class PuppyVM extends PuppyEventHandler {
             else {
               this.pause();
             }
-          }, 5000);
+          }, 10000);
         }
       }
       this.runtime.start(

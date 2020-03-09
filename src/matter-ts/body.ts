@@ -66,6 +66,7 @@ export class Body {
   public isSensor = false;
   public isStatic = false;
   public isSleeping = false;
+  public fixAngle = false;
   public motion = 0;
   public sleepThreshold = 60;
   public density = 0.001;
